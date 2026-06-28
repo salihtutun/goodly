@@ -67,6 +67,7 @@ export default function Projects() {
           <Dialog open={openCreate} onOpenChange={setOpenCreate}>
             <DialogTrigger asChild>
               <Button data-testid="new-project-btn"
+                onClick={() => setOpenCreate(true)}
                 className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6">
                 <Plus className="mr-1.5" size={18}/> New project
               </Button>
