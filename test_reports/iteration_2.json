@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 2 (Billing/Stripe + PDF + SERP + Schedule + Onboarding + Free-tier limits). Backend: 41/41 pytest pass (23 regression + 18 new). Frontend: all critical flows verified — registration triggers onboarding tour (4-step), demo login shows PRO badge + Billing nav, Billing page renders 3 plan cards with 'Current plan' on Pro, upgrade-to-Agency redirects to checkout.stripe.com (valid session), BillingSuccess shows 'Transaction not found' error state for fake session_id, ProjectDetail schedule toggle flips 'Schedule monthly' -> 'Monthly: ON' with next-audit chip 7/28/2026, SERP check returns rank #1 for 'example domain' on example.com, AuditDetail Download PDF returns valid 10KB %PDF- binary. ONE CRITICAL BUG: Pricing section is missing from the Landing page (PricingCard component is defined in Landing.jsx but never rendered; nav link href='#pricing' targets a non-existent section; testids pricing-free/pricing-pro/pricing-agency do not exist anywhere in DOM).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Landing.jsx", "issue": "Pricing section is completely missing from the Landing page render. PricingCard component (defined at line 231) is never invoked. Nav anchor href='#pricing' (line 17) points to a non-existent section id. Testids 'pricing-free', 'pricing-pro', 'pricing-agency' do not exist in DOM. This is one of the explicit iteration-2 requirements and is unmet.", "selector": "[data-testid=\"pricing-pro\"] (missing)", "priority": "CRITICAL"},
+      {"component": "BillingSuccess.jsx (error state)", "issue": "The 'Back to billing' button on the 'Transaction not found' error card has no data-testid. Spec mentions data-testid 'go-dashboard-btn' (success state) and a back-to-billing button (error state) — only the success-root has testid. Button exists visually and works.", "selector": "[data-testid=\"back-to-billing-btn\"] (missing on error state)", "priority": "LOW"},
+      {"component": "OnboardingTour.jsx", "issue": "Radix DialogContent rendered without a DialogTitle — produces accessibility console warning on every mount. Wrap title in <VisuallyHidden> or add a <DialogTitle>.", "selector": "[data-testid=\"onboarding-dialog\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration2.py",
+    "/app/backend/tests/test_seo_api.py",
+    "/app/test_reports/pytest/iteration2_results.xml",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "RENDER the Pricing section on Landing.jsx. Add a <section id=\"pricing\"> with three <PricingCard> instances (testIds pricing-free/pricing-pro/pricing-agency, highlighted=true on Pro) and wire all three CTAs to navigate('/register'). Currently the PricingCard component is dead code.",
+    "Add data-testid=\"back-to-billing-btn\" to the 'Back to billing' button in BillingSuccess error state.",
+    "Add a DialogTitle (or VisuallyHidden DialogTitle) inside OnboardingTour DialogContent to fix the Radix a11y warning."
+  ],
+  "critical_code_review_comments": [
+    "server.py: PDF endpoint plan-check correctly happens before audit lookup (returns 402 for free users even with non-existent audit id — verified in test_pdf_blocked_for_free).",
+    "billing.py: PLANS dict server-authoritative (good). Free plan has audit_limit=3, project_limit=1 — enforced correctly in /api/projects and /api/audits.",
+    "server.py /api/billing/status correctly applies upgrade idempotently using 'applied' flag (won't double-upgrade on repeated polls).",
+    "server.py CORS still allow_origins='*' with allow_credentials=True (carried over from iteration 1). Browsers will reject credentialed CORS in production; Bearer token works as fallback.",
+    "Stripe webhook signature verification is delegated to emergentintegrations.handle_webhook — webhook route is mounted on app (not api router) so it's at /api/webhook/stripe via the @app.post decorator path. Correct.",
+    "OnboardingTour gating uses user.onboarded from /api/auth/me — POST /api/auth/onboarded marks it true and dialog disappears on next render. Verified."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration2.py (new — 18 pytest tests covering plans, onboarding, billing checkout/status, PDF (Pro+Free), SERP (Pro+Free), schedule toggle (Pro+Free), free-tier project/audit limits)"
+  ],
+  "success_rate": {"backend": "100% (41/41 across both suites)", "frontend": "92% — all listed features work EXCEPT the missing Pricing section on Landing page"},
+  "test_credentials": "Used demo@smallbiz.com/demo1234 (Pro) and freshly-registered TEST_ users (Free). Admin admin@seoframework.com/admin123 (Agency) was not exercised in frontend but seed verified at startup.",
+  "seed_data_creation": "Created several TEST_-prefixed projects + payment_transactions rows during pytest run (test_iteration2.py self-cleans the test project in TestSchedule). Demo user accumulated ~4 audits + 1 SERP check + 2 payment_transactions during E2E (initiated/unpaid Stripe sessions — never completed, expected).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After main agent renders the Pricing section in Landing.jsx, just re-run the landing portion: navigate to https://rank-helper-2.preview.emergentagent.com/ and verify [data-testid='pricing-free'], [data-testid='pricing-pro'], [data-testid='pricing-agency'] exist, that the Pro card has highlighted styling (bg-[#2D3E32]), and that each CTA navigates to /register. Backend regression: `pytest /app/backend/tests/ -v` (~3 minutes; AI + audit calls dominate runtime). All 41 backend tests are currently green.",
+  "rca of the issue": "Pricing section missing: Landing.jsx defines `function PricingCard(...)` at line 231 but no JSX invocation of <PricingCard ... /> exists between the 'How it works' section (closes line 169) and the 'Testimonial' section (opens line 172). The component is dead code. Fix: insert a <section id='pricing'> with a grid of 3 PricingCards (Free $0, Pro $19 highlighted+tag='Most popular', Agency $49) between the 'how' and 'testimonials' sections, each with onClick={() => navigate('/register')} and the spec'd testIds."
+}

@@ -4,8 +4,11 @@ import api, { formatApiError } from "@/lib/api";
 import AppLayout from "@/components/app/AppLayout";
 import { Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Gauge, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Gauge, ExternalLink, Clock, Search, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -13,25 +16,63 @@ import {
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [audits, setAudits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [serpKw, setSerpKw] = useState("");
+  const [serpBusy, setSerpBusy] = useState(false);
+  const [serpHistory, setSerpHistory] = useState([]);
+
+  const isPro = user?.plan && user.plan !== "free";
 
   useEffect(() => {
     (async () => {
       try {
-        const [p, a] = await Promise.all([
+        const [p, a, s] = await Promise.all([
           api.get(`/projects/${id}`),
           api.get(`/audits?project_id=${id}`),
+          api.get(`/serp/history?project_id=${id}`).catch(() => ({ data: [] })),
         ]);
         setProject(p.data);
         setAudits(a.data);
+        setSerpHistory(s.data || []);
       } catch (e) {
         toast.error(formatApiError(e));
         navigate("/app/projects");
       } finally { setLoading(false); }
     })();
   }, [id, navigate]);
+
+  const toggleSchedule = async () => {
+    const next = project.schedule === "monthly" ? "off" : "monthly";
+    try {
+      const { data } = await api.post(`/projects/${id}/schedule`, { schedule: next });
+      setProject(data);
+      toast.success(next === "monthly" ? "Monthly audits scheduled" : "Schedule turned off");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
+
+  const runSerp = async (e) => {
+    e.preventDefault();
+    if (!serpKw.trim()) return;
+    setSerpBusy(true);
+    try {
+      const { data } = await api.post("/serp/check", {
+        keyword: serpKw.trim(),
+        domain: project.url,
+        project_id: id,
+      });
+      setSerpHistory((prev) => [data, ...prev]);
+      setSerpKw("");
+      if (data.rank) toast.success(`Found at position #${data.rank}`);
+      else toast.info(`Not in top ${data.total_results_checked || 30} for that keyword`);
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally { setSerpBusy(false); }
+  };
 
   if (loading || !project) {
     return <AppLayout><div className="text-[#5C685C]">Loading…</div></AppLayout>;
@@ -60,12 +101,28 @@ export default function ProjectDetail() {
               {project.url} <ExternalLink size={14}/>
             </a>
           </div>
-          <Button onClick={() => navigate(`/app/audit?project=${project.id}&url=${encodeURIComponent(project.url)}`)}
-            data-testid="project-run-audit-btn"
-            className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6">
-            <Gauge className="mr-1.5" size={18}/> Run new audit
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={toggleSchedule} variant="outline"
+              data-testid="schedule-toggle-btn"
+              className="bg-transparent border-[#E5E0D8] text-[#1A201A] hover:bg-[#F3F0E9] rounded-full">
+              <Clock size={16} className="mr-1.5"/>
+              {project.schedule === "monthly" ? "Monthly: ON" : "Schedule monthly"}
+              {!isPro && project.schedule !== "monthly" && <span className="ml-2 text-[10px] uppercase bg-[#E07A5F] text-[#FDFBF7] px-1.5 py-0.5 rounded-full">Pro</span>}
+            </Button>
+            <Button onClick={() => navigate(`/app/audit?project=${project.id}&url=${encodeURIComponent(project.url)}`)}
+              data-testid="project-run-audit-btn"
+              className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6">
+              <Gauge className="mr-1.5" size={18}/> Run new audit
+            </Button>
+          </div>
         </div>
+
+        {project.schedule === "monthly" && project.next_audit_at && (
+          <div className="mt-5 bg-[#81B29A]/15 border border-[#81B29A]/40 rounded-2xl px-5 py-3 text-sm text-[#1A201A] inline-flex items-center gap-2">
+            <Clock size={16} className="text-[#2D3E32]"/>
+            Next scheduled audit: <strong>{new Date(project.next_audit_at).toLocaleDateString()}</strong>
+          </div>
+        )}
 
         <div className="mt-10 grid md:grid-cols-3 gap-5">
           <div className="bg-white border border-[#E5E0D8] rounded-2xl p-6 flex flex-col items-center justify-center">
@@ -86,12 +143,6 @@ export default function ProjectDetail() {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <defs>
-                      <linearGradient id="gscore" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#81B29A" stopOpacity={0.6}/>
-                        <stop offset="100%" stopColor="#81B29A" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E0D8"/>
                     <XAxis dataKey="date" stroke="#5C685C" fontSize={12}/>
                     <YAxis domain={[0, 100]} stroke="#5C685C" fontSize={12}/>
@@ -102,6 +153,61 @@ export default function ProjectDetail() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* SERP rank tracker */}
+        <div className="mt-12">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <Eyebrow>SERP Rank Tracking <span className="ml-2 text-[10px] uppercase bg-[#E07A5F] text-[#FDFBF7] px-1.5 py-0.5 rounded-full">Pro</span></Eyebrow>
+              <h2 className="mt-2 font-display font-bold text-2xl text-[#1A201A]">Where do you rank?</h2>
+              <p className="text-sm text-[#5C685C] mt-1">Check your domain&apos;s position for any keyword (best-effort, uses DuckDuckGo).</p>
+            </div>
+          </div>
+
+          <form onSubmit={runSerp} className="mt-5 flex flex-wrap gap-3" data-testid="serp-form">
+            <Input value={serpKw} onChange={(e) => setSerpKw(e.target.value)}
+              data-testid="serp-keyword-input"
+              placeholder="e.g. handmade pottery portland"
+              className="flex-1 min-w-[260px] bg-white border-[#E5E0D8] rounded-xl py-6"/>
+            <Button type="submit" disabled={serpBusy || !isPro}
+              data-testid="serp-check-btn"
+              className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6">
+              <Search size={16} className="mr-1.5"/>{serpBusy ? "Searching…" : "Check rank"}
+            </Button>
+          </form>
+          {!isPro && (
+            <div className="mt-3 text-sm text-[#5C685C]">
+              SERP tracking is a Pro feature. <Link to="/app/billing" className="text-[#E07A5F] hover:underline">Upgrade</Link> to unlock it.
+            </div>
+          )}
+
+          {serpHistory.length > 0 && (
+            <div className="mt-6 space-y-3" data-testid="serp-history">
+              {serpHistory.slice(0, 10).map((h) => (
+                <div key={h.id} className="bg-white border border-[#E5E0D8] rounded-2xl p-5 flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-[#1A201A] truncate">{h.keyword}</div>
+                    <div className="text-xs text-[#5C685C] mt-1">{new Date(h.created_at).toLocaleString()} · {h.domain}</div>
+                  </div>
+                  {h.rank ? (
+                    <div className="text-right">
+                      <div className="font-display font-bold text-2xl text-[#2D3E32]">#{h.rank}</div>
+                      <Badge className="bg-[#81B29A]/20 text-[#2D3E32] hover:bg-[#81B29A]/20 border-0">
+                        <TrendingUp size={12} className="mr-1"/> Ranking
+                      </Badge>
+                    </div>
+                  ) : (
+                    <div className="text-right">
+                      <Badge className="bg-[#E07A5F]/15 text-[#C86A51] hover:bg-[#E07A5F]/15 border-0">
+                        Not in top 30
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-12">
@@ -134,3 +240,4 @@ export default function ProjectDetail() {
     </AppLayout>
   );
 }
+

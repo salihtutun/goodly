@@ -23,6 +23,10 @@ from auth import (
 )
 from seo_analyzer import analyze_url
 import ai_service
+from billing import PLANS, get_plan, month_key, create_subscription_checkout, make_stripe
+from pdf_export import build_audit_pdf
+from serp import check_rank
+from fastapi.responses import StreamingResponse
 
 
 # --- Mongo setup ---
@@ -50,8 +54,30 @@ def public_user(doc: dict) -> dict:
         "email": doc["email"],
         "name": doc.get("name") or doc["email"].split("@")[0],
         "role": doc.get("role", "user"),
+        "plan": doc.get("plan", "free"),
+        "onboarded": doc.get("onboarded", False),
         "created_at": doc.get("created_at"),
     }
+
+
+async def get_user(user_id: str) -> dict:
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+async def get_current_user_doc(user_id: str = Depends(get_current_user_id)) -> dict:
+    return await get_user(user_id)
+
+
+async def usage_for(user_id: str) -> dict:
+    mk = month_key()
+    audits_this_month = await db.audits.count_documents({
+        "user_id": user_id, "month_key": mk,
+    })
+    projects_count = await db.projects.count_documents({"user_id": user_id})
+    return {"month": mk, "audits_this_month": audits_this_month, "projects_count": projects_count}
 
 
 # ---------------------------------------------------------------
@@ -97,6 +123,8 @@ async def register(body: RegisterIn, response: Response):
         "password_hash": hash_password(body.password),
         "name": body.name or email.split("@")[0],
         "role": "user",
+        "plan": "free",
+        "onboarded": False,
         "created_at": now_iso(),
     }
     await db.users.insert_one(user_doc)
@@ -147,14 +175,23 @@ class ProjectUpdate(BaseModel):
 
 
 @api.post("/projects")
-async def create_project(body: ProjectIn, user_id: str = Depends(get_current_user_id)):
+async def create_project(body: ProjectIn, user: dict = Depends(get_current_user_doc)):
+    plan = get_plan(user.get("plan"))
+    current_count = await db.projects.count_documents({"user_id": user["id"]})
+    if plan["project_limit"] is not None and current_count >= plan["project_limit"]:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Project limit reached on the {plan['name']} plan ({plan['project_limit']} projects). Upgrade to add more.",
+        )
     doc = {
         "id": str(uuid.uuid4()),
-        "user_id": user_id,
+        "user_id": user["id"],
         "name": body.name,
         "url": body.url,
         "description": body.description or "",
         "target_keywords": body.target_keywords or "",
+        "schedule": "off",       # 'off' | 'monthly'
+        "next_audit_at": None,
         "created_at": now_iso(),
         "last_audit_at": None,
         "last_score": None,
@@ -208,7 +245,16 @@ class AuditIn(BaseModel):
 
 
 @api.post("/audits")
-async def run_audit(body: AuditIn, user_id: str = Depends(get_current_user_id)):
+async def run_audit(body: AuditIn, user: dict = Depends(get_current_user_doc)):
+    plan = get_plan(user.get("plan"))
+    if plan["audit_limit"] is not None:
+        used = await db.audits.count_documents({"user_id": user["id"], "month_key": month_key()})
+        if used >= plan["audit_limit"]:
+            raise HTTPException(
+                status_code=402,
+                detail=f"You've used your {plan['audit_limit']} audits this month on the {plan['name']} plan. Upgrade for unlimited audits.",
+            )
+
     result = await analyze_url(body.url)
 
     # Generate AI recommendations only when fetch succeeded
@@ -222,10 +268,11 @@ async def run_audit(body: AuditIn, user_id: str = Depends(get_current_user_id)):
 
     audit_doc = {
         "id": str(uuid.uuid4()),
-        "user_id": user_id,
+        "user_id": user["id"],
         "project_id": body.project_id,
         "url": result.get("url", body.url),
         "created_at": now_iso(),
+        "month_key": month_key(),
         "result": result,
         "ai_recommendations": ai_recs,
     }
@@ -233,7 +280,7 @@ async def run_audit(body: AuditIn, user_id: str = Depends(get_current_user_id)):
 
     if body.project_id:
         await db.projects.update_one(
-            {"id": body.project_id, "user_id": user_id},
+            {"id": body.project_id, "user_id": user["id"]},
             {"$set": {"last_audit_at": audit_doc["created_at"], "last_score": result.get("overall_score")}},
         )
 
@@ -372,6 +419,238 @@ async def root():
 
 
 # ---------------------------------------------------------------
+# Billing / Plans (Stripe)
+# ---------------------------------------------------------------
+class CheckoutIn(BaseModel):
+    plan_id: str
+    origin_url: str
+
+
+@api.get("/billing/plans")
+async def get_plans():
+    return list(PLANS.values())
+
+
+@api.get("/billing/me")
+async def billing_me(user: dict = Depends(get_current_user_doc)):
+    plan = get_plan(user.get("plan"))
+    usage = await usage_for(user["id"])
+    txs = await db.payment_transactions.find(
+        {"user_id": user["id"]}, {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    return {"plan": plan, "usage": usage, "transactions": txs}
+
+
+@api.post("/billing/checkout")
+async def billing_checkout(body: CheckoutIn, request: Request, user: dict = Depends(get_current_user_doc)):
+    if body.plan_id not in PLANS or body.plan_id == "free":
+        raise HTTPException(status_code=400, detail="Invalid plan")
+    host = str(request.base_url)
+    try:
+        session, plan = await create_subscription_checkout(
+            host_url=host,
+            plan_id=body.plan_id,
+            user_id=user["id"],
+            user_email=user["email"],
+            origin_url=body.origin_url,
+        )
+    except Exception as e:
+        logger.exception("Stripe checkout creation failed")
+        raise HTTPException(status_code=502, detail=f"Could not create checkout session: {e}")
+
+    tx = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_email": user["email"],
+        "session_id": session.session_id,
+        "plan_id": body.plan_id,
+        "amount": plan["price_usd"],
+        "currency": "usd",
+        "payment_status": "initiated",
+        "status": "open",
+        "applied": False,
+        "metadata": {"plan_id": body.plan_id, "kind": "subscription_upgrade"},
+        "created_at": now_iso(),
+    }
+    await db.payment_transactions.insert_one(tx)
+    return {"session_id": session.session_id, "url": session.url}
+
+
+@api.get("/billing/status/{session_id}")
+async def billing_status(session_id: str, request: Request, user: dict = Depends(get_current_user_doc)):
+    tx = await db.payment_transactions.find_one({"session_id": session_id, "user_id": user["id"]}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    host = str(request.base_url)
+    stripe = make_stripe(host)
+    try:
+        status = await stripe.get_checkout_status(session_id)
+    except Exception as e:
+        logger.exception("Stripe status fetch failed")
+        raise HTTPException(status_code=502, detail=f"Could not check status: {e}")
+
+    update = {
+        "status": status.status,
+        "payment_status": status.payment_status,
+        "updated_at": now_iso(),
+    }
+    await db.payment_transactions.update_one({"session_id": session_id}, {"$set": update})
+
+    # Apply upgrade exactly once
+    if status.payment_status == "paid" and not tx.get("applied"):
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"plan": tx["plan_id"], "plan_started_at": now_iso()}},
+        )
+        await db.payment_transactions.update_one(
+            {"session_id": session_id},
+            {"$set": {"applied": True}},
+        )
+
+    return {
+        "session_id": session_id,
+        "status": status.status,
+        "payment_status": status.payment_status,
+        "amount_total": status.amount_total,
+        "currency": status.currency,
+        "plan_id": tx["plan_id"],
+        "applied": status.payment_status == "paid",
+    }
+
+
+@app.post("/api/webhook/stripe")
+async def stripe_webhook(request: Request):
+    body = await request.body()
+    sig = request.headers.get("Stripe-Signature")
+    host = str(request.base_url)
+    stripe = make_stripe(host)
+    try:
+        evt = await stripe.handle_webhook(body, sig)
+    except Exception as e:
+        logger.warning("webhook handle failed: %s", e)
+        return {"received": False}
+
+    if evt.payment_status == "paid" and evt.session_id:
+        tx = await db.payment_transactions.find_one({"session_id": evt.session_id})
+        if tx and not tx.get("applied"):
+            await db.users.update_one(
+                {"id": tx["user_id"]},
+                {"$set": {"plan": tx["plan_id"], "plan_started_at": now_iso()}},
+            )
+            await db.payment_transactions.update_one(
+                {"session_id": evt.session_id},
+                {"$set": {"applied": True, "payment_status": "paid", "status": "complete", "updated_at": now_iso()}},
+            )
+    return {"received": True}
+
+
+# ---------------------------------------------------------------
+# PDF export
+# ---------------------------------------------------------------
+@api.get("/audits/{audit_id}/pdf")
+async def audit_pdf(audit_id: str, user: dict = Depends(get_current_user_doc)):
+    plan = get_plan(user.get("plan"))
+    if not plan["perks"].get("pdf_export"):
+        raise HTTPException(status_code=402, detail="PDF export is a Pro feature. Upgrade to download reports.")
+    audit = await db.audits.find_one({"id": audit_id, "user_id": user["id"]}, {"_id": 0})
+    if not audit:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    pdf_bytes = build_audit_pdf(audit)
+    filename = f"seo-audit-{audit_id[:8]}.pdf"
+    return StreamingResponse(
+        io_bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def io_bytes(b: bytes):
+    import io
+    return io.BytesIO(b)
+
+
+# ---------------------------------------------------------------
+# SERP rank tracking
+# ---------------------------------------------------------------
+class SerpIn(BaseModel):
+    keyword: str
+    domain: str
+    project_id: Optional[str] = None
+
+
+@api.post("/serp/check")
+async def serp_check(body: SerpIn, user: dict = Depends(get_current_user_doc)):
+    plan = get_plan(user.get("plan"))
+    if not plan["perks"].get("serp_tracking"):
+        raise HTTPException(status_code=402, detail="SERP rank tracking is a Pro feature. Upgrade to use it.")
+    result = await check_rank(body.keyword.strip(), body.domain.strip())
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "project_id": body.project_id,
+        "keyword": body.keyword,
+        "domain": result.get("domain"),
+        "rank": result.get("rank"),
+        "engine": result.get("engine"),
+        "results": result.get("results"),
+        "error": result.get("error"),
+        "created_at": now_iso(),
+    }
+    await db.serp_checks.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.get("/serp/history")
+async def serp_history(project_id: Optional[str] = None, user: dict = Depends(get_current_user_doc)):
+    q = {"user_id": user["id"]}
+    if project_id:
+        q["project_id"] = project_id
+    docs = await db.serp_checks.find(q, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
+    return docs
+
+
+# ---------------------------------------------------------------
+# Scheduled audits (in-app queue)
+# ---------------------------------------------------------------
+class ScheduleIn(BaseModel):
+    schedule: str  # 'off' | 'monthly'
+
+
+@api.post("/projects/{project_id}/schedule")
+async def set_schedule(project_id: str, body: ScheduleIn, user: dict = Depends(get_current_user_doc)):
+    plan = get_plan(user.get("plan"))
+    if body.schedule not in ("off", "monthly"):
+        raise HTTPException(status_code=400, detail="Schedule must be 'off' or 'monthly'")
+    if body.schedule != "off" and not plan["perks"].get("scheduled_audits"):
+        raise HTTPException(status_code=402, detail="Scheduled audits are a Pro feature. Upgrade to enable.")
+    project = await db.projects.find_one({"id": project_id, "user_id": user["id"]})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    next_at = None
+    if body.schedule == "monthly":
+        from datetime import timedelta
+        next_at = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    await db.projects.update_one(
+        {"id": project_id},
+        {"$set": {"schedule": body.schedule, "next_audit_at": next_at}},
+    )
+    updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    return updated
+
+
+# ---------------------------------------------------------------
+# Onboarding
+# ---------------------------------------------------------------
+@api.post("/auth/onboarded")
+async def mark_onboarded(user_id: str = Depends(get_current_user_id)):
+    await db.users.update_one({"id": user_id}, {"$set": {"onboarded": True}})
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------
 # Mount + middleware
 # ---------------------------------------------------------------
 app.include_router(api)
@@ -393,13 +672,19 @@ async def on_startup():
     await db.projects.create_index("user_id")
     await db.audits.create_index("id", unique=True)
     await db.audits.create_index([("user_id", 1), ("created_at", -1)])
+    await db.payment_transactions.create_index("session_id", unique=True)
+    await db.serp_checks.create_index([("user_id", 1), ("created_at", -1)])
 
-    # Seed admin + demo user
+    # Backfill plan/onboarded on legacy users
+    await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})
+    await db.users.update_many({"onboarded": {"$exists": False}}, {"$set": {"onboarded": False}})
+
+    # Seed admin + demo user (demo is Pro so testers can exercise Pro features)
     seeds = [
         {"email": os.environ.get("ADMIN_EMAIL", "admin@seoframework.com"),
          "password": os.environ.get("ADMIN_PASSWORD", "admin123"),
-         "name": "Admin", "role": "admin"},
-        {"email": "demo@smallbiz.com", "password": "demo1234", "name": "Demo Owner", "role": "user"},
+         "name": "Admin", "role": "admin", "plan": "agency"},
+        {"email": "demo@smallbiz.com", "password": "demo1234", "name": "Demo Owner", "role": "user", "plan": "pro"},
     ]
     for s in seeds:
         existing = await db.users.find_one({"email": s["email"]})
@@ -410,8 +695,16 @@ async def on_startup():
                 "password_hash": hash_password(s["password"]),
                 "name": s["name"],
                 "role": s["role"],
+                "plan": s["plan"],
+                "onboarded": True,
                 "created_at": now_iso(),
             })
+        else:
+            # ensure existing seeds have plan set
+            await db.users.update_one(
+                {"email": s["email"]},
+                {"$set": {"plan": existing.get("plan") or s["plan"], "onboarded": True}},
+            )
     logger.info("Startup complete. Seeded users (if missing).")
 
 

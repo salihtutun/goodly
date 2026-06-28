@@ -14,6 +14,7 @@ export default function Landing() {
           <Logo />
           <nav className="hidden md:flex items-center gap-8 text-sm text-[#5C685C]">
             <a href="#features" className="hover:text-[#1A201A] transition-colors">Features</a>
+            <a href="#pricing" className="hover:text-[#1A201A] transition-colors">Pricing</a>
             <a href="#how" className="hover:text-[#1A201A] transition-colors">How it works</a>
             <a href="#testimonials" className="hover:text-[#1A201A] transition-colors">Stories</a>
           </nav>
@@ -223,6 +224,43 @@ function FeatureCard({ span, icon: Icon, title, body, accent }) {
       </div>
       <div className="mt-6 font-display font-bold text-xl text-[#1A201A]">{title}</div>
       <div className="mt-2 text-[#5C685C]">{body}</div>
+    </div>
+  );
+}
+
+function PricingCard({ name, price, tag, features, onClick, ctaLabel, highlighted, testId }) {
+  return (
+    <div data-testid={testId}
+      className={`relative rounded-3xl p-8 border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+        highlighted ? "bg-[#2D3E32] border-[#2D3E32] text-[#FDFBF7]" : "bg-white border-[#E5E0D8] text-[#1A201A]"
+      }`}>
+      {highlighted && (
+        <div className="absolute -top-3 left-7 bg-[#E07A5F] text-[#FDFBF7] text-xs font-medium tracking-wider uppercase px-3 py-1 rounded-full">
+          {tag}
+        </div>
+      )}
+      {!highlighted && <div className="label-eyebrow">{tag}</div>}
+      <div className={`mt-3 ${highlighted ? "text-[#FDFBF7]/80 label-eyebrow" : ""}`}>{highlighted && name}</div>
+      {!highlighted && <div className="font-display font-bold text-2xl mt-1">{name}</div>}
+      <div className="mt-4 font-display">
+        <span className="text-5xl font-bold">${price}</span>
+        {price > 0 && <span className={`text-sm ml-1 ${highlighted ? "text-[#FDFBF7]/70" : "text-[#5C685C]"}`}>/ month</span>}
+      </div>
+      <ul className="mt-6 space-y-2.5">
+        {features.map((f, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm">
+            <ShieldCheck size={16} className={highlighted ? "text-[#81B29A] shrink-0 mt-0.5" : "text-[#81B29A] shrink-0 mt-0.5"} />
+            <span className={highlighted ? "text-[#FDFBF7]/95" : ""}>{f}</span>
+          </li>
+        ))}
+      </ul>
+      <button onClick={onClick}
+        className={`mt-8 w-full rounded-full py-3 text-sm font-medium transition-colors ${
+          highlighted ? "bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7]"
+                      : "bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7]"
+        }`}>
+        {ctaLabel}
+      </button>
     </div>
   );
 }

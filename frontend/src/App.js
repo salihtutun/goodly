@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PageLoader } from "@/components/app/Common";
+import OnboardingTour from "@/components/app/OnboardingTour";
 import { Toaster } from "sonner";
 
 import Landing from "@/pages/Landing";
@@ -13,12 +14,14 @@ import ProjectDetail from "@/pages/ProjectDetail";
 import Audit from "@/pages/Audit";
 import AuditDetail from "@/pages/AuditDetail";
 import AiTools from "@/pages/AiTools";
+import Billing from "@/pages/Billing";
+import BillingSuccess from "@/pages/BillingSuccess";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
-  return children;
+  return <>{children}<OnboardingTour /></>;
 }
 
 function PublicOnly({ children }) {
@@ -49,6 +52,8 @@ export default function App() {
             <Route path="/app/audit" element={<Protected><Audit /></Protected>} />
             <Route path="/app/audits/:id" element={<Protected><AuditDetail /></Protected>} />
             <Route path="/app/ai-tools" element={<Protected><AiTools /></Protected>} />
+            <Route path="/app/billing" element={<Protected><Billing /></Protected>} />
+            <Route path="/app/billing/success" element={<Protected><BillingSuccess /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

@@ -1,13 +1,14 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/app/Common";
-import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard } from "lucide-react";
 
 const navItems = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard", end: true },
   { to: "/app/projects", label: "Projects", icon: FolderKanban, testId: "nav-projects" },
   { to: "/app/audit", label: "SEO Audit", icon: Gauge, testId: "nav-audit" },
   { to: "/app/ai-tools", label: "AI Studio", icon: Sparkles, testId: "nav-ai" },
+  { to: "/app/billing", label: "Billing", icon: CreditCard, testId: "nav-billing" },
 ];
 
 export default function AppLayout({ children }) {
@@ -52,7 +53,14 @@ export default function AppLayout({ children }) {
               {(user?.name?.[0] || user?.email?.[0] || "U").toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-[#1A201A] truncate">{user?.name}</div>
+              <div className="text-sm font-medium text-[#1A201A] truncate flex items-center gap-2">
+                {user?.name}
+                {user?.plan && user.plan !== "free" && (
+                  <span className="text-[10px] uppercase tracking-wider bg-[#E07A5F] text-[#FDFBF7] px-1.5 py-0.5 rounded-full" data-testid="user-plan-badge">
+                    {user.plan}
+                  </span>
+                )}
+              </div>
               <div className="text-xs text-[#5C685C] truncate">{user?.email}</div>
             </div>
           </div>
