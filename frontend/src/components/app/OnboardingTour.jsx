@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Gauge, FolderKanban, Sparkles, BarChart3, ArrowRight, ArrowLeft } from "lucide-react";
 
 const STEPS = [
@@ -75,6 +75,7 @@ export default function OnboardingTour() {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) skip(); }}>
       <DialogContent className="bg-[#FDFBF7] border-[#E5E0D8] rounded-3xl max-w-lg p-0 overflow-hidden" data-testid="onboarding-dialog">
+        <DialogTitle className="sr-only">Onboarding — {s.title}</DialogTitle>
         <div className="p-8">
           <div className="flex items-center justify-between">
             <div className="label-eyebrow">{s.eyebrow}</div>

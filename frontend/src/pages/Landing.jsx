@@ -168,6 +168,59 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Pricing */}
+      <section id="pricing" className="bg-[#F3F0E9] py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          <Eyebrow className="mb-4">Pricing</Eyebrow>
+          <h2 className="font-display font-bold text-[#1A201A] text-3xl sm:text-4xl lg:text-5xl tracking-tight max-w-3xl">
+            Start free. Upgrade when your shop outgrows the soil.
+          </h2>
+          <div className="mt-14 grid md:grid-cols-3 gap-6">
+            <PricingCard
+              testId="pricing-free"
+              name="Free"
+              price={0}
+              tag="Get started"
+              features={["3 audits per month", "1 saved project", "Basic AI recommendations"]}
+              onClick={() => navigate("/register")}
+              ctaLabel="Start free"
+            />
+            <PricingCard
+              testId="pricing-pro"
+              name="Pro"
+              price={19}
+              tag="Most popular"
+              highlighted
+              features={[
+                "Unlimited audits",
+                "5 saved projects",
+                "PDF export of audit reports",
+                "Scheduled monthly audits",
+                "SERP rank tracking",
+                "Competitor analysis",
+              ]}
+              onClick={() => navigate("/register")}
+              ctaLabel="Start Pro trial"
+            />
+            <PricingCard
+              testId="pricing-agency"
+              name="Agency"
+              price={49}
+              tag="For multiple clients"
+              features={[
+                "Everything in Pro",
+                "10 saved projects",
+                "Priority support",
+                "Bulk audit running",
+              ]}
+              onClick={() => navigate("/register")}
+              ctaLabel="Start Agency"
+            />
+          </div>
+        </div>
+      </section>
+
+
       {/* Testimonial */}
       <section id="testimonials" className="bg-[#2D3E32] py-20 lg:py-24">
         <div className="max-w-5xl mx-auto px-6 lg:px-10">

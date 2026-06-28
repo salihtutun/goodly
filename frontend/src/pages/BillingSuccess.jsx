@@ -92,6 +92,7 @@ export default function BillingSuccess() {
             <h1 className="mt-6 font-display font-bold text-2xl text-[#1A201A]">Hmm</h1>
             <p className="mt-2 text-[#5C685C]">{state.message}</p>
             <Button onClick={() => navigate("/app/billing")}
+              data-testid="back-to-billing-btn"
               className="mt-8 bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6">
               Back to billing
             </Button>
