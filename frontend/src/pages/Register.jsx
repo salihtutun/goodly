@@ -1,0 +1,85 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/app/Common";
+import { AuthShell } from "@/pages/Login";
+import { toast } from "sonner";
+
+export default function Register() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setError("");
+    const res = await register(email.trim(), password, name.trim() || undefined);
+    setBusy(false);
+    if (res.ok) {
+      toast.success("Account created — welcome to RootedSEO");
+      navigate("/app");
+    } else {
+      setError(res.error);
+    }
+  };
+
+  return (
+    <AuthShell>
+      <div className="w-full max-w-md">
+        <Link to="/"><Logo /></Link>
+        <h1 className="mt-12 font-display font-bold text-4xl text-[#1A201A] tracking-tight">Create your account</h1>
+        <p className="mt-2 text-[#5C685C]">Plant the seed in under a minute.</p>
+
+        <form onSubmit={submit} className="mt-10 space-y-5" data-testid="register-form">
+          <div className="space-y-2">
+            <Label htmlFor="name">Business / your name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)}
+              data-testid="register-name-input"
+              className="bg-white border-[#E5E0D8] rounded-xl py-6 focus:ring-2 focus:ring-[#81B29A]"
+              placeholder="Greenhouse Lane Co." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+              data-testid="register-email-input"
+              className="bg-white border-[#E5E0D8] rounded-xl py-6 focus:ring-2 focus:ring-[#81B29A]"
+              placeholder="you@business.com" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" required minLength={6} value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              data-testid="register-password-input"
+              className="bg-white border-[#E5E0D8] rounded-xl py-6 focus:ring-2 focus:ring-[#81B29A]"
+              placeholder="At least 6 characters" />
+          </div>
+
+          {error && (
+            <div data-testid="register-error" className="text-sm text-[#E07A5F] bg-[#E07A5F]/10 border border-[#E07A5F]/30 rounded-xl px-4 py-3">
+              {error}
+            </div>
+          )}
+
+          <Button type="submit" disabled={busy} data-testid="register-submit-btn"
+            className="w-full bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full py-6 text-base">
+            {busy ? "Creating account..." : "Create account"}
+          </Button>
+        </form>
+
+        <p className="mt-8 text-sm text-[#5C685C]">
+          Already have one?{" "}
+          <Link to="/login" data-testid="goto-login-link" className="text-[#2D3E32] font-medium hover:text-[#4A5F4F]">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </AuthShell>
+  );
+}
