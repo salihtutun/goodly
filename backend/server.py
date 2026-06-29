@@ -29,6 +29,8 @@ from serp import check_rank
 from fastapi.responses import StreamingResponse
 import scheduler as scheduler_mod
 import stripe as stripe_sdk
+import social_service
+import social_fetcher
 
 
 # --- Mongo setup ---
@@ -700,6 +702,128 @@ async def mark_onboarded(user_id: str = Depends(get_current_user_id)):
 
 
 # ---------------------------------------------------------------
+# Social presence audit (Instagram / TikTok / YouTube)
+# ---------------------------------------------------------------
+ALLOWED_PLATFORMS = {"instagram", "tiktok", "youtube"}
+
+
+class SocialAuditIn(BaseModel):
+    platform: str
+    handle: str
+    bio: Optional[str] = ""
+    niche: Optional[str] = ""
+    location: Optional[str] = ""
+    followers: Optional[str] = ""
+    recent_caption: Optional[str] = ""
+    posts_per_week: Optional[str] = ""
+    project_id: Optional[str] = None
+
+
+class SocialSuggestionsIn(BaseModel):
+    platform: str
+    handle: str
+    bio: Optional[str] = ""
+    niche: Optional[str] = ""
+    location: Optional[str] = ""
+    target_customer: Optional[str] = ""
+
+
+class SocialCompetitorIn(BaseModel):
+    platform: str
+    your_handle: str
+    your_niche: Optional[str] = ""
+    competitors: List[str]
+
+
+def _check_platform(p: str):
+    if p not in ALLOWED_PLATFORMS:
+        raise HTTPException(status_code=400, detail=f"platform must be one of: {sorted(ALLOWED_PLATFORMS)}")
+
+
+@api.post("/social/audit")
+async def social_audit(body: SocialAuditIn, user: dict = Depends(get_current_user_doc)):
+    _check_platform(body.platform)
+    fetched = await social_fetcher.fetch_profile_signals(body.platform, body.handle)
+    try:
+        ai = await social_service.audit_profile(
+            platform=body.platform,
+            handle=body.handle.lstrip("@"),
+            bio=body.bio or "",
+            niche=body.niche or "",
+            location=body.location or "",
+            followers=body.followers or "",
+            recent_caption=body.recent_caption or "",
+            posts_per_week=body.posts_per_week or "",
+            fetched_signals=fetched,
+        )
+    except Exception as e:
+        logger.exception("social audit failed")
+        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "project_id": body.project_id,
+        "platform": body.platform,
+        "handle": body.handle.lstrip("@"),
+        "input": body.model_dump(),
+        "fetched": fetched,
+        "result": ai,
+        "created_at": now_iso(),
+    }
+    await db.social_audits.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.post("/social/suggestions")
+async def social_suggestions(body: SocialSuggestionsIn, user: dict = Depends(get_current_user_doc)):
+    _check_platform(body.platform)
+    try:
+        result = await social_service.suggestions(
+            platform=body.platform,
+            handle=body.handle.lstrip("@"),
+            bio=body.bio or "",
+            niche=body.niche or "",
+            location=body.location or "",
+            target_customer=body.target_customer or "",
+        )
+    except Exception as e:
+        logger.exception("social suggestions failed")
+        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+    await db.ai_history.insert_one({
+        "id": str(uuid.uuid4()), "user_id": user["id"], "kind": f"social_suggestions_{body.platform}",
+        "input": body.model_dump(), "result": result, "created_at": now_iso(),
+    })
+    return result
+
+
+@api.post("/social/competitors")
+async def social_competitors(body: SocialCompetitorIn, user: dict = Depends(get_current_user_doc)):
+    _check_platform(body.platform)
+    try:
+        result = await social_service.compare_competitors(
+            platform=body.platform,
+            your_handle=body.your_handle,
+            your_niche=body.your_niche or "",
+            competitors=body.competitors,
+        )
+    except Exception as e:
+        logger.exception("social competitors failed")
+        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+    return result
+
+
+@api.get("/social/audits")
+async def social_audit_history(platform: Optional[str] = None, user: dict = Depends(get_current_user_doc)):
+    q = {"user_id": user["id"]}
+    if platform:
+        q["platform"] = platform
+    docs = await db.social_audits.find(q, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
+    return docs
+
+
+# ---------------------------------------------------------------
 # Concierge brief (onboarding form for $1k/mo customers)
 # ---------------------------------------------------------------
 class ConciergeBriefIn(BaseModel):
@@ -808,6 +932,7 @@ async def on_startup():
     await db.serp_checks.create_index([("user_id", 1), ("created_at", -1)])
     await db.scheduled_runs.create_index([("user_id", 1), ("run_at", -1)])
     await db.concierge_briefs.create_index("user_id", unique=True)
+    await db.social_audits.create_index([("user_id", 1), ("created_at", -1)])
 
     # Backfill plan/onboarded on legacy users
     await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})

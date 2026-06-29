@@ -37,14 +37,13 @@ export default function Landing() {
         <div className="organic-blob bg-[#E07A5F]" style={{ width: 380, height: 380, bottom: -120, left: -100 }} />
         <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-20 lg:py-28 grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7">
-            <Eyebrow className="mb-6">Done-for-you SEO for startups</Eyebrow>
+            <Eyebrow className="mb-6">Done-for-you visibility for startups</Eyebrow>
             <h1 className="font-display font-bold text-[#1A201A] text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.05]">
-              We get your startup to <span className="text-[#E07A5F]">#1 on Google.</span> Your phone starts ringing.
+              We get your startup <span className="text-[#E07A5F]">found.</span> On Google, on Instagram, on TikTok, on YouTube. Your phone starts ringing.
             </h1>
             <p className="mt-6 text-lg text-[#5C685C] max-w-xl leading-relaxed">
-              Goodly is the SEO partner small companies hire when they&apos;re tired of guessing.
-              One flat fee, a dedicated specialist, and a 90-day goal: page-one ranking for the keywords
-              that actually bring customers through your door.
+              Goodly audits every channel your customers actually use, fixes what&apos;s broken, and writes the bios,
+              captions and meta tags that bring them to your door. One flat fee. One dedicated specialist. One ringing phone.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <Button

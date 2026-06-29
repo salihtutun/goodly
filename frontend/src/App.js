@@ -14,6 +14,7 @@ import ProjectDetail from "@/pages/ProjectDetail";
 import Audit from "@/pages/Audit";
 import AuditDetail from "@/pages/AuditDetail";
 import AiTools from "@/pages/AiTools";
+import Social from "@/pages/Social";
 import Billing from "@/pages/Billing";
 import BillingSuccess from "@/pages/BillingSuccess";
 import ConciergeOnboarding from "@/pages/ConciergeOnboarding";
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/app/audit" element={<Protected><Audit /></Protected>} />
             <Route path="/app/audits/:id" element={<Protected><AuditDetail /></Protected>} />
             <Route path="/app/ai-tools" element={<Protected><AiTools /></Protected>} />
+            <Route path="/app/social" element={<Protected><Social /></Protected>} />
             <Route path="/app/billing" element={<Protected><Billing /></Protected>} />
             <Route path="/app/billing/success" element={<Protected><BillingSuccess /></Protected>} />
             <Route path="/app/concierge/onboarding" element={<Protected><ConciergeOnboarding /></Protected>} />
