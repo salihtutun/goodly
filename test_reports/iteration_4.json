@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 4 (Goodly) testing complete. Backend: 19/19 new pytest tests pass — concierge brief CRUD (auth required, 402 for free user, upsert behavior, unique index verified), admin brief listing (admin-only, lists across users, no _id leak), Stripe checkout with Emergent fallback (concierge plan returns valid cs_test_* + stripe.com URL when STRIPE_PRICE_ID_CONCIERGE unset), and code review of billing.py confirms both subscription-mode (stripe SDK with price_id) and fallback (CheckoutSessionRequest) branches present. Frontend: All new data-testids render correctly — nav-concierge link, concierge-onboarding-root, full form with chip-input pattern (keyword-chip-N + competitor-chip-N), submit shows brief-submitted-banner on success, dashboard banner disappears after submission, free-user sees concierge-locked card with concierge-upgrade-btn, BillingSuccess.jsx code has go-brief-btn and go-dashboard-btn testids in success branch.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ConciergeOnboarding.jsx",
+        "issue": "Submit button is NOT disabled when required fields (business_name, website, primary_goal) are empty — only disabled while busy. Spec requires it to remain disabled until those 3 fields are filled. Currently a user can click Submit with empty fields and the POST will fail with 422 from Pydantic.",
+        "selector": "[data-testid='brief-submit-btn']",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/pytest/iteration4_results.xml"
+  ],
+  "action_items": [
+    "FIX: ConciergeOnboarding.jsx line 264 — change `disabled={busy}` to `disabled={busy || !form.business_name.trim() || !form.website.trim() || !form.primary_goal.trim()}` so the button stays disabled until the three required fields are populated (matches spec)."
+  ],
+  "critical_code_review_comments": [
+    "billing.py:create_subscription_checkout — branching logic is clean and idempotent. _NormalizedSession wrapper ensures both code paths produce identical (session_id, url) shape. Subscription branch correctly uses mode='subscription' + line_items=[{price, quantity:1}] + subscription_data metadata so the recurring subscription carries user_id/plan_id for webhook reconciliation. allow_promotion_codes=True is enabled — good for launch promos.",
+    "server.py POST /concierge/brief — upsert pattern is correct (find_one → update OR insert), but the inserted `doc` includes a freshly-generated id even though it's overwritten on update (no harm, but slightly redundant on update path; the returned doc on update is the find_one which strips _id). Verified DB persistence via repeat-POST test → still 1 brief per user_id. Unique index db.concierge_briefs.user_id is enforced on startup.",
+    "server.py GET /admin/concierge/briefs — 403 for non-admins; admin sees all briefs sorted by updated_at desc. _id excluded by projection. Good.",
+    "ConciergeOnboarding.jsx — submit-button disabled state is too lax (see UI bug above). Otherwise the chip-input pattern (Add btn + Enter key) and X-remove work correctly; tested 2 keyword chips added (one via button, one via Enter) and 1 competitor chip. brief-submitted-banner appears after POST 200.",
+    "Dashboard.jsx — only mounts concierge-brief-banner when user.plan === 'concierge' AND brief is null. Verified gone after submit. Free user does not see banner. Verified.",
+    "AppLayout.jsx — nav-concierge link is shown to ALL authenticated users (free + concierge). For free users the route serves the locked card, which is acceptable and gives free users a discovery path. Not a bug.",
+    "BillingSuccess.jsx — go-brief-btn and go-dashboard-btn data-testids are correctly placed inside the success branch (lines 76 & 80). They render only when payment_status==='paid' & a valid transaction is returned by /billing/status, which is the right gating.",
+    "REGRESSION: existing iter3 test file (/app/backend/tests/test_iteration3.py) is now stale because pro/agency plans were merged into 'concierge' — its assertions `ids == {'free','pro','agency'}` and `plan == 'pro'` will fail. Recommend the main agent either delete test_iteration3.py or update it to assert 'concierge'. The functionality those tests exercised (portal/scheduler/serp/email) is still alive but uncovered by automated tests in this iteration.",
+    "CORS still uses allow_origins='*' with allow_credentials=True (carryover). Browser strict-mode credentialed CORS would reject; Bearer token fallback masks the issue."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py (new — 19 pytest tests)"
+  ],
+  "success_rate": {"backend": "100% (19/19)", "frontend": "95% (1 minor UI bug — submit-btn disabled state)"},
+  "test_credentials": "demo@smallbiz.com/demo1234 (concierge plan), admin@goodly.app/admin123 (admin role + concierge plan). Both logged in successfully.",
+  "seed_data_creation": "Tests insert and clean up TEST_-prefixed briefs in db.concierge_briefs. Demo user's brief is rewritten by multiple tests (upsert verified). A TEST_PlaywrightCo brief was submitted from the UI test and was NOT cleaned up (left in DB for visual verification); main agent can delete via db.concierge_briefs.delete_many({business_name: /^TEST_/i}) if desired. Free-plan test users (TEST_iter4_free_*, TEST_iter4_ui_*) are auto-cleaned in fixture teardown for backend; one UI-test free user remains in db.users.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 19 iter4 tests pass in ~4s. Iteration 3 regression tests are STALE (they assert pro/agency plans which no longer exist after rebrand) — please update or delete /app/backend/tests/test_iteration3.py to use 'concierge'. The Stripe subscription-mode branch is NOT execution-tested (no real Price ID); the test_create_subscription_checkout_has_both_branches test does source-inspection only, as instructed. Frontend has one minor bug: brief-submit-btn doesn't enforce disabled-until-required-fields — main agent fix is a one-line change.",
+  "rca of the issue": "Submit button disabled state: ConciergeOnboarding.jsx:264 only checks `disabled={busy}`. The form maintains required-field state in `form.business_name`, `form.website`, `form.primary_goal` but does not include them in the disabled prop. Fix: add the three trimmed-length checks to the disabled expression."
+}

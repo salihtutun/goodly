@@ -1,0 +1,94 @@
+{
+  "theme": "Light",
+  "archetype": "Archetype 1: Organic & Earthy",
+  "emotion_and_vibe": "Grounded, clear, growing, trustworthy, un-intimidating. It breaks the 'techy/hacker' SEO vibe, making it approachable for small business owners. Growth is represented by nature and earthy tones, not neon arrows.",
+  "color_palette": {
+    "background_primary": "#FDFBF7",
+    "background_secondary": "#F3F0E9",
+    "surface_card": "#FFFFFF",
+    "border_color": "#E5E0D8",
+    "primary_brand": "#2D3E32",
+    "primary_hover": "#4A5F4F",
+    "accent_terracotta": "#E07A5F",
+    "accent_sage": "#81B29A",
+    "text_primary": "#1A201A",
+    "text_secondary": "#5C685C",
+    "success": "#81B29A",
+    "warning": "#E6A57E",
+    "error": "#E07A5F"
+  },
+  "typography": {
+    "font_primary": "Cabinet Grotesk",
+    "font_secondary": "Outfit",
+    "heading_strategy": "Use Cabinet Grotesk for all H1-H4. Keep letter spacing tight (tracking-tight) for large headings.",
+    "body_strategy": "Use Outfit for all body text, dashboard labels, and metrics.",
+    "sizes": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight",
+      "h3": "text-xl sm:text-2xl",
+      "h4": "text-lg sm:text-xl",
+      "body": "text-base",
+      "small": "text-sm",
+      "labels": "text-xs tracking-[0.2em] uppercase"
+    }
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "Generous spacing. Use p-6, p-8, and p-12 extensively to let content breathe.",
+    "dashboard_grid": "The 'Control Room' Grid. grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-6. Tight density but soft aesthetics.",
+    "landing_page_grid": "The 'Bento' Grid for features. Asymmetrical layouts, overlapping organic shapes.",
+    "border_radius": "rounded-2xl for cards and modals. rounded-full for primary action buttons to make them feel tactile and friendly."
+  },
+  "surface_strategies": {
+    "cards": "Flat background (#FFFFFF), 1px subtle border (border-[#E5E0D8]), no shadow by default. On hover: slight lift (-translate-y-1) and soft shadow (shadow-lg).",
+    "headers": "Solid background (#FDFBF7) with a hard bottom border (#E5E0D8). Never transparent over scrolling content.",
+    "glassmorphism": "Avoid heavy glassmorphism as it feels too 'techy'. Stick to solid, earthy tactile surfaces."
+  },
+  "motion_and_interaction": {
+    "hover_states": "Buttons must smoothly transition to lighter hues. Cards lift slightly.",
+    "transitions": "transition-all duration-300 ease-out",
+    "loading": "Use organic, slow-spinning indicators. Avoid rapid tech-like loaders."
+  },
+  "components": {
+    "buttons": "Primary: bg-[#2D3E32] text-white hover:bg-[#4A5F4F]. Secondary: bg-[#E07A5F] text-white hover:bg-[#C86A51]. Outline: border border-[#2D3E32] text-[#2D3E32] hover:bg-[#F3F0E9].",
+    "inputs": "Shadcn customized: bg-white border-[#E5E0D8] rounded-xl focus:ring-2 focus:ring-[#81B29A] focus:border-transparent text-[#1A201A].",
+    "scorecards": "For SEO audits, use circular progress charts. Color code: #81B29A (Good), #E6A57E (Average), #E07A5F (Poor).",
+    "tables": "Clean, cardless tables with border-b only on rows. text-sm text-[#5C685C]."
+  },
+  "iconography": {
+    "library": "lucide-react",
+    "style": "Soft, rounded stroke, 1.5px to 2px weight. Avoid sharp geometric icons."
+  },
+  "image_strategy": {
+    "urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1531058240690-006c446962d8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxzbWFsbCUyMGJ1c2luZXNzJTIwb3duZXIlMjBwbGFudCUyMHNob3B8ZW58MHx8fHwxNzgyNjg0MDk1fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Woman standing beside table in plant shop",
+        "category": "Hero Section / Testimonial Background"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1507914464562-6ff4ac29692f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxjb2ZmZWUlMjBzaG9wJTIwb3duZXIlMjBmcmllbmRseXxlbnwwfHx8fDE3ODI2ODQwOTV8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Friendly woman holding clear drinking glass",
+        "category": "Features / Small Business Persona"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1547106429-11e696f446d9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDR8MHwxfHNlYXJjaHwxfHxncm93dGglMjBsZWF2ZXMlMjBwbGFudCUyMHN1bmxpZ2h0fGVufDB8fHx8MTc4MjY4NDA5NXww&ixlib=rb-4.1.0&q=85",
+        "description": "Green plant under sunlight",
+        "category": "Growth Metaphor / Decorative Images"
+      }
+    ],
+    "treatment": "Images should have rounded-2xl corners. Never use heavy black overlays. If overlay is needed, use a subtle warm gradient (from-[#2D3E32]/40 to-transparent)."
+  },
+  "page_specific_instructions": {
+    "landing_page": "Hero: High contrast typography, warm alabaster background, image of small business owner. Features: Bento grid using sage and terracotta accent cards. Pricing: Simple, non-intimidating tiers.",
+    "auth": "Split screen: left side is a soft green plant/growth image, right side is the login form. Form must feel spacious.",
+    "dashboard": "Use the 'Control Room' grid but with earthy colors. No dark mode. Focus on clear 'Next Actions' for the user instead of overwhelming them with charts.",
+    "seo_audit": "The audit entry should be a massive, friendly input field in the center of the screen. Results page: Break down technical SEO into human terms ('How fast your site loads', 'What Google reads').",
+    "ai_generator": "Use the terracotta accent for AI actions to make it feel like a creative spark. The generator interface should be conversational, not like a terminal.",
+    "keyword_research": "Data tables should be airy. Highlight 'low hanging fruit' keywords with the Sage Green color.",
+    "project_detail": "Show a history timeline. Use Recharts for trend lines (colored in Forest Green with soft sage gradients below the line)."
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure Forest Green text on Alabaster meets APCA guidelines. Use Text Shadow on images if text is overlaid.",
+    "testing_attributes": "All interactive elements (buttons, links, form inputs, scorecards) MUST include a 'data-testid' attribute (e.g., data-testid='audit-submit-btn')."
+  }
+}

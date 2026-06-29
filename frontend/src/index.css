@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Earthy & Organic palette */
+  --bg-primary: #FDFBF7;
+  --bg-secondary: #F3F0E9;
+  --surface: #FFFFFF;
+  --border-soft: #E5E0D8;
+  --brand: #2D3E32;
+  --brand-hover: #4A5F4F;
+  --terracotta: #E07A5F;
+  --terracotta-hover: #C86A51;
+  --sage: #81B29A;
+  --warning: #E6A57E;
+  --text-primary: #1A201A;
+  --text-secondary: #5C685C;
+}
+
+@layer base {
+  :root {
+    --background: 39 41% 98%;
+    --foreground: 110 14% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 110 14% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 110 14% 11%;
+    --primary: 134 16% 21%;
+    --primary-foreground: 39 41% 98%;
+    --secondary: 38 23% 93%;
+    --secondary-foreground: 134 16% 21%;
+    --muted: 38 23% 93%;
+    --muted-foreground: 120 6% 39%;
+    --accent: 38 23% 93%;
+    --accent-foreground: 134 16% 21%;
+    --destructive: 12 67% 63%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 39 21% 87%;
+    --input: 39 21% 87%;
+    --ring: 144 22% 60%;
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html, body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Cabinet Grotesk', 'Outfit', sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  .font-display { font-family: 'Cabinet Grotesk', 'Outfit', sans-serif; }
+  .label-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .grain-overlay {
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(129, 178, 154, 0.06), transparent 40%),
+      radial-gradient(circle at 80% 60%, rgba(224, 122, 95, 0.05), transparent 45%);
+  }
+  .organic-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+}
+
+@keyframes leafSpin {
+  from { transform: rotate(0); }
+  to { transform: rotate(360deg); }
+}
+
+.loader-leaf {
+  animation: leafSpin 2.4s ease-in-out infinite;
+}
+
+@layer base {
+  [data-debug-wrapper="true"] { display: contents !important; }
+}
+
+::selection {
+  background-color: rgba(129, 178, 154, 0.35);
+  color: var(--text-primary);
+}

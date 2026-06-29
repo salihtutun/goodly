@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 3 (RootedSEO) end-to-end testing complete. NEW: APScheduler hourly worker, Resend mocked digest, SerpAPI/DDG fallback, Stripe Customer Portal, admin /scheduler/run-now, /scheduler/runs history, frontend Manage subscription + Recent automated runs. Backend: 17/17 new pytest tests pass + 41/41 regression tests pass = 58/58 backend tests green. Frontend: Pro user on /app/billing correctly shows Manage subscription button (data-testid=manage-subscription-btn), clicking it triggers POST /billing/portal → 400 → friendly toast 'No active Stripe customer found. Upgrade once to enable the billing portal.'. Recent automated runs section (data-testid=scheduled-runs-section) shows seeded run with score 68, formatted timestamp, and 'Email mocked (RESEND_API_KEY not set)' text — exactly as spec. Landing pricing section (iter2 carryover bug) is now fixed: testids pricing-free/pricing-pro/pricing-agency all present. Backend logs confirm 'Scheduler started — runs every hour'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration3.py",
+    "/app/backend/tests/test_iteration2.py",
+    "/app/backend/tests/test_seo_api.py",
+    "/app/test_reports/pytest/iteration3_results.xml",
+    "/app/test_reports/pytest/iteration2_results.xml",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "scheduler.py: AsyncIOScheduler started in @app.on_event('startup'); good — single instance per backend worker. Hourly tick with next_run_time = now+2min ensures startup doesn't trigger immediate cold runs.",
+    "scheduler.py: _run_one_scheduled_audit advances next_audit_at by 30 days unconditionally — good drift behavior. Inserts {audit, project update, scheduled_run} sequentially; if any insert mid-flow fails the audit will exist without a scheduled_runs row. Not critical for MVP.",
+    "email_service.py: send_html_email() correctly returns {mocked: true} when key empty and uses asyncio.to_thread for the blocking Resend SDK call when configured. Sender default is onboarding@resend.dev which only works with verified Resend accounts in test mode.",
+    "serp.py: SerpAPI → DDG fallback is robust (catches all exceptions). DuckDuckGo HTML scrape uses `lxml` parser; ensure lxml stays in requirements.txt.",
+    "server.py /api/billing/portal: gracefully recovers stripe_customer_id from latest paid transaction if missing on user doc — nice resilience. Stores it back on user.",
+    "server.py /api/billing/status: now uses raw stripe SDK (stripe_sdk.checkout.Session.retrieve) inside asyncio.to_thread to capture customer_id. Good.",
+    "server.py /api/scheduler/run-now: admin-only correctly enforced (403 for demo). Uses _store_base_url(request) so the emailed link points to the public ingress URL.",
+    "Middleware `_capture_base_url` runs on every request — minor overhead but harmless; ensures scheduler always has a fresh public base_url.",
+    "scheduler indexes (scheduled_runs user_id+run_at, projects schedule+next_audit_at) are created on startup — efficient queries.",
+    "CORS still allow_origins='*' with allow_credentials=True (carried over from iter1/iter2). Browser-side credentialed CORS would fail in strict mode; Bearer-token fallback in axios handles this."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration3.py (new — 17 pytest tests covering /billing/portal (3), /scheduler/run-now (4 incl. backdated project end-to-end with mocked-email assertion), /scheduler/runs (3), SerpAPI/DDG fallback (2), email_service mocked behavior (1), regression smoke (4))"
+  ],
+  "success_rate": {"backend": "100% (58/58 — 17 new + 41 regression)", "frontend": "100% — all iter3 testids present, Manage subscription error path verified, scheduled-runs row visible with mocked email message"},
+  "test_credentials": "demo@smallbiz.com/demo1234 (Pro), admin@seoframework.com/admin123 (Agency, admin role). Both worked. Fresh TEST_iter3_* registered users used for empty-history test.",
+  "seed_data_creation": "test_run_now_processes_backdated_project creates a TEST_iter3_sched project, backdates its next_audit_at, then runs and self-cleans (deletes project + scheduled_runs + audits). All others temporarily mutate then restore next_audit_at on existing monthly projects. Demo user retains 1 prior scheduled_run (score 68, email.mocked=true) from main-agent smoke test — used to verify the frontend section renders.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 58 backend tests pass; pytest /app/backend/tests/ -v takes ~3.5 min (AI + scheduler audit calls dominate). Frontend Billing page verified end-to-end with Pro user — Manage subscription button, scheduler-runs section, and pricing grid all present. For full Stripe Portal happy-path you would need to (1) complete a real checkout, (2) wait for /billing/status to capture cus_*, (3) re-click Manage subscription — was not exercised here (requires live card).",
+  "rca of the issue": "N/A — no defects found."
+}
