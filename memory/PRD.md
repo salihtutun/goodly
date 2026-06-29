@@ -1,63 +1,51 @@
 # RootedSEO — Product Requirements Document
 
-> **Last updated:** 2026-06-28
-> **Status:** v1.1 — Stripe billing, PDF export, SERP tracking, onboarding tour all live and verified.
+> **Last updated:** 2026-06-29
+> **Status:** v1.2 — Scheduler + Resend digest + SerpAPI fallback + Stripe Customer Portal shipped.
 
 ## 1. Original Problem Statement
 > "In these days, I want to develop the framework to optimize of SEO for small companies. Can you help me to do it"
 
-## 2. User Choices (gathered across iterations)
-- **Core features (v1.0)**: SEO audit + keyword research + AI content/meta + competitor analysis
-- **AI**: Claude Sonnet 4.6 via Emergent Universal LLM key
-- **Auth**: Email + password (JWT)
-- **Monetization (v1.1)**: Free tier with limits + Pro $19/mo + Agency $49/mo via Emergent Stripe test key
-- **Scheduled audits**: Queue in-app (no email yet)
-- **Optional features (v1.1)**: PDF export, SERP rank tracking, onboarding tour — all built
+## 2. User Choices (across all iterations)
+- v1.0: All core features (audit + keywords + AI content + competitor analysis), Claude Sonnet 4.6, JWT email/password auth, saved projects, default visual design.
+- v1.1: Free tier + Pro $19/mo + Agency $49/mo via Emergent Stripe test key. Optional features: PDF export, SERP tracking, onboarding tour.
+- v1.2: Resend for scheduled audit email digest (mock until key provided), SerpAPI with DDG fallback, Stripe Customer Portal, hourly scheduler.
 
-## 3. Target User Personas
-- **Small shop owner**: non-technical, wants plain-English advice + monthly check-ups
-- **Side-hustle founder**: ranks locally without an agency
-- **Tiny in-house marketer / freelancer**: tracks multiple client sites (Agency plan)
-
-## 4. Architecture
-- **Backend**: FastAPI + Motor + bcrypt + PyJWT + httpx + BeautifulSoup + emergentintegrations (Claude Sonnet 4.6 + Stripe) + ReportLab.
+## 3. Architecture
+- **Backend**: FastAPI + Motor + bcrypt + PyJWT + httpx + BeautifulSoup + emergentintegrations + ReportLab + APScheduler + Resend SDK + Stripe SDK (raw, for Portal).
 - **Frontend**: React 19 + react-router 7 + Tailwind + shadcn/ui + Recharts + Sonner + axios.
-- **Plans**: server-authoritative `PLANS` dict in `/app/backend/billing.py` (audit_limit, project_limit, perks).
-- **DB collections**: `users`, `projects`, `audits`, `ai_history`, `payment_transactions`, `serp_checks`.
+- **Background worker**: APScheduler hourly, finds `projects.schedule='monthly'` with `next_audit_at <= now`, runs audit, emails digest, advances next_audit_at +30d.
+- **DB collections**: `users`, `projects`, `audits`, `ai_history`, `payment_transactions`, `serp_checks`, `scheduled_runs`.
 
-## 5. Implemented
+## 4. Implemented
 ### v1.0 (2026-06-28)
-- Landing page, JWT auth (register/login/logout/me, seeded demo + admin)
-- Dashboard with stats + recent audits + projects preview
-- Projects CRUD with score-history line chart
-- Full on-page SEO audit (8 weighted categories: meta_tags, headings, performance, mobile, accessibility, content, social, security) + plain-English issues list
-- AI Studio (meta tag writer, keyword research, competitor analysis) via Claude Sonnet 4.6
-- Audit detail with AI action plan, issues by severity, raw details tabs
+- Landing + JWT auth + Dashboard + Projects + Audit (8 cat scores + issues) + AI Studio + Audit Detail (action plan / issues / details tabs).
 
 ### v1.1 (2026-06-28)
-- **Pricing section on landing** (Free / Pro highlighted / Agency)
-- **Stripe checkout** via Emergent test key: `/api/billing/checkout` → Stripe redirect → `/api/billing/status/{id}` polling → idempotent plan upgrade. Webhook at `/api/webhook/stripe`.
-- **Billing page** at `/app/billing` with current plan, usage tiles, upgrade buttons, transaction history table.
-- **Free-tier enforcement**: 3 audits/month + 1 project. 402 with upgrade message on limit hit.
-- **PDF export** of audit reports (`GET /api/audits/{id}/pdf`) — Pro+ only, ReportLab with brand colors and HTML-escaped content.
-- **SERP rank tracking** (`POST /api/serp/check`) using DuckDuckGo HTML — Pro+ only.
-- **Scheduled monthly audits** (`POST /api/projects/{id}/schedule`) — Pro+ only, sets `next_audit_at` 30 days out.
-- **Onboarding tour** — 4-step modal on first login; persisted via `POST /api/auth/onboarded`.
+- Pricing section, Stripe Checkout, Billing page, free-tier limits, PDF export (Pro+), SERP tracking via DDG (Pro+), Schedule toggle (Pro+), Onboarding tour.
+
+### v1.2 (2026-06-29)
+- **APScheduler** runs hourly inside FastAPI, checks for due monthly audits, fires `analyze_url` + Claude AI recs + advances `next_audit_at`.
+- **Resend digest email** with brand-styled HTML (score, delta vs last month, top 5 issues, link to full report). Gracefully MOCKS sends when `RESEND_API_KEY` is empty — fully end-to-end testable now.
+- **SerpAPI integration** with **DuckDuckGo fallback**: uses SerpAPI when `SERPAPI_KEY` is set, falls back to DDG on missing key or SerpAPI error.
+- **Stripe Customer Portal**: `POST /api/billing/portal` returns a hosted-portal URL using raw `stripe.billing_portal.Session.create`. Automatically captures `stripe_customer_id` from the latest paid Checkout Session.
+- **Admin tools**: `POST /api/scheduler/run-now` (admin-only) lets you manually fire all due audits. `GET /api/scheduler/runs` returns the user's recent automated-run history with per-run email status.
+- **Billing page additions**: "Manage subscription" button (visible to non-free users) + "Recent automated runs" history section.
 
 ### Verified
-- Iteration 2 testing: backend 41/41 pytest pass, frontend critical flows green. Smoke-tested PDF (10KB valid `%PDF-1.4`), SERP (rank #1 for example.com on test query), Stripe session creation (valid checkout URL), billing polling, schedule toggle.
+- Iteration 3 testing: **58/58 backend tests pass** (17 new + 41 regression); frontend critical flows green. Smoke-tested end-to-end: backdated project → admin trigger → 1 due → 1 ran → audit created (score 68) → digest email mocked → scheduled_runs history visible in UI.
 
-## 6. Backlog (P1 / P2)
-- **P1**: Scheduled-audit cron worker that actually runs the queued audits + email digest (Resend/SendGrid integration).
-- **P1**: Stripe Customer Portal for self-service cancel/upgrade.
-- **P2**: Whitelabel agency reports (custom logo on PDF).
-- **P2**: Multi-page audits (crawl whole site, not just one URL).
-- **P2**: Real SERP via SerpAPI / DataForSEO for production-grade accuracy.
+## 5. Backlog
+- **P1**: User-provided Resend API key (currently mocked). Add a UI for users to BYO their own Resend key + sender email + verified-domain check.
+- **P1**: Stripe Customer Portal happy-path live verification (requires a real test-card checkout in browser).
+- **P2**: Whitelabel agency PDF (custom logo + brand color).
+- **P2**: Multi-page crawl (audit a whole site, not just one URL).
+- **P2**: Production SERP via SerpAPI / DataForSEO with paid key.
 - **P2**: Team accounts (multiple users per Agency).
 - **P2**: Slack / email alerts when audit score drops.
 - **P3**: AI page-rewrite tool (paste URL → get full optimized HTML).
 
-## 7. Next Action Items
-- Decide on email provider (Resend recommended) to ship scheduled-audit notifications.
-- Decide whether to keep DuckDuckGo SERP free or upgrade to SerpAPI (paid, more accurate).
-- Set up Stripe Customer Portal for production billing self-service.
+## 6. Next Action Items
+- Decide on production Resend / SerpAPI API keys (both currently optional — system runs without them).
+- Drive at least one live Stripe test checkout to verify the Customer Portal flow end-to-end.
+- Decide on a domain to verify in Resend so sender doesn't have to be `onboarding@resend.dev`.
