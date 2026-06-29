@@ -1,13 +1,14 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/app/Common";
-import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard, ClipboardList } from "lucide-react";
 
 const navItems = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard", end: true },
   { to: "/app/projects", label: "Projects", icon: FolderKanban, testId: "nav-projects" },
   { to: "/app/audit", label: "SEO Audit", icon: Gauge, testId: "nav-audit" },
   { to: "/app/ai-tools", label: "AI Studio", icon: Sparkles, testId: "nav-ai" },
+  { to: "/app/concierge/onboarding", label: "Concierge brief", icon: ClipboardList, testId: "nav-concierge" },
   { to: "/app/billing", label: "Billing", icon: CreditCard, testId: "nav-billing" },
 ];
 

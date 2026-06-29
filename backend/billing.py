@@ -1,12 +1,15 @@
 """Plans, limits, and Stripe checkout helpers."""
 import os
+import asyncio
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
+import stripe as stripe_sdk
 from emergentintegrations.payments.stripe.checkout import (
     StripeCheckout,
     CheckoutSessionRequest,
 )
+
 
 # Plan definitions (server-authoritative — never trust frontend prices)
 PLANS: Dict[str, dict] = {
@@ -14,7 +17,7 @@ PLANS: Dict[str, dict] = {
         "id": "free",
         "name": "Self-serve",
         "price_usd": 0.0,
-        "audit_limit": 3,         # per month
+        "audit_limit": 3,
         "project_limit": 1,
         "features": [
             "3 audits per month",
@@ -34,7 +37,7 @@ PLANS: Dict[str, dict] = {
         "id": "concierge",
         "name": "Concierge",
         "price_usd": 1000.0,
-        "audit_limit": None,      # unlimited
+        "audit_limit": None,
         "project_limit": 25,
         "features": [
             "Done-for-you SEO — we do the work, you take the calls",
@@ -54,6 +57,10 @@ PLANS: Dict[str, dict] = {
             "competitor_analysis": True,
             "done_for_you": True,
         },
+        # When STRIPE_PRICE_ID_CONCIERGE is set, checkout switches to real
+        # recurring subscription mode. Otherwise it falls back to Emergent
+        # dynamic-amount one-time checkout (dev/test only).
+        "stripe_price_env": "STRIPE_PRICE_ID_CONCIERGE",
     },
 }
 
@@ -75,6 +82,20 @@ def make_stripe(host_url: str) -> StripeCheckout:
     return StripeCheckout(api_key=api_key, webhook_url=webhook_url)
 
 
+def _price_id_for(plan: dict) -> Optional[str]:
+    env_name = plan.get("stripe_price_env")
+    if not env_name:
+        return None
+    pid = os.environ.get(env_name)
+    return pid.strip() if pid else None
+
+
+class _NormalizedSession:
+    def __init__(self, session_id: str, url: str):
+        self.session_id = session_id
+        self.url = url
+
+
 async def create_subscription_checkout(
     *,
     host_url: str,
@@ -83,25 +104,49 @@ async def create_subscription_checkout(
     user_email: str,
     origin_url: str,
 ):
+    """Returns (session, plan). Uses real subscription mode when a Stripe Price ID
+    is configured (env var named in plan.stripe_price_env), otherwise falls back
+    to Emergent's dynamic-amount one-time checkout for dev/test."""
     plan = PLANS.get(plan_id)
     if not plan or plan_id == "free":
         raise ValueError("Invalid plan for checkout")
 
-    stripe = make_stripe(host_url)
     success_url = f"{origin_url.rstrip('/')}/app/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin_url.rstrip('/')}/app/billing?cancelled=1"
+    metadata = {
+        "user_id": user_id,
+        "user_email": user_email,
+        "plan_id": plan_id,
+        "kind": "subscription_upgrade",
+    }
 
+    price_id = _price_id_for(plan)
+    if price_id:
+        stripe_sdk.api_key = os.environ.get("STRIPE_API_KEY")
+        raw = await asyncio.to_thread(
+            stripe_sdk.checkout.Session.create,
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            customer_email=user_email,
+            client_reference_id=user_id,
+            metadata=metadata,
+            subscription_data={"metadata": metadata},
+            allow_promotion_codes=True,
+        )
+        sid = raw["id"] if isinstance(raw, dict) else raw.id
+        url = raw["url"] if isinstance(raw, dict) else raw.url
+        return _NormalizedSession(sid, url), plan
+
+    # Fallback: Emergent dynamic-amount one-time checkout
+    stripe = make_stripe(host_url)
     req = CheckoutSessionRequest(
         amount=float(plan["price_usd"]),
         currency="usd",
         success_url=success_url,
         cancel_url=cancel_url,
-        metadata={
-            "user_id": user_id,
-            "user_email": user_email,
-            "plan_id": plan_id,
-            "kind": "subscription_upgrade",
-        },
+        metadata=metadata,
     )
     session = await stripe.create_checkout_session(req)
     return session, plan

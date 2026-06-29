@@ -9,7 +9,6 @@ import uuid
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional
-
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, Request
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -701,6 +700,67 @@ async def mark_onboarded(user_id: str = Depends(get_current_user_id)):
 
 
 # ---------------------------------------------------------------
+# Concierge brief (onboarding form for $1k/mo customers)
+# ---------------------------------------------------------------
+class ConciergeBriefIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    website: str
+    industry: Optional[str] = ""
+    location: Optional[str] = ""
+    target_keywords: List[str] = Field(default_factory=list)
+    competitors: List[str] = Field(default_factory=list)
+    primary_goal: str = Field(min_length=1)
+    target_customer: Optional[str] = ""
+    brand_voice: Optional[str] = ""
+    monthly_traffic_goal: Optional[str] = ""
+    blockers: Optional[str] = ""
+    contact_phone: Optional[str] = ""
+    preferred_meeting_time: Optional[str] = ""
+
+
+@api.post("/concierge/brief")
+async def upsert_concierge_brief(body: ConciergeBriefIn, user: dict = Depends(get_current_user_doc)):
+    plan = get_plan(user.get("plan"))
+    if not plan["perks"].get("done_for_you"):
+        raise HTTPException(
+            status_code=402,
+            detail="Concierge brief is for done-for-you customers. Upgrade to Concierge.",
+        )
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_email": user["email"],
+        "user_name": user.get("name"),
+        **body.model_dump(),
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    existing = await db.concierge_briefs.find_one({"user_id": user["id"]})
+    if existing:
+        update = {**body.model_dump(), "updated_at": now_iso()}
+        await db.concierge_briefs.update_one({"user_id": user["id"]}, {"$set": update})
+        out = await db.concierge_briefs.find_one({"user_id": user["id"]}, {"_id": 0})
+        return out
+    await db.concierge_briefs.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.get("/concierge/brief")
+async def get_concierge_brief(user: dict = Depends(get_current_user_doc)):
+    doc = await db.concierge_briefs.find_one({"user_id": user["id"]}, {"_id": 0})
+    return doc  # may be null — frontend handles that
+
+
+@api.get("/admin/concierge/briefs")
+async def admin_list_briefs(user: dict = Depends(get_current_user_doc)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    docs = await db.concierge_briefs.find({}, {"_id": 0}).sort("updated_at", -1).to_list(500)
+    return docs
+
+
+# ---------------------------------------------------------------
 # Scheduled audits — manual trigger + history
 # ---------------------------------------------------------------
 @api.post("/scheduler/run-now")
@@ -747,6 +807,7 @@ async def on_startup():
     await db.payment_transactions.create_index("session_id", unique=True)
     await db.serp_checks.create_index([("user_id", 1), ("created_at", -1)])
     await db.scheduled_runs.create_index([("user_id", 1), ("run_at", -1)])
+    await db.concierge_briefs.create_index("user_id", unique=True)
 
     # Backfill plan/onboarded on legacy users
     await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})

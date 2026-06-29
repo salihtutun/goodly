@@ -72,14 +72,15 @@ export default function BillingSuccess() {
             </div>
             <h1 className="mt-6 font-display font-bold text-3xl text-[#1A201A]">All set!</h1>
             <p className="mt-2 text-[#5C685C]">{state.message}</p>
-            <div className="mt-8 flex justify-center gap-3">
-              <Button onClick={() => navigate("/app")} data-testid="go-dashboard-btn"
-                className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6">
-                Go to dashboard
+            <div className="mt-8 flex justify-center gap-3 flex-wrap">
+              <Button onClick={() => navigate("/app/concierge/onboarding")} data-testid="go-brief-btn"
+                className="bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7] rounded-full px-6">
+                Start your brief
               </Button>
-              <Button variant="outline" onClick={() => navigate("/app/billing")}
+              <Button onClick={() => navigate("/app")} data-testid="go-dashboard-btn"
+                variant="outline"
                 className="bg-transparent border-[#2D3E32] text-[#2D3E32] hover:bg-[#F3F0E9] rounded-full px-6">
-                Billing
+                Go to dashboard
               </Button>
             </div>
           </>

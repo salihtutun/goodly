@@ -6,11 +6,12 @@ import AppLayout from "@/components/app/AppLayout";
 import { Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, FolderKanban, Gauge, Sparkles, TrendingUp } from "lucide-react";
-
 export default function Dashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [brief, setBrief] = useState(null);
+  const [briefLoaded, setBriefLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -28,6 +29,17 @@ export default function Dashboard() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (user?.plan !== "concierge") return;
+    (async () => {
+      try {
+        const { data } = await api.get("/concierge/brief");
+        setBrief(data);
+      } catch { /* ignore */ }
+      finally { setBriefLoaded(true); }
+    })();
+  }, [user?.plan]);
+
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto" data-testid="dashboard-root">
@@ -36,6 +48,25 @@ export default function Dashboard() {
           Hello, {user?.name?.split(" ")[0] || "friend"}.
         </h1>
         <p className="mt-3 text-[#5C685C] text-lg">Here&apos;s how your projects are growing.</p>
+
+        {user?.plan === "concierge" && briefLoaded && !brief && (
+          <div className="mt-8 bg-[#E07A5F]/10 border border-[#E07A5F]/40 rounded-2xl p-5 flex items-start gap-4" data-testid="concierge-brief-banner">
+            <div className="h-10 w-10 rounded-xl bg-[#E07A5F]/20 text-[#E07A5F] flex items-center justify-center shrink-0">
+              <Sparkles size={20} strokeWidth={1.75}/>
+            </div>
+            <div className="flex-1">
+              <div className="font-display font-bold text-[#1A201A]">Tell us about your business</div>
+              <div className="text-sm text-[#5C685C] mt-1">
+                Your specialist needs your target keywords, competitors and goals to start work. Takes 5 minutes.
+              </div>
+            </div>
+            <Button onClick={() => navigate("/app/concierge/onboarding")}
+              data-testid="open-concierge-brief-btn"
+              className="bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7] rounded-full px-5 shrink-0">
+              Start brief
+            </Button>
+          </div>
+        )}
 
         {/* Stat tiles */}
         <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-5">

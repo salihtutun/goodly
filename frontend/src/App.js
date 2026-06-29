@@ -16,6 +16,7 @@ import AuditDetail from "@/pages/AuditDetail";
 import AiTools from "@/pages/AiTools";
 import Billing from "@/pages/Billing";
 import BillingSuccess from "@/pages/BillingSuccess";
+import ConciergeOnboarding from "@/pages/ConciergeOnboarding";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/app/ai-tools" element={<Protected><AiTools /></Protected>} />
             <Route path="/app/billing" element={<Protected><Billing /></Protected>} />
             <Route path="/app/billing/success" element={<Protected><BillingSuccess /></Protected>} />
+            <Route path="/app/concierge/onboarding" element={<Protected><ConciergeOnboarding /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
