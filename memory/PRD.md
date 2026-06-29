@@ -1,49 +1,55 @@
 # Goodly — Product Requirements Document
 
 > **Last updated:** 2026-06-29
-> **Status:** v1.4 — Real Stripe subscription mode + Concierge onboarding brief shipped.
+> **Status:** v1.5 — Multi-channel visibility live. Social Reach (Instagram + TikTok + YouTube) shipped.
 
-## 1. Original Problem Statement
-> "In these days, I want to develop the framework to optimize of SEO for small companies."
-> Updated to: $1,000/mo concierge service for startups + done-for-you SEO + page-one promise. Brand: Goodly.
+## 1. Vision
+Help startups get more customers from every channel they use — Google search, Google Maps, Instagram, TikTok, YouTube, AI assistants. One platform. One workflow: **Audit & score → AI improvements → Competitor analysis** repeated across each channel.
 
-## 2. Brand & Pricing
-- **Goodly** — done-for-you SEO for startups
-- **Self-serve** $0 (3 audits/mo, 1 project — tool-only trial)
-- **Concierge** $1,000/mo (done-for-you, 25 properties, unlimited audits, weekly SERP tracking, monthly PDF reports, page-one in 90 days or month 4 free)
+## 2. Pricing (unchanged)
+- **Self-serve** $0 (3 audits/mo, 1 project)
+- **Concierge** $1,000/mo (done-for-you across every channel)
 
-## 3. Architecture (current)
-- Backend: FastAPI + Motor + JWT + Claude Sonnet 4.6 + Stripe (Emergent + raw SDK) + ReportLab + APScheduler + Resend (mocked until key) + SerpAPI/DDG fallback.
-- Frontend: React 19 + Tailwind + shadcn/ui + Recharts.
-- Background: APScheduler hourly for due monthly audits → digest email.
+## 3. Channels covered
+- ✅ **Google Search / on-page SEO** (v1.0)
+- ✅ **Google SERP rank tracking** (v1.1, DuckDuckGo + SerpAPI optional)
+- ✅ **Instagram** audit + AI suggestions + competitor analysis (v1.5)
+- ✅ **TikTok** same triple (v1.5)
+- ✅ **YouTube** same triple (v1.5)
+- 🟡 Backlog: Google Business Profile / Maps, Yelp + directories, AI-assistant visibility, LinkedIn
 
-## 4. v1.4 Changes
-- **Real Stripe subscription mode**: `billing.py:create_subscription_checkout` branches on `STRIPE_PRICE_ID_CONCIERGE` env var. When set, uses raw `stripe.checkout.Session.create(mode='subscription', line_items=[{price: price_id, quantity: 1}])` with metadata pass-through to subscription. When unset, falls back to Emergent dynamic-amount one-time checkout (dev/test). `_NormalizedSession` wrapper makes both paths return identical shape.
-- **Concierge onboarding brief**: `/app/concierge/onboarding` page — full form with chip-input target keywords + competitors + primary goal + brand voice + contact details. Persists via `POST /api/concierge/brief` (upsert, unique-indexed on user_id).
-- **Dashboard prompt banner** for concierge users without a brief.
-- **Sidebar nav link** to the brief page.
-- **BillingSuccess** has "Start your brief" CTA after successful payment.
-- **Admin view** at `GET /api/admin/concierge/briefs` — admin sees all briefs sorted by updated_at desc.
-- **Free-user lock**: visiting `/app/concierge/onboarding` as a free user shows an upgrade card.
+## 4. v1.5 Changes
+- **3 new endpoints**: `POST /api/social/audit`, `POST /api/social/suggestions`, `POST /api/social/competitors`, plus `GET /api/social/audits?platform=`.
+- **Server-authoritative platform allow-list**: `{instagram, tiktok, youtube}` (400 on anything else).
+- **Best-effort public profile signals**: `social_fetcher.fetch_profile_signals(platform, handle)` tries to grab og:title/og:description/follower estimate from the public HTML. Never raises; UI doesn't depend on it but Claude gets the extra context when available.
+- **Platform-aware Claude prompts**: `PLATFORM_HINTS` injects platform-specific best-practice knobs (bio character limits, hashtag norms, hook formulas, posting cadence) into every prompt — no generic "social tips".
+- **Frontend `/app/social`** with tabbed UI (3 platforms × 3 modes = 9 combinations). Click-to-copy hashtag chips and bio rewrites. Inline error tile when AI service fails (not just toast).
+- **Landing rewritten**: hero now reads "We get your startup found. On Google, on Instagram, on TikTok, on YouTube. Your phone starts ringing." Eyebrow widened to "Done-for-you visibility for startups".
+- **Dashboard quick-action** added for `Social Reach`. Sidebar nav gets `Social Reach` between SEO Audit and AI Studio.
 
-## 5. Verified (v1.4)
-- Backend: 19/19 new pytest tests pass (concierge brief CRUD, upsert idempotency, free-user 402, admin-only listing, Stripe fallback returns valid `cs_test_*` session). Code review confirms both subscription-mode and fallback branches in `create_subscription_checkout`.
-- Frontend: All new testids render. Concierge brief form has chip-input pattern (button + Enter key both add chips; X removes). Dashboard banner appears for concierge users without a brief and disappears after submission. Free users see the locked card. **Submit button now disabled until required fields (business_name, website, primary_goal) are filled** (fixed after first testing pass).
-- Visual: brand reads "goodly", sidebar shows "Concierge brief" nav, form sections use proper Cabinet Grotesk + Outfit typography on the earthy palette.
+## 5. Verified (v1.5)
+- **20/20 backend pytest pass** — auth gating, platform validation, response shape, persistence, history filter, `_id` exclusion.
+- Frontend lint clean, all data-testids in place, page renders correctly with all 3 platform tabs and 3 mode buttons.
+- Live Claude smoke test: instagram audit for `@acmepottery` returned score=38 with 7 issues + 4 quick wins, all 6 categories populated.
+- ⚠️ **EMERGENT_LLM_KEY budget exhausted during testing** — backend correctly returns 502, frontend now shows both a toast AND an inline ErrorTile when this happens (UX polish applied post-test).
 
-## 6. Backlog
-- **P1**: Update legacy `test_iteration3.py` to assert 'concierge' instead of pro/agency (cosmetic — covered by iter4 tests).
-- **P1**: Live Stripe Price ID — user provides `STRIPE_PRICE_ID_CONCIERGE` from their Stripe Dashboard; no code change needed.
-- **P1**: Resend API key for real email sends.
-- **P2**: Whitelabel PDF (custom logo for concierge clients).
-- **P2**: Specialist dashboard (CRM-style view of all briefs + per-client audit history).
-- **P2**: Multi-page audit / full-site crawl.
-- **P2**: Production SERP via SerpAPI / DataForSEO (auto-uses when `SERPAPI_KEY` set).
-- **P2**: "Book a strategy call" CTA via Cal.com/Calendly above Concierge upgrade button.
-- **P3**: Automated month-4-free credit when 90-day page-one goal not met.
+## 6. Architecture summary
+- FastAPI + Motor + emergentintegrations (Claude 4.6 + Stripe checkout) + raw Stripe SDK (subscription + portal) + ReportLab + APScheduler + Resend + httpx + BeautifulSoup.
+- React 19 + react-router 7 + Tailwind + shadcn/ui + Recharts + Sonner.
+- DB collections: users, projects, audits, payment_transactions, serp_checks, scheduled_runs, concierge_briefs, **social_audits**, ai_history.
 
 ## 7. Next Action Items
-- Push to GitHub via Emergent UI's "Save to GitHub" button (main agent cannot push directly).
-- Create the Concierge product + monthly Price in Stripe Dashboard, copy the `price_xxx` ID into `STRIPE_PRICE_ID_CONCIERGE` env var, restart backend — done.
-- Provide a Resend API key + verified sender domain.
-- Build the specialist's CRM view: a single `/app/admin/clients` page showing all concierge briefs + last-audit-scores side-by-side, so your team can manage clients in-app.
+- **Top up `EMERGENT_LLM_KEY` budget** in Profile → Universal Key. Current cost exceeded the 3.20 cap during the 20 pytest suite + UI testing.
+- Decide next channel(s) to add: Google Business Profile (huge for local startups) OR AI-assistant visibility ("does ChatGPT recommend you when asked about your category?") — both are wide-open in 2026.
+- Optional: surface social audit history on the project detail page so each saved website has a unified visibility report across Google + social.
+
+## 8. Backlog
+- P1 Google Business Profile audit + AI suggestions (next channel)
+- P1 AI Assistant visibility ("ask ChatGPT about your category, see if your business is mentioned")
+- P1 Unified Visibility Score on Dashboard (single 0-100 blending Google + Instagram + TikTok + YouTube)
+- P1 Real Stripe Price ID for Concierge ($1,000/mo) + Resend API key for digest emails
+- P2 Whitelabel PDF (custom logo per concierge client)
+- P2 Specialist CRM view (`/app/admin/clients` page with all briefs + all audits)
+- P2 LinkedIn + Yelp + directory citations
+- P2 Multi-page site audit
+- P3 Auto-generated content calendar from suggestions

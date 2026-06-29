@@ -94,17 +94,22 @@ function AuditPanel({ platform, accent }) {
   });
   const [busy, setBusy] = useState(false);
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
   const submit = async (e) => {
     e.preventDefault();
     if (!form.handle.trim() || !form.niche.trim()) {
       toast.error("Handle and niche are required."); return;
     }
-    setBusy(true); setData(null);
+    setBusy(true); setData(null); setError(null);
     try {
       const { data: result } = await api.post("/social/audit", { platform, ...form });
       setData(result);
-    } catch (err) { toast.error(formatApiError(err)); }
+    } catch (err) {
+      const msg = formatApiError(err);
+      setError(msg);
+      toast.error(msg);
+    }
     finally { setBusy(false); }
   };
 
@@ -150,6 +155,7 @@ function AuditPanel({ platform, accent }) {
 
       <div>
         {busy && <Loader label="Claude is reviewing your presence…"/>}
+        {error && !busy && <ErrorTile message={error} testId={`audit-${platform}-error`}/>}
         {data && <AuditResult result={data.result} accent={accent} testIdPrefix={`audit-${platform}`}/>}
       </div>
     </div>
@@ -291,18 +297,23 @@ function CompetitorsPanel({ platform, accent }) {
   const [comps, setComps] = useState(["", "", ""]);
   const [busy, setBusy] = useState(false);
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
   const submit = async (e) => {
     e.preventDefault();
     const list = comps.map(c => c.trim()).filter(Boolean);
     if (!yourHandle.trim() || !list.length) { toast.error("Your handle + at least one competitor."); return; }
-    setBusy(true); setData(null);
+    setBusy(true); setData(null); setError(null);
     try {
       const { data: r } = await api.post("/social/competitors", {
         platform, your_handle: yourHandle, your_niche: yourNiche, competitors: list,
       });
       setData(r);
-    } catch (err) { toast.error(formatApiError(err)); }
+    } catch (err) {
+      const msg = formatApiError(err);
+      setError(msg);
+      toast.error(msg);
+    }
     finally { setBusy(false); }
   };
 
@@ -324,6 +335,7 @@ function CompetitorsPanel({ platform, accent }) {
       </form>
       <div>
         {busy && <Loader label="Reading the room…"/>}
+        {error && !busy && <ErrorTile message={error} testId={`comp-${platform}-error`}/>}
         {data && (
           <div className="space-y-4" data-testid={`comp-${platform}-result`}>
             {data.overview && (
@@ -349,6 +361,18 @@ function CompetitorsPanel({ platform, accent }) {
             </Block>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ErrorTile({ message, testId }) {
+  return (
+    <div className="bg-[#E07A5F]/10 border border-[#E07A5F]/40 rounded-2xl p-6 flex items-start gap-3" data-testid={testId}>
+      <AlertTriangle className="text-[#E07A5F] shrink-0 mt-0.5" size={20}/>
+      <div>
+        <div className="font-display font-bold text-[#1A201A]">Couldn&apos;t complete that request</div>
+        <div className="text-sm text-[#5C685C] mt-1">{message}</div>
       </div>
     </div>
   );
