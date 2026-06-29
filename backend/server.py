@@ -15,8 +15,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 import asyncio
 
-from slowapi import Limiter
+from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from auth import (
@@ -1266,6 +1267,9 @@ async def scheduler_runs(user: dict = Depends(get_current_user_doc)):
 # Mount + middleware
 # ---------------------------------------------------------------
 app.include_router(api)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 cors_origins_raw = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
 if cors_origins_raw == "*" and os.environ.get("ENVIRONMENT") == "production":
