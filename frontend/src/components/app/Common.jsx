@@ -9,7 +9,7 @@ export function Logo({ size = "md", showWord = true }) {
       </div>
       {showWord && (
         <span className="font-display font-bold text-[#1A201A] text-xl tracking-tight">
-          Rooted<span className="text-[#E07A5F]">SEO</span>
+          good<span className="text-[#E07A5F]">ly</span>
         </span>
       )}
     </div>

@@ -37,13 +37,14 @@ export default function Landing() {
         <div className="organic-blob bg-[#E07A5F]" style={{ width: 380, height: 380, bottom: -120, left: -100 }} />
         <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-20 lg:py-28 grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7">
-            <Eyebrow className="mb-6">SEO for small business owners</Eyebrow>
+            <Eyebrow className="mb-6">Done-for-you SEO for startups</Eyebrow>
             <h1 className="font-display font-bold text-[#1A201A] text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.05]">
-              Grow your shop the way <span className="text-[#E07A5F]">plants do.</span> Slowly, but unmistakably.
+              We get your startup to <span className="text-[#E07A5F]">#1 on Google.</span> Your phone starts ringing.
             </h1>
             <p className="mt-6 text-lg text-[#5C685C] max-w-xl leading-relaxed">
-              RootedSEO is the friendly framework that audits your website, finds the keywords your customers
-              actually type, and tells you — in plain English — exactly what to fix this week.
+              Goodly is the SEO partner small companies hire when they&apos;re tired of guessing.
+              One flat fee, a dedicated specialist, and a 90-day goal: page-one ranking for the keywords
+              that actually bring customers through your door.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <Button
@@ -51,7 +52,7 @@ export default function Landing() {
                 onClick={() => navigate("/register")}
                 className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-7 py-6 text-base"
               >
-                Audit my website free <ArrowRight className="ml-2" size={18} />
+                Get a free audit <ArrowRight className="ml-2" size={18} />
               </Button>
               <Button
                 data-testid="hero-cta-secondary"
@@ -63,8 +64,7 @@ export default function Landing() {
               </Button>
             </div>
             <div className="mt-10 flex items-center gap-6 text-sm text-[#5C685C]">
-              <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-[#81B29A]"/>No credit card</div>
-              <div className="flex items-center gap-2"><Leaf size={16} className="text-[#81B29A]"/>Built for small teams</div>
+              <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-[#81B29A]"/>Page-one in 90 days, or month 4 is free</div>
             </div>
           </div>
           <div className="lg:col-span-5 relative">
@@ -77,10 +77,10 @@ export default function Landing() {
               <div className="absolute inset-0 bg-gradient-to-t from-[#2D3E32]/40 to-transparent"/>
               <div className="absolute bottom-4 left-4 right-4 bg-[#FDFBF7]/95 backdrop-blur rounded-2xl p-4 border border-[#E5E0D8]">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-[#81B29A] flex items-center justify-center text-[#FDFBF7] font-bold">87</div>
+                  <div className="h-10 w-10 rounded-full bg-[#81B29A] flex items-center justify-center text-[#FDFBF7] font-bold">#1</div>
                   <div>
                     <div className="text-sm font-medium text-[#1A201A]">Greenhouse Lane Co.</div>
-                    <div className="text-xs text-[#5C685C]">SEO health, up 32 points this month</div>
+                    <div className="text-xs text-[#5C685C]">Ranked #1 for &ldquo;plant shop portland&rdquo; in 83 days</div>
                   </div>
                 </div>
               </div>
@@ -93,9 +93,9 @@ export default function Landing() {
       <section id="features" className="bg-[#F3F0E9] py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="max-w-2xl">
-            <Eyebrow className="mb-4">What you get</Eyebrow>
+            <Eyebrow className="mb-4">What&apos;s included</Eyebrow>
             <h2 className="font-display font-bold text-[#1A201A] text-3xl sm:text-4xl lg:text-5xl tracking-tight">
-              Everything a small business needs. None of the SEO jargon.
+              Everything you need to rank. Without becoming an SEO yourself.
             </h2>
           </div>
           <div className="mt-14 grid grid-cols-1 md:grid-cols-6 gap-5">
@@ -103,43 +103,43 @@ export default function Landing() {
               span="md:col-span-4"
               icon={Gauge}
               accent="#81B29A"
-              title="One-click website audit"
-              body="We crawl your site like Google does and score the things that matter — meta tags, headings, mobile, speed, links — into a single health number."
+              title="Full technical audit — every month"
+              body="We crawl your site like Google does, fix the broken bits ourselves, and send you a client-ready PDF so you always know what we've done."
             />
             <FeatureCard
               span="md:col-span-2"
               icon={KeySquare}
               accent="#E07A5F"
-              title="Keyword research"
-              body="AI surfaces the low-competition phrases your real customers search for."
+              title="Keyword research, done for you"
+              body="We pick the 5-10 phrases your real customers search and obsessively rank for them."
             />
             <FeatureCard
               span="md:col-span-2"
               icon={Sparkles}
               accent="#E07A5F"
-              title="AI meta tag writer"
-              body="Drop in your business, get title + description that fits Google's character limits."
+              title="We write your meta tags"
+              body="And your headings. And the on-page copy where it matters. You approve, we ship."
             />
             <FeatureCard
               span="md:col-span-4"
               icon={Users}
               accent="#81B29A"
-              title="Competitor analysis"
-              body="See what the shop down the street is doing well — and where you can quietly beat them in search."
+              title="Competitor takedown"
+              body="We watch the shops ranking above you, copy what's working, beat them on the rest. You get a weekly status note — no jargon."
             />
             <FeatureCard
               span="md:col-span-3"
               icon={LineChart}
               accent="#2D3E32"
-              title="Project history"
-              body="Save every website, every audit. Watch your scores climb over weeks and months."
+              title="Weekly SERP tracking"
+              body="See your rank climb every Monday. When you hit #1, your specialist calls to celebrate."
             />
             <FeatureCard
               span="md:col-span-3"
               icon={ShieldCheck}
               accent="#2D3E32"
-              title="Plain-English fixes"
-              body="No 'optimize your DOM' nonsense. Just clear next steps, ranked by impact."
+              title="One flat fee. No surprises."
+              body="$1,000/month. Cancel anytime. If you're not on page one in 90 days, month 4 is on us."
             />
           </div>
         </div>
@@ -173,48 +173,45 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <Eyebrow className="mb-4">Pricing</Eyebrow>
           <h2 className="font-display font-bold text-[#1A201A] text-3xl sm:text-4xl lg:text-5xl tracking-tight max-w-3xl">
-            Start free. Upgrade when your shop outgrows the soil.
+            One price. One specialist. One ringing phone.
           </h2>
-          <div className="mt-14 grid md:grid-cols-3 gap-6">
+          <p className="mt-5 text-[#5C685C] text-lg max-w-2xl">
+            Or try the self-serve tool free, if you&apos;d rather DIY first.
+          </p>
+          <div className="mt-14 grid md:grid-cols-2 gap-6 max-w-4xl">
             <PricingCard
               testId="pricing-free"
-              name="Free"
+              name="Self-serve"
               price={0}
-              tag="Get started"
-              features={["3 audits per month", "1 saved project", "Basic AI recommendations"]}
+              tag="Free trial"
+              features={[
+                "3 audits per month",
+                "1 saved project",
+                "AI-generated action plan",
+                "Try the tool — no card needed",
+              ]}
               onClick={() => navigate("/register")}
-              ctaLabel="Start free"
+              ctaLabel="Try the tool free"
             />
             <PricingCard
-              testId="pricing-pro"
-              name="Pro"
-              price={19}
-              tag="Most popular"
+              testId="pricing-concierge"
+              name="Concierge"
+              price={1000}
+              tag="Done for you"
               highlighted
               features={[
-                "Unlimited audits",
-                "5 saved projects",
-                "PDF export of audit reports",
-                "Scheduled monthly audits",
-                "SERP rank tracking",
-                "Competitor analysis",
+                "Done-for-you SEO — we do the work",
+                "Dedicated SEO specialist on Slack",
+                "Unlimited audits across 25 properties",
+                "Weekly SERP rank tracking",
+                "Monthly client-ready PDF report",
+                "We rewrite meta tags, headings & on-page copy",
+                "Google Business Profile + local citations",
+                "Backlink outreach to relevant sites",
+                "Page-one in 90 days, or month 4 free",
               ]}
               onClick={() => navigate("/register")}
-              ctaLabel="Start Pro trial"
-            />
-            <PricingCard
-              testId="pricing-agency"
-              name="Agency"
-              price={49}
-              tag="For multiple clients"
-              features={[
-                "Everything in Pro",
-                "10 saved projects",
-                "Priority support",
-                "Bulk audit running",
-              ]}
-              onClick={() => navigate("/register")}
-              ctaLabel="Start Agency"
+              ctaLabel="Start with Concierge"
             />
           </div>
         </div>
@@ -226,8 +223,9 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6 lg:px-10">
           <Quote className="text-[#E07A5F]" size={42} />
           <p className="mt-6 font-display text-2xl sm:text-3xl lg:text-4xl text-[#FDFBF7] leading-snug tracking-tight max-w-4xl">
-            &ldquo;I run a tiny pottery studio. I didn&apos;t know what a meta description was three months ago.
-            Now I rank #2 in my city and most of that came from following the audit list.&rdquo;
+            &ldquo;I run a tiny pottery studio. Goodly handled everything — meta tags, the Google Business listing,
+            the backlinks. Three months later I&apos;m #1 in my city and my phone won&apos;t stop ringing. Easiest $1k
+            I spend each month.&rdquo;
           </p>
           <div className="mt-8 flex items-center gap-3 text-[#FDFBF7]/80">
             <img
@@ -247,23 +245,23 @@ export default function Landing() {
       <section className="py-20 lg:py-28">
         <div className="max-w-4xl mx-auto px-6 lg:px-10 text-center">
           <h2 className="font-display font-bold text-[#1A201A] text-3xl sm:text-4xl lg:text-5xl tracking-tight">
-            Plant the seed today.
+            Stop guessing. Start ranking.
           </h2>
           <p className="mt-5 text-lg text-[#5C685C]">
-            Audit your first website in under 30 seconds.
+            Free audit in 30 seconds. Concierge spots are limited each month.
           </p>
           <Button
             data-testid="footer-cta"
             onClick={() => navigate("/register")}
             className="mt-10 bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7] rounded-full px-8 py-6 text-base"
           >
-            Start growing free <ArrowRight className="ml-2" size={18} />
+            Get my free audit <ArrowRight className="ml-2" size={18} />
           </Button>
         </div>
       </section>
 
       <footer className="border-t border-[#E5E0D8] py-8 text-center text-sm text-[#5C685C]">
-        © {new Date().getFullYear()} RootedSEO. Made for honest small businesses.
+        © {new Date().getFullYear()} Goodly. Real SEO for small companies that deserve to be found.
       </footer>
     </div>
   );

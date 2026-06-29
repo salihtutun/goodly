@@ -32,7 +32,7 @@ const STEPS = [
     icon: BarChart3,
     eyebrow: "Step 4 of 4",
     title: "Ready to grow",
-    body: "You're on the Free plan with 3 audits/month. Upgrade anytime for unlimited audits, PDF reports, and SERP tracking.",
+    body: "You're on the Self-serve plan with 3 audits/month. Want us to do this for you? Concierge is $1,000/month and we take it from here.",
     cta: "Take me to my audit",
   },
 ];

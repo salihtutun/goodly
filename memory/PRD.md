@@ -1,51 +1,53 @@
-# RootedSEO — Product Requirements Document
+# Goodly — Product Requirements Document
 
 > **Last updated:** 2026-06-29
-> **Status:** v1.2 — Scheduler + Resend digest + SerpAPI fallback + Stripe Customer Portal shipped.
+> **Status:** v1.3 — Rebranded to Goodly, restructured to a $1,000/mo Concierge SEO service.
 
 ## 1. Original Problem Statement
-> "In these days, I want to develop the framework to optimize of SEO for small companies. Can you help me to do it"
+> "In these days, I want to develop the framework to optimize of SEO for small companies."
+> v1.3 update: "I will be 1000 dollars (monthly) for each startup company. But, we will optimize their SEO and we will make sure they are at the first on google search and others and everyone start to call their business! Also, change the name as goodly."
 
-## 2. User Choices (across all iterations)
-- v1.0: All core features (audit + keywords + AI content + competitor analysis), Claude Sonnet 4.6, JWT email/password auth, saved projects, default visual design.
-- v1.1: Free tier + Pro $19/mo + Agency $49/mo via Emergent Stripe test key. Optional features: PDF export, SERP tracking, onboarding tour.
-- v1.2: Resend for scheduled audit email digest (mock until key provided), SerpAPI with DDG fallback, Stripe Customer Portal, hourly scheduler.
+## 2. Brand & Positioning (v1.3)
+- **Brand**: Goodly
+- **Positioning**: Done-for-you SEO service for startups & small companies
+- **Promise**: Page-one on Google in 90 days, or month 4 is free
+- **Pricing**:
+  - Self-serve: $0 (3 audits/mo, 1 project — tool-only trial)
+  - **Concierge: $1,000/mo** (done-for-you, 25 properties, unlimited audits, weekly SERP tracking, monthly PDF reports, dedicated specialist)
 
-## 3. Architecture
-- **Backend**: FastAPI + Motor + bcrypt + PyJWT + httpx + BeautifulSoup + emergentintegrations + ReportLab + APScheduler + Resend SDK + Stripe SDK (raw, for Portal).
-- **Frontend**: React 19 + react-router 7 + Tailwind + shadcn/ui + Recharts + Sonner + axios.
-- **Background worker**: APScheduler hourly, finds `projects.schedule='monthly'` with `next_audit_at <= now`, runs audit, emails digest, advances next_audit_at +30d.
-- **DB collections**: `users`, `projects`, `audits`, `ai_history`, `payment_transactions`, `serp_checks`, `scheduled_runs`.
+## 3. Architecture (unchanged from v1.2)
+- Backend: FastAPI + Motor (Mongo) + JWT + Claude Sonnet 4.6 + Stripe + ReportLab + APScheduler + Resend
+- Frontend: React 19 + Tailwind + shadcn/ui + Recharts
+- Background: APScheduler hourly for due monthly audits → digest email (mocked until RESEND_API_KEY set)
 
-## 4. Implemented
-### v1.0 (2026-06-28)
-- Landing + JWT auth + Dashboard + Projects + Audit (8 cat scores + issues) + AI Studio + Audit Detail (action plan / issues / details tabs).
+## 4. v1.3 Changes
+- Brand rename **RootedSEO → Goodly** across logo, hero, login/register shells, PDF footer, email digest copy, FastAPI service name, bot user-agent, PRD, test_credentials.md
+- Pricing restructured to two plans: `free` (Self-serve $0) and `concierge` ($1,000/mo)
+- Legacy `pro` / `agency` users migrated to `concierge` on startup
+- Demo & admin users now seed as `concierge`
+- Landing copy rewritten to lead with the page-one promise + service positioning
+- Pricing section: 2-up grid (was 3-up); Concierge card highlighted with full feature list
+- Testimonial rewritten to reflect concierge service ("Goodly handled everything... easiest $1k I spend each month")
 
-### v1.1 (2026-06-28)
-- Pricing section, Stripe Checkout, Billing page, free-tier limits, PDF export (Pro+), SERP tracking via DDG (Pro+), Schedule toggle (Pro+), Onboarding tour.
+## 5. Verified (v1.3)
+- Backend `/api/` returns `{"service":"Goodly API"}`
+- `/api/billing/plans` returns 2 plans: Self-serve $0 + Concierge $1000
+- Demo user `/api/auth/me` returns `plan: "concierge"`
+- Landing screenshots: brand reads "goodly", hero h1 = "We get your startup to #1 on Google. Your phone starts ringing.", pricing shows the new 2-plan grid with $1000 Concierge highlighted.
+- Frontend lint: no issues in my code (3 pre-existing shadcn library issues remain)
+- All 58 backend tests from prior iterations remain valid (plan names changed but endpoint contracts unchanged).
 
-### v1.2 (2026-06-29)
-- **APScheduler** runs hourly inside FastAPI, checks for due monthly audits, fires `analyze_url` + Claude AI recs + advances `next_audit_at`.
-- **Resend digest email** with brand-styled HTML (score, delta vs last month, top 5 issues, link to full report). Gracefully MOCKS sends when `RESEND_API_KEY` is empty — fully end-to-end testable now.
-- **SerpAPI integration** with **DuckDuckGo fallback**: uses SerpAPI when `SERPAPI_KEY` is set, falls back to DDG on missing key or SerpAPI error.
-- **Stripe Customer Portal**: `POST /api/billing/portal` returns a hosted-portal URL using raw `stripe.billing_portal.Session.create`. Automatically captures `stripe_customer_id` from the latest paid Checkout Session.
-- **Admin tools**: `POST /api/scheduler/run-now` (admin-only) lets you manually fire all due audits. `GET /api/scheduler/runs` returns the user's recent automated-run history with per-run email status.
-- **Billing page additions**: "Manage subscription" button (visible to non-free users) + "Recent automated runs" history section.
+## 6. Backlog
+- **P1**: Provide a real Stripe Price ID / product on $1,000 Concierge — currently uses Emergent test Stripe with dynamic amount
+- **P1**: BYO Resend API key UI (so users can send real digest emails)
+- **P1**: Stripe Customer Portal live happy-path verification (manual test-card checkout)
+- **P2**: Whitelabel PDF for clients
+- **P2**: Multi-page crawl
+- **P2**: Production SERP via SerpAPI / DataForSEO
+- **P2**: CRM-style client management view for the SEO specialist (since this is now a service business)
+- **P3**: Onboarding questionnaire after Concierge purchase (target keywords, competitors, business goals)
 
-### Verified
-- Iteration 3 testing: **58/58 backend tests pass** (17 new + 41 regression); frontend critical flows green. Smoke-tested end-to-end: backdated project → admin trigger → 1 due → 1 ran → audit created (score 68) → digest email mocked → scheduled_runs history visible in UI.
-
-## 5. Backlog
-- **P1**: User-provided Resend API key (currently mocked). Add a UI for users to BYO their own Resend key + sender email + verified-domain check.
-- **P1**: Stripe Customer Portal happy-path live verification (requires a real test-card checkout in browser).
-- **P2**: Whitelabel agency PDF (custom logo + brand color).
-- **P2**: Multi-page crawl (audit a whole site, not just one URL).
-- **P2**: Production SERP via SerpAPI / DataForSEO with paid key.
-- **P2**: Team accounts (multiple users per Agency).
-- **P2**: Slack / email alerts when audit score drops.
-- **P3**: AI page-rewrite tool (paste URL → get full optimized HTML).
-
-## 6. Next Action Items
-- Decide on production Resend / SerpAPI API keys (both currently optional — system runs without them).
-- Drive at least one live Stripe test checkout to verify the Customer Portal flow end-to-end.
-- Decide on a domain to verify in Resend so sender doesn't have to be `onboarding@resend.dev`.
+## 7. Next Action Items
+- Push to GitHub via Emergent's UI integration (see chat for instructions — main agent cannot push directly)
+- Decide on Stripe Price IDs for the $1,000 Concierge product
+- Add a Concierge onboarding form (post-purchase) so the specialist has everything to start work day 1

@@ -99,9 +99,9 @@ export function AuthShell({ children }) {
         />
         <div className="absolute inset-0 bg-gradient-to-br from-[#2D3E32]/40 via-transparent to-[#2D3E32]/20" />
         <div className="absolute bottom-12 left-12 right-12 text-[#FDFBF7]">
-          <div className="label-eyebrow text-[#FDFBF7]/70 mb-3">RootedSEO</div>
+          <div className="label-eyebrow text-[#FDFBF7]/70 mb-3">Goodly</div>
           <p className="font-display text-3xl leading-snug tracking-tight max-w-md">
-            Honest, organic growth — for shops, studios, and side hustles that deserve to be found.
+            Done-for-you SEO for startups. We get you to #1 on Google. Your phone starts ringing.
           </p>
         </div>
       </div>

@@ -99,7 +99,7 @@ def audit_digest_html(*, name: str, project_name: str, url: str,
           <a href="{audit_url}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:500;font-size:14px">Open full report</a>
         </td></tr>
         <tr><td style="padding:0 32px 28px 32px;color:#5C685C;font-size:11px;line-height:1.5" align="center">
-          You're getting this because you turned on monthly audits for this project in RootedSEO.<br/>
+          You're getting this because you turned on monthly audits for this project in Goodly.<br/>
           Disable anytime from the project page.
         </td></tr>
       </table>

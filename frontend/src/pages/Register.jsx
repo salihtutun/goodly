@@ -23,7 +23,7 @@ export default function Register() {
     const res = await register(email.trim(), password, name.trim() || undefined);
     setBusy(false);
     if (res.ok) {
-      toast.success("Account created — welcome to RootedSEO");
+      toast.success("Account created — welcome to Goodly");
       navigate("/app");
     } else {
       setError(res.error);

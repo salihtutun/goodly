@@ -37,7 +37,7 @@ mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
-app = FastAPI(title="SEO Framework API")
+app = FastAPI(title="Goodly API")
 api = APIRouter(prefix="/api")
 
 logger = logging.getLogger("seo_framework")
@@ -418,7 +418,7 @@ async def dashboard_summary(user_id: str = Depends(get_current_user_id)):
 
 @api.get("/")
 async def root():
-    return {"service": "SEO Framework API", "status": "ok"}
+    return {"service": "Goodly API", "status": "ok"}
 
 
 # ---------------------------------------------------------------
@@ -752,12 +752,12 @@ async def on_startup():
     await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})
     await db.users.update_many({"onboarded": {"$exists": False}}, {"$set": {"onboarded": False}})
 
-    # Seed admin + demo user (demo is Pro so testers can exercise Pro features)
+    # Seed admin + demo user (both on Concierge so testers can exercise all features)
     seeds = [
-        {"email": os.environ.get("ADMIN_EMAIL", "admin@seoframework.com"),
+        {"email": os.environ.get("ADMIN_EMAIL", "admin@goodly.app"),
          "password": os.environ.get("ADMIN_PASSWORD", "admin123"),
-         "name": "Admin", "role": "admin", "plan": "agency"},
-        {"email": "demo@smallbiz.com", "password": "demo1234", "name": "Demo Owner", "role": "user", "plan": "pro"},
+         "name": "Admin", "role": "admin", "plan": "concierge"},
+        {"email": "demo@smallbiz.com", "password": "demo1234", "name": "Demo Owner", "role": "user", "plan": "concierge"},
     ]
     for s in seeds:
         existing = await db.users.find_one({"email": s["email"]})

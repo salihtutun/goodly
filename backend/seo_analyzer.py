@@ -7,7 +7,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 
-USER_AGENT = "Mozilla/5.0 (compatible; SEOFrameworkBot/1.0; +https://seoframework.app)"
+USER_AGENT = "Mozilla/5.0 (compatible; GoodlyBot/1.0; +https://goodly.app)"
 TIMEOUT = 15.0
 
 
