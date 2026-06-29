@@ -14,6 +14,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, Reques
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
+import asyncio
 
 from auth import (
     hash_password,
@@ -27,6 +28,8 @@ from billing import PLANS, get_plan, month_key, create_subscription_checkout, ma
 from pdf_export import build_audit_pdf
 from serp import check_rank
 from fastapi.responses import StreamingResponse
+import scheduler as scheduler_mod
+import stripe as stripe_sdk
 
 
 # --- Mongo setup ---
@@ -497,15 +500,25 @@ async def billing_status(session_id: str, request: Request, user: dict = Depends
     }
     await db.payment_transactions.update_one({"session_id": session_id}, {"$set": update})
 
-    # Apply upgrade exactly once
+    # Apply upgrade exactly once and capture stripe customer id (best-effort)
     if status.payment_status == "paid" and not tx.get("applied"):
-        await db.users.update_one(
-            {"id": user["id"]},
-            {"$set": {"plan": tx["plan_id"], "plan_started_at": now_iso()}},
-        )
+        customer_id = None
+        try:
+            stripe_sdk.api_key = os.environ.get("STRIPE_API_KEY")
+            session_obj = await asyncio.to_thread(
+                stripe_sdk.checkout.Session.retrieve, session_id
+            )
+            customer_id = session_obj.get("customer") if isinstance(session_obj, dict) else getattr(session_obj, "customer", None)
+        except Exception as e:
+            logger.warning("Could not retrieve Stripe customer_id for %s: %s", session_id, e)
+
+        user_update = {"plan": tx["plan_id"], "plan_started_at": now_iso()}
+        if customer_id:
+            user_update["stripe_customer_id"] = customer_id
+        await db.users.update_one({"id": user["id"]}, {"$set": user_update})
         await db.payment_transactions.update_one(
             {"session_id": session_id},
-            {"$set": {"applied": True}},
+            {"$set": {"applied": True, "stripe_customer_id": customer_id}},
         )
 
     return {
@@ -517,6 +530,43 @@ async def billing_status(session_id: str, request: Request, user: dict = Depends
         "plan_id": tx["plan_id"],
         "applied": status.payment_status == "paid",
     }
+
+
+class PortalIn(BaseModel):
+    return_url: str
+
+
+@api.post("/billing/portal")
+async def billing_portal(body: PortalIn, user: dict = Depends(get_current_user_doc)):
+    """Create a Stripe Customer Portal session so the user can self-manage billing."""
+    customer_id = user.get("stripe_customer_id")
+    if not customer_id:
+        # Try to recover from latest paid transaction
+        tx = await db.payment_transactions.find_one(
+            {"user_id": user["id"], "applied": True, "stripe_customer_id": {"$ne": None}},
+            sort=[("created_at", -1)],
+        )
+        if tx:
+            customer_id = tx.get("stripe_customer_id")
+            await db.users.update_one({"id": user["id"]}, {"$set": {"stripe_customer_id": customer_id}})
+
+    if not customer_id:
+        raise HTTPException(
+            status_code=400,
+            detail="No active Stripe customer found. Upgrade once to enable the billing portal.",
+        )
+
+    try:
+        stripe_sdk.api_key = os.environ.get("STRIPE_API_KEY")
+        portal = await asyncio.to_thread(
+            stripe_sdk.billing_portal.Session.create,
+            customer=customer_id,
+            return_url=body.return_url,
+        )
+        return {"url": portal.url}
+    except Exception as e:
+        logger.exception("Stripe portal session failed")
+        raise HTTPException(status_code=502, detail=f"Portal session error: {e}")
 
 
 @app.post("/api/webhook/stripe")
@@ -651,6 +701,27 @@ async def mark_onboarded(user_id: str = Depends(get_current_user_id)):
 
 
 # ---------------------------------------------------------------
+# Scheduled audits — manual trigger + history
+# ---------------------------------------------------------------
+@api.post("/scheduler/run-now")
+async def scheduler_run_now(request: Request, user: dict = Depends(get_current_user_doc)):
+    """Manually run all due scheduled audits. Admins only."""
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    base_url = _store_base_url(request)
+    summary = await scheduler_mod.run_due_audits(db, base_url)
+    return summary
+
+
+@api.get("/scheduler/runs")
+async def scheduler_runs(user: dict = Depends(get_current_user_doc)):
+    docs = await db.scheduled_runs.find(
+        {"user_id": user["id"]}, {"_id": 0}
+    ).sort("run_at", -1).limit(50).to_list(50)
+    return docs
+
+
+# ---------------------------------------------------------------
 # Mount + middleware
 # ---------------------------------------------------------------
 app.include_router(api)
@@ -670,10 +741,12 @@ async def on_startup():
     await db.users.create_index("id", unique=True)
     await db.projects.create_index("id", unique=True)
     await db.projects.create_index("user_id")
+    await db.projects.create_index([("schedule", 1), ("next_audit_at", 1)])
     await db.audits.create_index("id", unique=True)
     await db.audits.create_index([("user_id", 1), ("created_at", -1)])
     await db.payment_transactions.create_index("session_id", unique=True)
     await db.serp_checks.create_index([("user_id", 1), ("created_at", -1)])
+    await db.scheduled_runs.create_index([("user_id", 1), ("run_at", -1)])
 
     # Backfill plan/onboarded on legacy users
     await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})
@@ -707,7 +780,27 @@ async def on_startup():
             )
     logger.info("Startup complete. Seeded users (if missing).")
 
+    # Start hourly scheduler for due audits
+    scheduler_mod.start(db, lambda: _state.get("base_url") or "http://localhost:8001")
+
 
 @app.on_event("shutdown")
 async def on_shutdown():
+    scheduler_mod.shutdown()
     client.close()
+
+
+# Capture the live external base URL (set by /api/scheduler/run-now or any request)
+_state: dict = {}
+
+
+def _store_base_url(request: Request) -> str:
+    base = str(request.base_url).rstrip("/")
+    _state["base_url"] = base
+    return base
+
+
+@app.middleware("http")
+async def _capture_base_url(request: Request, call_next):
+    _store_base_url(request)
+    return await call_next(request)

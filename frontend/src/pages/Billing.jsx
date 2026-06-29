@@ -6,7 +6,7 @@ import AppLayout from "@/components/app/AppLayout";
 import { Eyebrow } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, ExternalLink, Settings, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Billing() {
@@ -14,15 +14,22 @@ export default function Billing() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
   const [billingMe, setBillingMe] = useState(null);
+  const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyPlan, setBusyPlan] = useState(null);
+  const [portalBusy, setPortalBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        const [p, m] = await Promise.all([api.get("/billing/plans"), api.get("/billing/me")]);
+        const [p, m, r] = await Promise.all([
+          api.get("/billing/plans"),
+          api.get("/billing/me"),
+          api.get("/scheduler/runs").catch(() => ({ data: [] })),
+        ]);
         setPlans(p.data);
         setBillingMe(m.data);
+        setRuns(r.data || []);
       } catch (e) {
         toast.error(formatApiError(e));
       } finally { setLoading(false); }
@@ -43,18 +50,45 @@ export default function Billing() {
     }
   };
 
+  const openPortal = async () => {
+    setPortalBusy(true);
+    try {
+      const { data } = await api.post("/billing/portal", {
+        return_url: `${window.location.origin}/app/billing`,
+      });
+      window.location.href = data.url;
+    } catch (e) {
+      toast.error(formatApiError(e));
+      setPortalBusy(false);
+    }
+  };
+
   const currentPlan = billingMe?.plan?.id || user?.plan || "free";
 
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto" data-testid="billing-root">
         <Eyebrow>Billing & plans</Eyebrow>
-        <h1 className="mt-3 font-display font-bold text-4xl sm:text-5xl text-[#1A201A] tracking-tight">
-          Choose how you grow.
-        </h1>
-        <p className="mt-3 text-[#5C685C] text-lg">
-          You&apos;re on the <strong className="text-[#2D3E32]">{billingMe?.plan?.name || "Free"}</strong> plan.
-        </p>
+        <div className="mt-3 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="font-display font-bold text-4xl sm:text-5xl text-[#1A201A] tracking-tight">
+              Choose how you grow.
+            </h1>
+            <p className="mt-3 text-[#5C685C] text-lg">
+              You&apos;re on the <strong className="text-[#2D3E32]">{billingMe?.plan?.name || "Free"}</strong> plan.
+            </p>
+          </div>
+          {currentPlan !== "free" && (
+            <Button onClick={openPortal} disabled={portalBusy}
+              data-testid="manage-subscription-btn"
+              variant="outline"
+              className="bg-transparent border-[#2D3E32] text-[#2D3E32] hover:bg-[#F3F0E9] rounded-full">
+              <Settings size={16} className="mr-1.5"/>
+              {portalBusy ? "Opening…" : "Manage subscription"}
+              <ExternalLink size={13} className="ml-1.5"/>
+            </Button>
+          )}
+        </div>
 
         {/* Usage */}
         {billingMe && (
@@ -127,6 +161,38 @@ export default function Billing() {
             );
           })}
         </div>
+
+        {/* Scheduled runs */}
+        {runs.length > 0 && (
+          <div className="mt-14" data-testid="scheduled-runs-section">
+            <Eyebrow>Scheduled audits</Eyebrow>
+            <h2 className="mt-2 font-display font-bold text-2xl text-[#1A201A]">Recent automated runs</h2>
+            <div className="mt-5 space-y-2">
+              {runs.slice(0, 10).map((r) => (
+                <div key={r.id} className="bg-white border border-[#E5E0D8] rounded-2xl px-5 py-4 flex items-center gap-4" data-testid={`run-${r.id}`}>
+                  <div className="h-10 w-10 rounded-full bg-[#81B29A]/20 flex items-center justify-center font-display font-bold text-[#2D3E32]">
+                    {r.score ?? "—"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-[#1A201A] text-sm">{new Date(r.run_at).toLocaleString()}</div>
+                    <div className="text-xs text-[#5C685C] mt-0.5 flex items-center gap-2">
+                      <Mail size={12}/>
+                      {r.email?.sent ? "Email sent" :
+                        r.email?.mocked ? "Email mocked (RESEND_API_KEY not set)" :
+                        r.email?.error ? `Email error: ${r.email.error.slice(0, 60)}` : "No email"}
+                    </div>
+                  </div>
+                  {r.audit_id && (
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/app/audits/${r.audit_id}`)}
+                      className="bg-transparent border-[#E5E0D8] text-[#1A201A] hover:bg-[#F3F0E9] rounded-full">
+                      View
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Transaction history */}
         {billingMe?.transactions?.length > 0 && (
