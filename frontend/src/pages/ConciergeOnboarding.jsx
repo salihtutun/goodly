@@ -261,9 +261,10 @@ export default function ConciergeOnboarding() {
             <p className="text-sm text-[#5C685C]">
               Your specialist will reach out within 1 business day after submit.
             </p>
-            <Button type="submit" disabled={busy}
+            <Button type="submit"
+              disabled={busy || !form.business_name.trim() || !form.website.trim() || !form.primary_goal.trim()}
               data-testid="brief-submit-btn"
-              className="bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7] rounded-full px-7 py-6">
+              className="bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7] rounded-full px-7 py-6 disabled:opacity-60 disabled:cursor-not-allowed">
               {busy ? "Saving…" : (submitted ? "Update brief" : "Submit brief")}
               <ArrowRight size={16} className="ml-1.5"/>
             </Button>
