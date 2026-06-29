@@ -144,7 +144,7 @@ def _set_auth_cookie(response: Response, token: str):
 
 @api.post("/auth/register", response_model=AuthOut)
 @limiter.limit("3/minute")
-async def register(body: RegisterIn, response: Response):
+async def register(request: Request, body: RegisterIn, response: Response):
     email = body.email.lower().strip()
     existing = await db.users.find_one({"email": email})
     if existing:
@@ -181,7 +181,7 @@ async def register(body: RegisterIn, response: Response):
 
 @api.post("/auth/login", response_model=AuthOut)
 @limiter.limit("5/minute")
-async def login(body: LoginIn, response: Response):
+async def login(request: Request, body: LoginIn, response: Response):
     email = body.email.lower().strip()
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(body.password, user["password_hash"]):
@@ -268,7 +268,7 @@ async def forgot_password(body: ForgotPasswordIn, request: Request):
 
 @api.post("/auth/reset-password")
 @limiter.limit("5/minute")
-async def reset_password(body: ResetPasswordIn):
+async def reset_password(request: Request, body: ResetPasswordIn):
     user = await db.users.find_one({"reset_token": body.token})
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
@@ -477,7 +477,7 @@ class CompetitorsIn(BaseModel):
 
 @api.post("/ai/meta-tags")
 @limiter.limit("10/minute")
-async def ai_meta_tags(body: MetaTagsIn, user_id: str = Depends(get_current_user_id)):
+async def ai_meta_tags(request: Request, body: MetaTagsIn, user_id: str = Depends(get_current_user_id)):
     try:
         result = await ai_service.generate_meta_tags(body.business_name, body.description, body.target_keywords or "")
         await db.ai_history.insert_one({
@@ -492,7 +492,7 @@ async def ai_meta_tags(body: MetaTagsIn, user_id: str = Depends(get_current_user
 
 @api.post("/ai/keywords")
 @limiter.limit("10/minute")
-async def ai_keywords(body: KeywordsIn, user_id: str = Depends(get_current_user_id)):
+async def ai_keywords(request: Request, body: KeywordsIn, user_id: str = Depends(get_current_user_id)):
     try:
         result = await ai_service.keyword_research(body.seed_topic, body.industry or "", body.location or "")
         await db.ai_history.insert_one({
@@ -508,7 +508,7 @@ async def ai_keywords(body: KeywordsIn, user_id: str = Depends(get_current_user_
 @api.post("/ai/competitors")
 @limiter.limit("10/minute")
 
-async def ai_competitors(body: CompetitorsIn, user_id: str = Depends(get_current_user_id)):
+async def ai_competitors(request: Request, body: CompetitorsIn, user_id: str = Depends(get_current_user_id)):
     try:
         result = await ai_service.competitor_analysis(body.your_site, body.competitors, body.industry or "")
         await db.ai_history.insert_one({
@@ -902,7 +902,7 @@ class GBPCompetitorsIn(BaseModel):
 
 @api.post("/gbp/audit")
 @limiter.limit("10/minute")
-async def gbp_audit(body: GBPAuditIn, user: dict = Depends(get_current_user_doc)):
+async def gbp_audit(request: Request, body: GBPAuditIn, user: dict = Depends(get_current_user_doc)):
     try:
         result = await gbp_service.audit_listing(**{k: v for k, v in body.model_dump().items() if k != "project_id"})
     except Exception as e:
@@ -967,7 +967,7 @@ class AIVisibilityIn(BaseModel):
 
 @api.post("/ai-visibility/check")
 @limiter.limit("5/minute")
-async def ai_visibility_check(body: AIVisibilityIn, user: dict = Depends(get_current_user_doc)):
+async def ai_visibility_check(request: Request, body: AIVisibilityIn, user: dict = Depends(get_current_user_doc)):
     try:
         result = await ai_visibility.check_ai_visibility(
             business_name=body.business_name,
@@ -1098,7 +1098,7 @@ def _check_platform(p: str):
 
 @api.post("/social/audit")
 @limiter.limit("10/minute")
-async def social_audit(body: SocialAuditIn, user: dict = Depends(get_current_user_doc)):
+async def social_audit(request: Request, body: SocialAuditIn, user: dict = Depends(get_current_user_doc)):
     _check_platform(body.platform)
     fetched = await social_fetcher.fetch_profile_signals(body.platform, body.handle)
     try:
@@ -1201,7 +1201,7 @@ class ConciergeBriefIn(BaseModel):
 
 @api.post("/concierge/brief")
 @limiter.limit("10/minute")
-async def upsert_concierge_brief(body: ConciergeBriefIn, user: dict = Depends(get_current_user_doc)):
+async def upsert_concierge_brief(request: Request, body: ConciergeBriefIn, user: dict = Depends(get_current_user_doc)):
     plan = get_plan(user.get("plan"))
     if not plan["perks"].get("done_for_you"):
         raise HTTPException(
