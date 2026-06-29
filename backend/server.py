@@ -32,6 +32,7 @@ import stripe as stripe_sdk
 import social_service
 import social_fetcher
 import ai_visibility
+import gbp_service
 
 
 # --- Mongo setup ---
@@ -703,6 +704,95 @@ async def mark_onboarded(user_id: str = Depends(get_current_user_id)):
 
 
 # ---------------------------------------------------------------
+# Google Business Profile audit / suggestions / competitors
+# ---------------------------------------------------------------
+class GBPAuditIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    primary_category: str = Field(min_length=1)
+    address: Optional[str] = ""
+    service_area: Optional[str] = ""
+    description: Optional[str] = ""
+    phone: Optional[str] = ""
+    website: Optional[str] = ""
+    hours_summary: Optional[str] = ""
+    photo_count: Optional[int] = None
+    reviews_count: Optional[int] = None
+    avg_rating: Optional[float] = None
+    response_rate: Optional[str] = ""
+    posts_per_month: Optional[int] = None
+    booking_enabled: Optional[bool] = None
+    messaging_enabled: Optional[bool] = None
+    project_id: Optional[str] = None
+
+
+class GBPSuggestionsIn(BaseModel):
+    business_name: str = Field(min_length=1)
+    primary_category: str = Field(min_length=1)
+    location: Optional[str] = ""
+    target_customer: Optional[str] = ""
+    current_description: Optional[str] = ""
+
+
+class GBPCompetitorsIn(BaseModel):
+    business_name: str = Field(min_length=1)
+    primary_category: str = Field(min_length=1)
+    location: Optional[str] = ""
+    competitors: List[str]
+
+
+@api.post("/gbp/audit")
+async def gbp_audit(body: GBPAuditIn, user: dict = Depends(get_current_user_doc)):
+    try:
+        result = await gbp_service.audit_listing(**{k: v for k, v in body.model_dump().items() if k != "project_id"})
+    except Exception as e:
+        logger.exception("gbp audit failed")
+        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "project_id": body.project_id,
+        "input": body.model_dump(),
+        "result": result,
+        "created_at": now_iso(),
+    }
+    await db.gbp_audits.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.post("/gbp/suggestions")
+async def gbp_suggestions(body: GBPSuggestionsIn, user: dict = Depends(get_current_user_doc)):
+    try:
+        result = await gbp_service.suggestions(**body.model_dump())
+    except Exception as e:
+        logger.exception("gbp suggestions failed")
+        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+    await db.ai_history.insert_one({
+        "id": str(uuid.uuid4()), "user_id": user["id"], "kind": "gbp_suggestions",
+        "input": body.model_dump(), "result": result, "created_at": now_iso(),
+    })
+    return result
+
+
+@api.post("/gbp/competitors")
+async def gbp_competitors(body: GBPCompetitorsIn, user: dict = Depends(get_current_user_doc)):
+    try:
+        result = await gbp_service.compare_competitors(**body.model_dump())
+    except Exception as e:
+        logger.exception("gbp competitors failed")
+        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+    return result
+
+
+@api.get("/gbp/audits")
+async def gbp_audit_history(user: dict = Depends(get_current_user_doc)):
+    docs = await db.gbp_audits.find(
+        {"user_id": user["id"]}, {"_id": 0}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    return docs
+
+
+# ---------------------------------------------------------------
 # AI Assistant Visibility
 # ---------------------------------------------------------------
 class AIVisibilityIn(BaseModel):
@@ -781,15 +871,22 @@ async def unified_visibility(user: dict = Depends(get_current_user_doc)):
     ).sort("created_at", -1).limit(1).to_list(1)
     ai_score = ((last_aiv[0].get("result") or {}).get("overall_visibility_score")) if last_aiv else None
 
+    # GBP (latest)
+    last_gbp = await db.gbp_audits.find(
+        {"user_id": user["id"]}, {"_id": 0, "result.overall_score": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(1).to_list(1)
+    gbp_score = ((last_gbp[0].get("result") or {}).get("overall_score")) if last_gbp else None
+
     breakdown = {
-        "google":    {"score": google_score,            "has_data": google_score is not None},
-        "instagram": {"score": socials["instagram"],    "has_data": socials["instagram"] is not None},
-        "tiktok":    {"score": socials["tiktok"],       "has_data": socials["tiktok"] is not None},
-        "youtube":   {"score": socials["youtube"],      "has_data": socials["youtube"] is not None},
-        "ai_assistants": {"score": ai_score,            "has_data": ai_score is not None},
+        "google":      {"score": google_score,         "has_data": google_score is not None},
+        "gbp":         {"score": gbp_score,            "has_data": gbp_score is not None},
+        "instagram":   {"score": socials["instagram"], "has_data": socials["instagram"] is not None},
+        "tiktok":      {"score": socials["tiktok"],    "has_data": socials["tiktok"] is not None},
+        "youtube":     {"score": socials["youtube"],   "has_data": socials["youtube"] is not None},
+        "ai_assistants": {"score": ai_score,           "has_data": ai_score is not None},
     }
 
-    weights = {"google": 0.30, "instagram": 0.175, "tiktok": 0.175, "youtube": 0.15, "ai_assistants": 0.20}
+    weights = {"google": 0.22, "gbp": 0.20, "instagram": 0.13, "tiktok": 0.13, "youtube": 0.12, "ai_assistants": 0.20}
     overall = 0
     informed = 0
     for k, w in weights.items():
@@ -1041,6 +1138,7 @@ async def on_startup():
     await db.concierge_briefs.create_index("user_id", unique=True)
     await db.social_audits.create_index([("user_id", 1), ("created_at", -1)])
     await db.ai_visibility_checks.create_index([("user_id", 1), ("created_at", -1)])
+    await db.gbp_audits.create_index([("user_id", 1), ("created_at", -1)])
 
     # Backfill plan/onboarded on legacy users
     await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})

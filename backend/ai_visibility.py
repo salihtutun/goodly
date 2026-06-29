@@ -61,8 +61,6 @@ async def check_ai_visibility(
     queries: Optional[List[str]] = None,
 ) -> dict:
     """Run a single multi-assistant probe and return a visibility report."""
-    name_l = business_name.lower().strip()
-
     # Generate sensible user queries if none provided
     if not queries:
         queries = [
