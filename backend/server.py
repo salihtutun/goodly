@@ -31,6 +31,7 @@ import scheduler as scheduler_mod
 import stripe as stripe_sdk
 import social_service
 import social_fetcher
+import ai_visibility
 
 
 # --- Mongo setup ---
@@ -702,6 +703,112 @@ async def mark_onboarded(user_id: str = Depends(get_current_user_id)):
 
 
 # ---------------------------------------------------------------
+# AI Assistant Visibility
+# ---------------------------------------------------------------
+class AIVisibilityIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    category: str = Field(min_length=1)
+    location: Optional[str] = ""
+    website: Optional[str] = ""
+    queries: Optional[List[str]] = None
+    project_id: Optional[str] = None
+
+
+@api.post("/ai-visibility/check")
+async def ai_visibility_check(body: AIVisibilityIn, user: dict = Depends(get_current_user_doc)):
+    try:
+        result = await ai_visibility.check_ai_visibility(
+            business_name=body.business_name,
+            category=body.category,
+            location=body.location or "",
+            website=body.website or "",
+            queries=body.queries,
+        )
+    except Exception as e:
+        logger.exception("ai-visibility check failed")
+        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "project_id": body.project_id,
+        "input": body.model_dump(),
+        "result": result,
+        "created_at": now_iso(),
+    }
+    await db.ai_visibility_checks.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.get("/ai-visibility/history")
+async def ai_visibility_history(user: dict = Depends(get_current_user_doc)):
+    docs = await db.ai_visibility_checks.find(
+        {"user_id": user["id"]}, {"_id": 0}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    return docs
+
+
+# ---------------------------------------------------------------
+# Unified Visibility Score (north-star)
+# ---------------------------------------------------------------
+@api.get("/dashboard/visibility")
+async def unified_visibility(user: dict = Depends(get_current_user_doc)):
+    """Return a single 0-100 score blending Google + Instagram + TikTok + YouTube.
+
+    Weights: Google 40%, each social channel 20% (averaged from latest audit per channel).
+    Components that have no data contribute 0; we surface 'has_data' booleans so the UI
+    can show how much of the score is actually informed."""
+
+    # Latest google audit overall_score (any project)
+    last_audit = await db.audits.find(
+        {"user_id": user["id"]}, {"_id": 0, "result.overall_score": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(1).to_list(1)
+    google_score = ((last_audit[0].get("result") or {}).get("overall_score")) if last_audit else None
+
+    # Latest social audit per platform
+    socials = {}
+    for plat in ("instagram", "tiktok", "youtube"):
+        rows = await db.social_audits.find(
+            {"user_id": user["id"], "platform": plat},
+            {"_id": 0, "result.overall_score": 1, "created_at": 1},
+        ).sort("created_at", -1).limit(1).to_list(1)
+        socials[plat] = ((rows[0].get("result") or {}).get("overall_score")) if rows else None
+
+    # AI visibility (latest)
+    last_aiv = await db.ai_visibility_checks.find(
+        {"user_id": user["id"]}, {"_id": 0, "result.overall_visibility_score": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(1).to_list(1)
+    ai_score = ((last_aiv[0].get("result") or {}).get("overall_visibility_score")) if last_aiv else None
+
+    breakdown = {
+        "google":    {"score": google_score,            "has_data": google_score is not None},
+        "instagram": {"score": socials["instagram"],    "has_data": socials["instagram"] is not None},
+        "tiktok":    {"score": socials["tiktok"],       "has_data": socials["tiktok"] is not None},
+        "youtube":   {"score": socials["youtube"],      "has_data": socials["youtube"] is not None},
+        "ai_assistants": {"score": ai_score,            "has_data": ai_score is not None},
+    }
+
+    weights = {"google": 0.30, "instagram": 0.175, "tiktok": 0.175, "youtube": 0.15, "ai_assistants": 0.20}
+    overall = 0
+    informed = 0
+    for k, w in weights.items():
+        s = breakdown[k]["score"]
+        if s is not None:
+            overall += s * w
+            informed += w
+    overall_score = int(round(overall)) if informed > 0 else None
+
+    return {
+        "overall_score": overall_score,
+        "informed_fraction": round(informed, 2),
+        "weights": weights,
+        "breakdown": breakdown,
+        "checked_at": now_iso(),
+    }
+
+
+# ---------------------------------------------------------------
 # Social presence audit (Instagram / TikTok / YouTube)
 # ---------------------------------------------------------------
 ALLOWED_PLATFORMS = {"instagram", "tiktok", "youtube"}
@@ -933,6 +1040,7 @@ async def on_startup():
     await db.scheduled_runs.create_index([("user_id", 1), ("run_at", -1)])
     await db.concierge_briefs.create_index("user_id", unique=True)
     await db.social_audits.create_index([("user_id", 1), ("created_at", -1)])
+    await db.ai_visibility_checks.create_index([("user_id", 1), ("created_at", -1)])
 
     # Backfill plan/onboarded on legacy users
     await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})

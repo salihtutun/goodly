@@ -6,6 +6,7 @@ import AppLayout from "@/components/app/AppLayout";
 import { Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, FolderKanban, Gauge, Sparkles, TrendingUp } from "lucide-react";
+import VisibilityTile from "@/components/app/VisibilityTile";
 export default function Dashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
@@ -91,6 +92,11 @@ export default function Dashboard() {
             icon={TrendingUp}
             accent="#2D3E32"
           />
+        </div>
+
+        {/* Unified Visibility Score */}
+        <div className="mt-8">
+          <VisibilityTile/>
         </div>
 
         {/* Quick actions */}
