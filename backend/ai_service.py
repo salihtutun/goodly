@@ -5,7 +5,7 @@ from typing import Dict, List
 from llm_client import ask_json, DEFAULT_MODEL, PRO_MODEL
 
 
-SYSTEM_MESSAGE = (
+SYSTEM_MESSAGE: str = (
     "You are an expert SEO strategist for small businesses. "
     "Your advice must be specific, actionable, and easy for non-technical owners to apply. "
     "When asked for structured data, ALWAYS respond with valid JSON only (no markdown fences, no commentary)."
