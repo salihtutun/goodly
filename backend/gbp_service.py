@@ -9,7 +9,7 @@ from typing import List, Optional
 from llm_client import ask_json, DEFAULT_MODEL
 
 
-SYSTEM = (
+SYSTEM: str = (
     "You are a Google Business Profile / local-SEO expert helping small startups "
     "get found in Google Maps and the local pack. Your advice is concrete and easy "
     "to apply in under 30 minutes per item. ALWAYS respond with valid JSON only."

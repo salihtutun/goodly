@@ -10,7 +10,7 @@ from typing import List, Optional
 from llm_client import ask_json, PRO_MODEL
 
 
-SYSTEM = (
+SYSTEM: str = (
     "You are simulating how popular AI assistants would respond to a user query. "
     "Be realistic about training-data limits — assistants only know what was in "
     "their training data plus widely-cited sources. ALWAYS respond with valid JSON only."

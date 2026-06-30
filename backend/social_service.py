@@ -3,7 +3,7 @@ from typing import Optional, List
 from llm_client import ask_json, DEFAULT_MODEL, PRO_MODEL
 
 
-SYSTEM = (
+SYSTEM: str = (
     "You are an expert social media strategist for small startups. "
     "Your advice is concrete, kind, and easy to apply in under 30 minutes. "
     "When asked for structured data, ALWAYS respond with valid JSON only — no markdown fences, no commentary."
