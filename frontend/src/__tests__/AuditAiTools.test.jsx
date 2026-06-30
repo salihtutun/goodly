@@ -1,4 +1,6 @@
 // Audit and AiTools page component smoke tests.
+// @/lib/api is mocked via src/lib/__mocks__/api.js (auto-discovered by Jest)
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
@@ -12,16 +14,6 @@ jest.mock('../contexts/AuthContext', () => ({
     logout: jest.fn(),
   }),
   AuthProvider: ({ children }) => children,
-}));
-
-// Mock @/lib/api before any component imports (avoids import.meta ESM issue)
-jest.mock('@/lib/api', () => ({
-  __esModule: true,
-  default: {
-    get: jest.fn().mockResolvedValue({ data: [] }),
-    post: jest.fn().mockResolvedValue({ data: {} }),
-  },
-  formatApiError: jest.fn((e) => 'API error'),
 }));
 
 // Mock react-router-dom hooks
