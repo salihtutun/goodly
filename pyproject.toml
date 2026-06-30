@@ -1,0 +1,27 @@
+[tool]
+[tool.pytest.ini_options]
+testpaths = ["tests/unit", "tests/integration", "backend/tests"]
+pythonpath = ["backend"]
+addopts = "-v --tb=short --strict-markers"
+asyncio_mode = "auto"
+markers = [
+    "unit: Unit tests (no external dependencies)",
+    "integration: Integration tests (requires running backend)",
+    "slow: Slow tests (AI calls, network)",
+    "e2e: End-to-end tests",
+    "asyncio: Async test marker",
+]
+
+[run]
+source = ["backend"]
+omit = ["backend/tests/*", "tests/*", "api/*"]
+
+[report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+fail_under = 99

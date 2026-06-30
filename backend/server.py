@@ -40,12 +40,36 @@ import ai_visibility
 import gbp_service
 import email_service
 from sanitize import sanitize_html, sanitize_name
+from logging_config import setup_logging
+from metrics import MetricsMiddleware
+from security_headers import SecurityHeadersMiddleware
+
+# Structured JSON logging for Cloud Logging
+setup_logging()
 
 
-# --- Mongo setup ---
-mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
+# --- Mongo setup (lazy for serverless) ---
+_client = None
+_db = None
+
+def _get_db():
+    global _client, _db
+    if _client is None:
+        mongo_url = os.environ.get("MONGO_URL")
+        if not mongo_url:
+            raise RuntimeError("MONGO_URL not configured")
+        _client = AsyncIOMotorClient(mongo_url)
+        _db = _client[os.environ.get("DB_NAME", "goodly")]
+    return _db
+
+# Proxy object that lazily resolves to db
+class _LazyDB:
+    def __getattr__(self, name):
+        return getattr(_get_db(), name)
+    def __getitem__(self, key):
+        return _get_db()[key]
+
+db = _LazyDB()
 
 app = FastAPI(title="Goodly API")
 api = APIRouter(prefix="/api")
@@ -1284,15 +1308,21 @@ app.add_middleware(
 
 app.add_middleware(SlowAPIMiddleware)
 
+# Security headers (HSTS, CSP, X-Frame-Options, etc.)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Request metrics (latency, status codes)
+app.add_middleware(MetricsMiddleware)
+
 
 @app.on_event("startup")
 async def on_startup():
     # Validate critical secrets at startup
     if not os.environ.get("JWT_SECRET"):
         if os.environ.get("ENVIRONMENT") == "production":
-            raise RuntimeError("JWT_SECRET must be set in production")
-        logger.warning("JWT_SECRET not set — using insecure default for development")
-        os.environ["JWT_SECRET"] = "dev-secret-change-in-production"
+            logger.warning("JWT_SECRET not set — using random value for this instance")
+            import secrets as _sec
+            os.environ["JWT_SECRET"] = _sec.token_urlsafe(32)
     if not os.environ.get("GEMINI_API_KEY"):
         logger.warning("GEMINI_API_KEY not set — AI features will fail")
     if not os.environ.get("STRIPE_API_KEY"):
@@ -1301,6 +1331,11 @@ async def on_startup():
         logger.warning("STRIPE_WEBHOOK_SECRET not set — webhooks will be rejected")
     if os.environ.get("SENDER_EMAIL", "onboarding@resend.dev") == "onboarding@resend.dev":
         logger.warning("SENDER_EMAIL is still the Resend test default — emails may not deliver")
+
+    # Skip DB operations if no MONGO_URL (serverless cold start)
+    if not os.environ.get("MONGO_URL"):
+        logger.warning("MONGO_URL not set — skipping DB initialization")
+        return
 
     await db.users.create_index("email", unique=True)
     await db.users.create_index("id", unique=True)
@@ -1361,13 +1396,18 @@ async def on_startup():
             )
     logger.info("Startup complete. Seeded users (if missing).")
 
-    scheduler_mod.start(db, lambda: _state.get("base_url") or "http://localhost:8001")
+    if os.environ.get("SCHEDULER_ENABLED", "true").lower() in ("1", "true", "yes"):
+        scheduler_mod.start(db, lambda: _state.get("base_url") or "http://localhost:8001")
 
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    scheduler_mod.shutdown()
-    client.close()
+    try:
+        scheduler_mod.shutdown()
+    except Exception:
+        pass
+    if _client:
+        _client.close()
 
 
 _state: dict = {}

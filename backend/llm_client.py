@@ -70,7 +70,7 @@ async def ask_json(
     model: str = DEFAULT_MODEL,
     temperature: float = 0.3,
     max_output_tokens: int = 4096,
-) -> dict | list:
+):  # -> dict | list (Python 3.10+ syntax)
     """Send a prompt to Gemini and parse the response as JSON.
 
     Includes exponential backoff retry for transient failures.

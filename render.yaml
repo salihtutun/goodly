@@ -1,13 +1,9 @@
 services:
   - type: web
     name: goodly-api
-    runtime: python
-    region: virginia
-    plan: free
-    rootDir: backend
+    env: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /api/health
     envVars:
       - key: ENVIRONMENT
         value: production
@@ -15,29 +11,25 @@ services:
         value: goodly
       - key: SCHEDULER_ENABLED
         value: "true"
-      - key: CORS_ORIGINS
-        sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: https://frontend-beta-weld-93.vercel.app
       - key: PRODUCTION_DOMAIN
+        value: https://frontend-beta-weld-93.vercel.app
+      - key: CORS_ORIGINS
+        value: https://frontend-beta-weld-93.vercel.app
+      - key: SENDER_EMAIL
+        value: hello@goodly.app
+      - key: ADMIN_EMAIL
+        value: admin@goodly.app
+      - key: GEMINI_API_KEY
         sync: false
       - key: MONGO_URL
         sync: false
       - key: JWT_SECRET
-        generateValue: true
-      - key: GEMINI_API_KEY
         sync: false
       - key: STRIPE_API_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: STRIPE_PRICE_ID_CONCIERGE
-        sync: false
       - key: RESEND_API_KEY
-        sync: false
-      - key: SENDER_EMAIL
-        sync: false
-      - key: ADMIN_EMAIL
-        sync: false
-      - key: ADMIN_PASSWORD
         sync: false
