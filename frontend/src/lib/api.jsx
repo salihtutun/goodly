@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
+// Use process.env for Jest compatibility (CRA/webpack also injects REACT_APP_* via DefinePlugin)
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
 export const API_BASE = `${BACKEND_URL}/api`;
 
 const api = axios.create({
