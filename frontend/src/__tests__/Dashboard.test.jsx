@@ -1,10 +1,11 @@
-"""Dashboard and AppLayout component smoke tests."""
+// Dashboard and AppLayout component smoke tests.
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
 // Mock auth context
-jest.mock('../../contexts/AuthContext', () => ({
+jest.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: '1', email: 'test@test.com', name: 'Test', role: 'user', plan: 'free' },
     loading: false,
@@ -15,16 +16,16 @@ jest.mock('../../contexts/AuthContext', () => ({
 }));
 
 // Mock API calls
-jest.mock('../../lib/api', () => ({
+jest.mock('../lib/api', () => ({
   api: {
     get: jest.fn().mockResolvedValue({ data: {} }),
     post: jest.fn().mockResolvedValue({ data: {} }),
   },
 }));
 
-import Dashboard from '../../pages/Dashboard';
-import AppLayout from '../../components/app/AppLayout';
-import VisibilityTile from '../../components/app/VisibilityTile';
+import Dashboard from '../pages/Dashboard';
+import AppLayout from '../components/app/AppLayout';
+import VisibilityTile from '../components/app/VisibilityTile';
 
 describe('Dashboard Page', () => {
   test('renders without crashing', () => {

@@ -1,22 +1,23 @@
-"""Frontend component smoke tests — verify critical pages render without crashing."""
+// Frontend component smoke tests — verify critical pages render without crashing.
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
-import Landing from '../../pages/Landing';
-import Login from '../../pages/Login';
-import Register from '../../pages/Register';
-import NotFound from '../../pages/NotFound';
-import ErrorPage from '../../pages/ErrorPage';
-import Terms from '../../pages/Terms';
-import Privacy from '../../pages/Privacy';
-import ForgotPassword from '../../pages/ForgotPassword';
-import ResetPassword from '../../pages/ResetPassword';
-import VerifyEmail from '../../pages/VerifyEmail';
+import { AuthProvider } from '../contexts/AuthContext';
+import Landing from '../pages/Landing';
+import Login from '../pages/Login';
+import Register from '../pages/Register';
+import NotFound from '../pages/NotFound';
+import ErrorPage from '../pages/ErrorPage';
+import Terms from '../pages/Terms';
+import Privacy from '../pages/Privacy';
+import ForgotPassword from '../pages/ForgotPassword';
+import ResetPassword from '../pages/ResetPassword';
+import VerifyEmail from '../pages/VerifyEmail';
 
 // Mock the auth context for protected pages
-jest.mock('../../contexts/AuthContext', () => ({
-  ...jest.requireActual('../../contexts/AuthContext'),
+jest.mock('../contexts/AuthContext', () => ({
+  ...jest.requireActual('../contexts/AuthContext'),
   useAuth: () => ({ user: null, loading: false }),
   AuthProvider: ({ children }) => children,
 }));
