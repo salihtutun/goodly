@@ -73,6 +73,20 @@ let webpackConfig = {
       },
     },
   },
+  jest: {
+    configure: (jestConfig) => {
+      // Fix react-router-dom v7: main field points to missing dist/main.js
+      // Force Jest to use the CJS entry point
+      jestConfig.moduleNameMapper = {
+        ...jestConfig.moduleNameMapper,
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^react-router-dom$': '<rootDir>/node_modules/react-router-dom/dist/index.js',
+        '^react-router$': '<rootDir>/node_modules/react-router/dist/development/index.js',
+        '^react-router/dom$': '<rootDir>/node_modules/react-router/dist/development/dom-export.js',
+      };
+      return jestConfig;
+    },
+  },
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

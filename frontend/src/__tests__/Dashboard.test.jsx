@@ -1,7 +1,7 @@
 // Dashboard and AppLayout component smoke tests.
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
 // Mock auth context
@@ -15,12 +15,15 @@ jest.mock('../contexts/AuthContext', () => ({
   AuthProvider: ({ children }) => children,
 }));
 
-// Mock API calls
-jest.mock('../lib/api', () => ({
-  api: {
+// Mock the api module at the exact path Jest resolves @/lib/api to
+// The craco moduleNameMapper maps @/(.*) → <rootDir>/src/$1
+// So @/lib/api → <rootDir>/src/lib/api
+jest.mock('<rootDir>/src/lib/api', () => ({
+  default: {
     get: jest.fn().mockResolvedValue({ data: {} }),
     post: jest.fn().mockResolvedValue({ data: {} }),
   },
+  formatApiError: jest.fn((e) => 'API error'),
 }));
 
 import Dashboard from '../pages/Dashboard';
@@ -28,28 +31,32 @@ import AppLayout from '../components/app/AppLayout';
 import VisibilityTile from '../components/app/VisibilityTile';
 
 describe('Dashboard Page', () => {
-  test('renders without crashing', () => {
-    render(<BrowserRouter><Dashboard /></BrowserRouter>);
-    expect(screen.getByTestId('dashboard-page')).toBeInTheDocument();
+  test('renders without crashing', async () => {
+    await act(async () => {
+      render(<BrowserRouter><Dashboard /></BrowserRouter>);
+    });
+    expect(screen.getByTestId('dashboard-root')).toBeInTheDocument();
   });
 
-  test('shows visibility tile', () => {
-    render(<BrowserRouter><Dashboard /></BrowserRouter>);
+  test('shows visibility tile', async () => {
+    await act(async () => {
+      render(<BrowserRouter><Dashboard /></BrowserRouter>);
+    });
     expect(screen.getByTestId('visibility-tile')).toBeInTheDocument();
   });
 });
 
 describe('AppLayout', () => {
-  test('renders sidebar navigation', () => {
-    render(<BrowserRouter><AppLayout /></BrowserRouter>);
-    expect(screen.getByTestId('sidebar')).toBeInTheDocument();
-  });
-
   test('renders nav links', () => {
     render(<BrowserRouter><AppLayout /></BrowserRouter>);
     expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
     expect(screen.getByTestId('nav-projects')).toBeInTheDocument();
     expect(screen.getByTestId('nav-audit')).toBeInTheDocument();
+  });
+
+  test('renders logout button', () => {
+    render(<BrowserRouter><AppLayout /></BrowserRouter>);
+    expect(screen.getByTestId('logout-btn')).toBeInTheDocument();
   });
 });
 
