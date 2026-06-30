@@ -18,6 +18,10 @@ node_modules/
 
 # Testing
 /coverage
+.coverage
+.pytest_cache/
+htmlcov/
+tests/reports/coverage/
 
 # Next.js
 /.next/
