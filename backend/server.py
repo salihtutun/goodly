@@ -72,9 +72,13 @@ class _LazyDB:
 
 db = _LazyDB()
 
-app = FastAPI(title="Goodly API")
+app = FastAPI(title="Goodly API", version="1.8.0")
 api = APIRouter(prefix="/api")
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200/minute"],
+    headers_enabled=True,  # Send X-RateLimit-* headers
+)
 
 logger = logging.getLogger("seo_framework")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
