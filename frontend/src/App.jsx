@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PageLoader } from "@/components/app/Common";
 import OnboardingTour from "@/components/app/OnboardingTour";
+import ErrorBoundary from "@/components/app/ErrorBoundary";
 import { Toaster } from "sonner";
 
 import Landing from "@/pages/Landing";
@@ -56,6 +57,7 @@ export default function App() {
       />
       <BrowserRouter>
         <AuthProvider>
+          <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/audit" element={<PublicAudit />} />
@@ -83,6 +85,7 @@ export default function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </div>
