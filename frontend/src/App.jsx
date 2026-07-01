@@ -1,6 +1,7 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PageLoader } from "@/components/app/Common";
 import OnboardingTour from "@/components/app/OnboardingTour";
 import ErrorBoundary from "@/components/app/ErrorBoundary";
@@ -56,6 +57,7 @@ export default function App() {
         }}
       />
       <BrowserRouter>
+        <ThemeProvider>
         <AuthProvider>
           <ErrorBoundary>
           <Routes>
@@ -87,6 +89,7 @@ export default function App() {
           </Routes>
           </ErrorBoundary>
         </AuthProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </div>
   );

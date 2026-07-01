@@ -43,6 +43,7 @@ from sanitize import sanitize_html, sanitize_name
 from logging_config import setup_logging
 from metrics import MetricsMiddleware
 from security_headers import SecurityHeadersMiddleware
+from version_header import VersionHeaderMiddleware
 
 # Structured JSON logging for Cloud Logging
 setup_logging()
@@ -569,14 +570,24 @@ async def ai_competitors(request: Request, body: CompetitorsIn, user_id: str = D
 # ---------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------
+_startup_time = datetime.now(timezone.utc)
+__version__ = "1.8.0"
+
+
 @api.get("/")
 async def root():
-    return {"service": "Goodly API", "status": "ok"}
+    return {"service": "Goodly API", "status": "ok", "version": __version__}
 
 
 @api.get("/health")
 async def health():
-    health_status = {"status": "ok", "service": "Goodly API", "version": "1.7.0"}
+    uptime_seconds = (datetime.now(timezone.utc) - _startup_time).total_seconds()
+    health_status = {
+        "status": "ok",
+        "service": "Goodly API",
+        "version": __version__,
+        "uptime_seconds": int(uptime_seconds),
+    }
     try:
         await db.command("ping")
         health_status["database"] = "connected"
@@ -1359,6 +1370,9 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # Request metrics (latency, status codes)
 app.add_middleware(MetricsMiddleware)
+
+# API version header
+app.add_middleware(VersionHeaderMiddleware, version=__version__)
 
 
 from contextlib import asynccontextmanager

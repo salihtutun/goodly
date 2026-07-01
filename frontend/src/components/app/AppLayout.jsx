@@ -1,7 +1,8 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Logo } from "@/components/app/Common";
-import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard, ClipboardList, Share2, Bot, MapPin, Gift } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard, ClipboardList, Share2, Bot, MapPin, Gift, Moon, Sun } from "lucide-react";
 
 const navItems = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard", end: true },
@@ -17,6 +18,7 @@ const navItems = [
 
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
+  const { dark, toggle } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -74,6 +76,15 @@ export default function AppLayout({ children }) {
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5C685C] hover:text-[#E07A5F] transition-colors rounded-xl"
           >
             <LogOut size={16} /> Sign out
+          </button>
+          <button
+            onClick={toggle}
+            data-testid="theme-toggle-btn"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5C685C] hover:text-[#1A201A] transition-colors rounded-xl"
+            title={dark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+            {dark ? "Light mode" : "Dark mode"}
           </button>
         </div>
       </aside>
