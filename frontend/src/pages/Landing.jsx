@@ -174,12 +174,12 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <Eyebrow className="mb-4">Pricing</Eyebrow>
           <h2 className="font-display font-bold text-[#1A201A] text-3xl sm:text-4xl lg:text-5xl tracking-tight max-w-3xl">
-            One price. One specialist. One ringing phone.
+            One price for every stage. No surprises.
           </h2>
           <p className="mt-5 text-[#5C685C] text-lg max-w-2xl">
-            Or try the self-serve tool free, if you&apos;d rather DIY first.
+            Start free, upgrade when you're ready. Every plan includes AI-powered audits.
           </p>
-          <div className="mt-14 grid md:grid-cols-2 gap-6 max-w-4xl">
+          <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
             <PricingCard
               testId="pricing-free"
               name="Self-serve"
@@ -195,11 +195,47 @@ export default function Landing() {
               ctaLabel="Try the tool free"
             />
             <PricingCard
+              testId="pricing-starter"
+              name="Starter"
+              price={49}
+              tag="Most popular"
+              highlighted
+              features={[
+                "10 SEO audits per month",
+                "3 saved projects",
+                "5 SERP keyword trackers",
+                "Weekly automated re-audits",
+                "PDF reports for every audit",
+                "Instagram audit + suggestions",
+                "Email support within 24 hours",
+              ]}
+              onClick={() => navigate("/register")}
+              ctaLabel="Start free trial"
+            />
+            <PricingCard
+              testId="pricing-pro"
+              name="Pro"
+              price={149}
+              tag="Power user"
+              features={[
+                "Unlimited SEO audits",
+                "15 saved projects",
+                "25 SERP keyword trackers",
+                "Daily automated re-audits",
+                "Competitor analysis",
+                "All social platforms",
+                "AI visibility + GBP audit",
+                "White-label PDF reports",
+                "Priority email support",
+              ]}
+              onClick={() => navigate("/register")}
+              ctaLabel="Start free trial"
+            />
+            <PricingCard
               testId="pricing-concierge"
               name="Concierge"
               price={1000}
               tag="Done for you"
-              highlighted
               features={[
                 "Done-for-you SEO — we do the work",
                 "Dedicated SEO specialist on Slack",

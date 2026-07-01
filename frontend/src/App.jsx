@@ -20,6 +20,7 @@ import GbpAudit from "@/pages/GbpAudit";
 import Billing from "@/pages/Billing";
 import BillingSuccess from "@/pages/BillingSuccess";
 import ConciergeOnboarding from "@/pages/ConciergeOnboarding";
+import OnboardingWizard from "@/pages/OnboardingWizard";
 import NotFound from "@/pages/NotFound";
 import ErrorPage from "@/pages/ErrorPage";
 import Terms from "@/pages/Terms";
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/app/billing" element={<Protected><Billing /></Protected>} />
             <Route path="/app/billing/success" element={<Protected><BillingSuccess /></Protected>} />
             <Route path="/app/concierge/onboarding" element={<Protected><ConciergeOnboarding /></Protected>} />
+            <Route path="/app/onboarding" element={<Protected><OnboardingWizard /></Protected>} />
             <Route path="/error" element={<ErrorPage />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />

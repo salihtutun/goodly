@@ -123,13 +123,15 @@ export default function Dashboard() {
         </div>
 
         {/* Quick actions */}
-        <div className="mt-10 grid md:grid-cols-3 gap-5">
+        <div className="mt-10 grid md:grid-cols-4 gap-5">
           <QuickAction onClick={() => navigate("/app/audit")} testId="qa-audit"
             title="Run a website audit" body="Paste any URL. Get a score in seconds." icon={Gauge}/>
           <QuickAction onClick={() => navigate("/app/social")} testId="qa-social"
             title="Audit your social reach" body="Instagram, TikTok, YouTube — score + AI improvements." icon={Sparkles}/>
           <QuickAction onClick={() => navigate("/app/ai-tools")} testId="qa-ai"
             title="Open AI Studio" body="Generate meta tags, keywords, competitor reports." icon={Sparkles}/>
+          <QuickAction onClick={() => navigate("/app/billing")} testId="qa-billing"
+            title="Manage billing" body="Upgrade plan, view invoices, manage subscription." icon={CreditCard}/>
         </div>
 
         {/* Recent audits */}

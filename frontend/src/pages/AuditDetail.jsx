@@ -6,7 +6,7 @@ import { Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, Info, Sparkles, Globe, Smartphone, Image as ImageIcon, Link2, Shield, Download } from "lucide-react";
+import { ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, Info, Sparkles, Globe, Smartphone, Image as ImageIcon, Link2, Shield, Download, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { API_BASE } from "@/lib/api";
@@ -90,12 +90,23 @@ export default function AuditDetail() {
           <Link to="/app/audit" className="text-sm text-[#5C685C] hover:text-[#1A201A] flex items-center gap-1.5" data-testid="back-to-audits">
             <ArrowLeft size={16}/> New audit
           </Link>
-          <Button onClick={downloadPdf} disabled={downloading} data-testid="download-pdf-btn"
-            className="bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7] rounded-full">
-            <Download size={16} className="mr-1.5"/>
-            {downloading ? "Preparing…" : "Download PDF"}
-            {user?.plan === "free" && <span className="ml-2 text-[10px] uppercase bg-[#FDFBF7]/20 px-1.5 py-0.5 rounded-full">Pro</span>}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => {
+              const text = `I just got a ${result.overall_score}/100 SEO score for ${result.url} on Goodly. Try it free: ${window.location.origin}`;
+              navigator.clipboard.writeText(text);
+              toast.success("Copied! Share with your network.");
+            }} data-testid="share-audit-btn"
+              className="bg-[#81B29A] hover:bg-[#6A9A82] text-[#FDFBF7] rounded-full">
+              <Share2 size={16} className="mr-1.5"/>
+              Share
+            </Button>
+            <Button onClick={downloadPdf} disabled={downloading} data-testid="download-pdf-btn"
+              className="bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7] rounded-full">
+              <Download size={16} className="mr-1.5"/>
+              {downloading ? "Preparing…" : "Download PDF"}
+              {user?.plan === "free" && <span className="ml-2 text-[10px] uppercase bg-[#FDFBF7]/20 px-1.5 py-0.5 rounded-full">Pro</span>}
+            </Button>
+          </div>
         </div>
 
         {/* Header */}
