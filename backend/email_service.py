@@ -238,3 +238,38 @@ def weekly_tips_html(*, name: str, tips: list, dashboard_url: str) -> str:
   </table>
 </body></html>
 """
+
+
+def referral_invite_html(*, referrer_name: str, referral_link: str) -> str:
+    """Email sent when a user invites a friend via the referral system."""
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">{referrer_name} thinks you should try Goodly</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            {referrer_name} uses Goodly to get found on Google, Instagram, TikTok, and YouTube — and they thought you'd benefit too.
+          </p>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="background:#F3F0E9;border-radius:16px;width:100%">
+            <tr>
+              <td style="padding:24px" align="center">
+                <div style="font-size:18px;font-weight:600;color:#1A201A;margin-bottom:8px">Get a free SEO audit</div>
+                <div style="color:#5C685C;font-size:14px;line-height:1.55">Paste your website URL and get a score in 10 seconds. No signup. No credit card.</div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{referral_link}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">Get my free audit</a>
+          <p style="margin:20px 0 0;color:#5C685C;font-size:12px">Goodly helps small businesses get found online. Real SEO, no jargon.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""

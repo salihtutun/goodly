@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: goodly-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: goodly
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    container_name: goodly-backend
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=goodly
+      - JWT_SECRET=dev-secret-change-in-production-32bytes
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - STRIPE_API_KEY=${STRIPE_API_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - SENDER_EMAIL=onboarding@resend.dev
+      - ENVIRONMENT=development
+      - CORS_ORIGINS=http://localhost:3000
+      - ADMIN_EMAIL=admin@goodly.app
+      - ADMIN_PASSWORD=admin123
+      - DEMO_PASSWORD=demo1234
+      - SCHEDULER_ENABLED=true
+    depends_on:
+      - mongodb
+    command: uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: goodly-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8001
+    depends_on:
+      - backend
+    command: npm start
+
+volumes:
+  mongo_data:

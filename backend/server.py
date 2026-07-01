@@ -1288,6 +1288,32 @@ async def admin_list_briefs(user: dict = Depends(get_current_user_doc)):
 
 
 # ---------------------------------------------------------------
+# Referrals
+# ---------------------------------------------------------------
+class ReferralInviteIn(BaseModel):
+    email: EmailStr
+
+
+@api.post("/referrals/invite")
+@limiter.limit("5/minute")
+async def referral_invite(request: Request, body: ReferralInviteIn, user: dict = Depends(get_current_user_doc)):
+    """Send a referral invite email to a friend."""
+    referral_link = f"{_store_base_url(request)}audit?ref={user['id']}"
+    try:
+        await email_service.send_html_email(
+            to=body.email,
+            subject=f"{user.get('name', 'A friend')} invited you to try Goodly",
+            html=email_service.referral_invite_html(
+                referrer_name=user.get("name", "A friend"),
+                referral_link=referral_link,
+            ),
+        )
+    except Exception as e:
+        logger.warning("Referral invite email failed: %s", e)
+    return {"ok": True, "message": f"Invite sent to {body.email}"}
+
+
+# ---------------------------------------------------------------
 # Scheduled audits — manual trigger + history
 # ---------------------------------------------------------------
 @api.post("/scheduler/run-now")

@@ -67,6 +67,12 @@ export default function Landing() {
             <div className="mt-10 flex items-center gap-6 text-sm text-[#5C685C]">
               <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-[#81B29A]"/>Page-one in 90 days, or month 4 is free</div>
             </div>
+            {/* Social proof stats */}
+            <div className="mt-8 flex items-center gap-8 text-sm text-[#5C685C]">
+              <div><span className="font-display font-bold text-2xl text-[#1A201A]">500+</span><br/>audits run</div>
+              <div><span className="font-display font-bold text-2xl text-[#1A201A]">4.9</span><br/>avg SEO score improvement</div>
+              <div><span className="font-display font-bold text-2xl text-[#1A201A]">83</span><br/>days to page one</div>
+            </div>
           </div>
           <div className="lg:col-span-5 relative">
             <div className="relative rounded-3xl overflow-hidden border border-[#E5E0D8] shadow-sm">

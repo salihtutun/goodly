@@ -1,7 +1,7 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/app/Common";
-import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard, ClipboardList, Share2, Bot, MapPin } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard, ClipboardList, Share2, Bot, MapPin, Gift } from "lucide-react";
 
 const navItems = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard", end: true },
@@ -11,7 +11,7 @@ const navItems = [
   { to: "/app/ai-visibility", label: "AI Visibility", icon: Bot, testId: "nav-ai-visibility" },
   { to: "/app/gbp", label: "Google Profile", icon: MapPin, testId: "nav-gbp" },
   { to: "/app/ai-tools", label: "AI Studio", icon: Sparkles, testId: "nav-ai" },
-  { to: "/app/concierge/onboarding", label: "Concierge brief", icon: ClipboardList, testId: "nav-concierge" },
+  { to: "/app/referral", label: "Refer & Earn", icon: Gift, testId: "nav-referral" },
   { to: "/app/billing", label: "Billing", icon: CreditCard, testId: "nav-billing" },
 ];
 

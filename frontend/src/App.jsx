@@ -22,6 +22,7 @@ import BillingSuccess from "@/pages/BillingSuccess";
 import ConciergeOnboarding from "@/pages/ConciergeOnboarding";
 import OnboardingWizard from "@/pages/OnboardingWizard";
 import PublicAudit from "@/pages/PublicAudit";
+import Referral from "@/pages/Referral";
 import NotFound from "@/pages/NotFound";
 import ErrorPage from "@/pages/ErrorPage";
 import Terms from "@/pages/Terms";
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/app/billing/success" element={<Protected><BillingSuccess /></Protected>} />
             <Route path="/app/concierge/onboarding" element={<Protected><ConciergeOnboarding /></Protected>} />
             <Route path="/app/onboarding" element={<Protected><OnboardingWizard /></Protected>} />
+            <Route path="/app/referral" element={<Protected><Referral /></Protected>} />
             <Route path="/error" element={<ErrorPage />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
