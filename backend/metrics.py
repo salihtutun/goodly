@@ -20,6 +20,13 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         duration_ms = (time.time() - start) * 1000
 
+        # Add rate limit headers if available
+        if hasattr(request.state, "limiter_info"):
+            info = request.state.limiter_info
+            response.headers["X-RateLimit-Limit"] = str(info.get("limit", ""))
+            response.headers["X-RateLimit-Remaining"] = str(info.get("remaining", ""))
+            response.headers["X-RateLimit-Reset"] = str(info.get("reset", ""))
+
         logger.info(json.dumps({
             "metric": "request",
             "path": request.url.path,
