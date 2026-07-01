@@ -442,6 +442,26 @@ async def run_audit(body: AuditIn, user: dict = Depends(get_current_user_doc)):
     return audit_doc
 
 
+# Public audit — no auth required, no DB save, no AI recs (just the raw score)
+class PublicAuditIn(BaseModel):
+    url: str
+
+
+@api.post("/public/audit")
+@limiter.limit("10/minute")
+async def public_audit(request: Request, body: PublicAuditIn):
+    """Run a free SEO audit without authentication. Returns score + top issues only."""
+    result = await analyze_url(body.url)
+    return {
+        "url": result.get("url", body.url),
+        "overall_score": result.get("overall_score"),
+        "categories": result.get("categories"),
+        "issues": result.get("issues", []),
+        "fetch_failed": result.get("fetch_failed", False),
+        "error": result.get("error"),
+    }
+
+
 @api.get("/audits")
 async def list_audits(project_id: Optional[str] = None, user_id: str = Depends(get_current_user_id)):
     query = {"user_id": user_id}

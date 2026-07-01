@@ -21,6 +21,7 @@ import Billing from "@/pages/Billing";
 import BillingSuccess from "@/pages/BillingSuccess";
 import ConciergeOnboarding from "@/pages/ConciergeOnboarding";
 import OnboardingWizard from "@/pages/OnboardingWizard";
+import PublicAudit from "@/pages/PublicAudit";
 import NotFound from "@/pages/NotFound";
 import ErrorPage from "@/pages/ErrorPage";
 import Terms from "@/pages/Terms";
@@ -56,6 +57,7 @@ export default function App() {
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/audit" element={<PublicAudit />} />
             <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
             <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
             <Route path="/verify-email" element={<VerifyEmail />} />

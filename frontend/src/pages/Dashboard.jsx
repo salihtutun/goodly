@@ -62,6 +62,26 @@ export default function Dashboard() {
         </h1>
         <p className="mt-3 text-[#5C685C] text-lg">Here&apos;s how your projects are growing.</p>
 
+        {/* Free trial banner — show upgrade prompt for free users */}
+        {user?.plan === "free" && (
+          <div className="mt-6 bg-gradient-to-r from-[#81B29A]/10 to-[#2D3E32]/10 border border-[#81B29A]/30 rounded-2xl p-5 flex items-start gap-4" data-testid="free-trial-banner">
+            <div className="h-10 w-10 rounded-xl bg-[#81B29A]/20 text-[#2D3E32] flex items-center justify-center shrink-0">
+              <Sparkles size={20} strokeWidth={1.75}/>
+            </div>
+            <div className="flex-1">
+              <div className="font-display font-bold text-[#1A201A]">You're on the free plan</div>
+              <div className="text-sm text-[#5C685C] mt-1">
+                Upgrade to Starter for $49/mo and get 10 audits, SERP tracking, PDF reports, and weekly automated re-audits.
+              </div>
+            </div>
+            <Button onClick={() => navigate("/app/billing")}
+              data-testid="upgrade-from-banner-btn"
+              className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-5 shrink-0">
+              See plans
+            </Button>
+          </div>
+        )}
+
         {user?.plan === "concierge" && briefLoaded && !brief && (
           <div className="mt-8 bg-[#E07A5F]/10 border border-[#E07A5F]/40 rounded-2xl p-5 flex items-start gap-4" data-testid="concierge-brief-banner">
             <div className="h-10 w-10 rounded-xl bg-[#E07A5F]/20 text-[#E07A5F] flex items-center justify-center shrink-0">

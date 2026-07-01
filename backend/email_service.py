@@ -157,3 +157,84 @@ def audit_digest_html(*, name: str, project_name: str, url: str,
   </table>
 </body></html>
 """
+
+
+def post_audit_html(*, name: str, url: str, overall_score: int,
+                    high_issues: int, audit_url: str) -> str:
+    """Email sent immediately after a user runs their first audit."""
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">Your SEO score is {overall_score}/100</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            Hi {name},<br/><br/>
+            We just finished auditing <strong>{url}</strong>. Here's what we found:
+          </p>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="background:#F3F0E9;border-radius:16px;width:100%">
+            <tr>
+              <td style="padding:24px;width:35%" align="center">
+                <div style="font-size:48px;font-weight:700;color:#2D3E32;line-height:1">{overall_score}</div>
+                <div style="font-size:12px;color:#5C685C;margin-top:4px">/100 health</div>
+              </td>
+              <td style="padding:24px;color:#1A201A;font-size:14px;line-height:1.55">
+                <strong>{high_issues}</strong> critical issues found.<br/>
+                <span style="color:#5C685C">View your full report to see the step-by-step fix plan.</span>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{audit_url}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">View my full report</a>
+          <p style="margin:20px 0 0;color:#5C685C;font-size:12px">You're getting this because you ran an audit on Goodly. We'll send you tips to improve your score.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""
+
+
+def weekly_tips_html(*, name: str, tips: list, dashboard_url: str) -> str:
+    """Weekly email with SEO tips and upgrade prompt."""
+    tips_html = ""
+    for tip in tips[:3]:
+        tips_html += (
+            f"<tr><td style='padding:12px 16px;border-bottom:1px solid #E5E0D8'>"
+            f"<div style='color:#1A201A;font-size:14px;font-weight:500'>{tip.get('title','')}</div>"
+            f"<div style='color:#5C685C;font-size:13px;margin-top:4px'>{tip.get('body','')}</div>"
+            f"</td></tr>"
+        )
+
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">Your weekly SEO tips</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            Hi {name},<br/><br/>
+            Here are this week's tips to improve your visibility:
+          </p>
+        </td></tr>
+        <tr><td style="padding:8px 16px 8px 16px">
+          <table cellpadding="0" cellspacing="0" width="100%" style="background:#FFFFFF">
+            {tips_html or '<tr><td style="padding:14px;color:#5C685C">Run an audit to get personalized tips!</td></tr>'}
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{dashboard_url}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">Go to dashboard</a>
+          <p style="margin:20px 0 0;color:#5C685C;font-size:12px">Want more? Upgrade to Starter for $49/mo and get weekly automated audits + SERP tracking.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""

@@ -104,37 +104,37 @@ export default function Billing() {
         )}
 
         {/* Plans grid */}
-        <div className="mt-12 grid md:grid-cols-2 gap-6" data-testid="plans-grid">
+        <div className="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-6" data-testid="plans-grid">
           {loading ? <div className="text-[#5C685C]">Loading plans…</div> : plans.map((p) => {
             const isCurrent = p.id === currentPlan;
-            const isPro = p.id === "concierge";
+            const isHighlighted = p.id === "starter";
             return (
               <div key={p.id}
                 className={`relative rounded-3xl p-7 border transition-all duration-300 ${
-                  isPro ? "bg-[#2D3E32] border-[#2D3E32] text-[#FDFBF7]" : "bg-white border-[#E5E0D8] text-[#1A201A]"
+                  isHighlighted ? "bg-[#2D3E32] border-[#2D3E32] text-[#FDFBF7]" : "bg-white border-[#E5E0D8] text-[#1A201A]"
                 }`}
                 data-testid={`plan-card-${p.id}`}>
-                {isPro && (
+                {isHighlighted && (
                   <div className="absolute -top-3 left-7 bg-[#E07A5F] text-[#FDFBF7] text-xs font-medium tracking-wider uppercase px-3 py-1 rounded-full">
                     Most popular
                   </div>
                 )}
-                <div className="label-eyebrow" style={isPro ? { color: "#FDFBF7AA" } : {}}>{p.name}</div>
+                <div className="label-eyebrow" style={isHighlighted ? { color: "#FDFBF7AA" } : {}}>{p.name}</div>
                 <div className="mt-4 font-display">
                   <span className="text-5xl font-bold">${Math.round(p.price_usd)}</span>
-                  {p.price_usd > 0 && <span className={`text-sm ml-1 ${isPro ? "text-[#FDFBF7]/70" : "text-[#5C685C]"}`}>/ month</span>}
+                  {p.price_usd > 0 && <span className={`text-sm ml-1 ${isHighlighted ? "text-[#FDFBF7]/70" : "text-[#5C685C]"}`}>/ month</span>}
                 </div>
                 <ul className="mt-6 space-y-2.5">
                   {p.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
-                      <Check size={16} className={isPro ? "text-[#81B29A]" : "text-[#81B29A]"} />
-                      <span className={isPro ? "text-[#FDFBF7]/95" : "text-[#1A201A]"}>{f}</span>
+                      <Check size={16} className={isHighlighted ? "text-[#81B29A]" : "text-[#81B29A]"} />
+                      <span className={isHighlighted ? "text-[#FDFBF7]/95" : "text-[#1A201A]"}>{f}</span>
                     </li>
                   ))}
                 </ul>
                 <div className="mt-8">
                   {isCurrent ? (
-                    <Badge className={`rounded-full px-4 py-2 ${isPro ? "bg-[#FDFBF7]/15 text-[#FDFBF7] hover:bg-[#FDFBF7]/15" : "bg-[#F3F0E9] text-[#1A201A] hover:bg-[#F3F0E9]"} border-0`}
+                    <Badge className={`rounded-full px-4 py-2 ${isHighlighted ? "bg-[#FDFBF7]/15 text-[#FDFBF7] hover:bg-[#FDFBF7]/15" : "bg-[#F3F0E9] text-[#1A201A] hover:bg-[#F3F0E9]"} border-0`}
                       data-testid={`current-${p.id}`}>
                       Current plan
                     </Badge>
@@ -142,7 +142,7 @@ export default function Billing() {
                     <Button variant="outline"
                       onClick={() => navigate("/app")}
                       data-testid={`select-${p.id}`}
-                      className={`rounded-full ${isPro ? "border-[#FDFBF7] text-[#FDFBF7] hover:bg-[#FDFBF7]/10 bg-transparent" : "border-[#2D3E32] text-[#2D3E32] hover:bg-[#F3F0E9] bg-transparent"}`}>
+                      className={`rounded-full ${isHighlighted ? "border-[#FDFBF7] text-[#FDFBF7] hover:bg-[#FDFBF7]/10 bg-transparent" : "border-[#2D3E32] text-[#2D3E32] hover:bg-[#F3F0E9] bg-transparent"}`}>
                       Continue free
                     </Button>
                   ) : (
@@ -151,7 +151,7 @@ export default function Billing() {
                       disabled={busyPlan === p.id}
                       data-testid={`upgrade-${p.id}-btn`}
                       className={`rounded-full px-6 ${
-                        isPro ? "bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7]"
+                        isHighlighted ? "bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7]"
                               : "bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7]"
                       }`}>
                       <Sparkles size={16} className="mr-2"/>
