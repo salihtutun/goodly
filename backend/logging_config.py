@@ -6,7 +6,21 @@ that can be parsed by cloud logging platforms.
 import logging
 import json
 import sys
+import uuid
+from contextvars import ContextVar
 from datetime import datetime, timezone
+
+# Thread-safe request ID for correlating logs
+request_id_var: ContextVar[str] = ContextVar("request_id", default="")
+
+
+def get_request_id() -> str:
+    """Get the current request ID, generating one if not set."""
+    rid = request_id_var.get()
+    if not rid:
+        rid = str(uuid.uuid4())[:8]
+        request_id_var.set(rid)
+    return rid
 
 
 class StructuredFormatter(logging.Formatter):
@@ -22,9 +36,12 @@ class StructuredFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno,
         }
+        # Include request ID for correlation
+        rid = request_id_var.get()
+        if rid:
+            log_entry["request_id"] = rid
         if record.exc_info and record.exc_info[1]:
             log_entry["exception"] = str(record.exc_info[1])
-        # Include any extra fields passed via logging extras
         if hasattr(record, "extra_fields"):
             log_entry.update(record.extra_fields)
         return json.dumps(log_entry, default=str)
@@ -38,7 +55,6 @@ def setup_logging(level: int = logging.INFO):
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(StructuredFormatter())
     root = logging.getLogger()
-    # Remove existing handlers
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(level)

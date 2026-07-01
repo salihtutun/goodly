@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/app/Common";
-import { Leaf, Home } from "lucide-react";
+import { Leaf, Home, Search, ArrowRight } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function NotFound() {
+  usePageMeta({ title: "Page not found", description: "The page you're looking for doesn't exist." });
+
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center px-6">
       <div className="text-center max-w-md">
@@ -19,7 +21,28 @@ export default function NotFound() {
         <p className="mt-2 text-[#5C685C]">
           The page you're looking for doesn't exist or has been moved.
         </p>
-        <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
+
+        {/* Quick actions */}
+        <div className="mt-8 bg-white border border-[#E5E0D8] rounded-2xl p-5 text-left">
+          <div className="text-sm font-medium text-[#1A201A] mb-3">Try these instead:</div>
+          <Link to="/audit" className="flex items-center gap-3 py-2 text-sm text-[#5C685C] hover:text-[#1A201A] transition-colors">
+            <Search size={14} className="text-[#81B29A]" />
+            Run a free SEO audit
+            <ArrowRight size={12} className="ml-auto" />
+          </Link>
+          <Link to="/" className="flex items-center gap-3 py-2 text-sm text-[#5C685C] hover:text-[#1A201A] transition-colors">
+            <Home size={14} className="text-[#81B29A]" />
+            Go to homepage
+            <ArrowRight size={12} className="ml-auto" />
+          </Link>
+          <Link to="/login" className="flex items-center gap-3 py-2 text-sm text-[#5C685C] hover:text-[#1A201A] transition-colors">
+            <Home size={14} className="text-[#81B29A]" />
+            Sign in to your account
+            <ArrowRight size={12} className="ml-auto" />
+          </Link>
+        </div>
+
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             asChild
             className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6"

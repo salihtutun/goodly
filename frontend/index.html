@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#2D3E32" />
     <meta name="description" content="Goodly — Visibility OS for Small Businesses. Get found on Google, Instagram, TikTok, YouTube, and AI assistants. Free SEO audit in 10 seconds." />
+    <link rel="canonical" href="https://goodly.app" />
 
     <!-- Open Graph / Social -->
     <meta property="og:title" content="Goodly — Visibility OS for Small Businesses" />
@@ -19,9 +20,28 @@
     <meta name="twitter:description" content="Get found on Google, Instagram, TikTok, and YouTube. Free SEO audit in 10 seconds." />
     <meta name="twitter:image" content="https://goodly.app/og-image.png" />
 
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Goodly",
+      "applicationCategory": "BusinessApplication",
+      "description": "Visibility OS for small businesses. SEO audits, social media analysis, and AI-powered recommendations.",
+      "url": "https://goodly.app",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "operatingSystem": "Web"
+    }
+    </script>
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/logo192.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,6 +49,7 @@
     <title>Goodly — Visibility OS for Small Businesses</title>
   </head>
   <body>
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-[#2D3E32] focus:text-[#FDFBF7] focus:px-4 focus:py-2 focus:rounded-full">Skip to main content</a>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
