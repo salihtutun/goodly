@@ -532,7 +532,7 @@ class PublicAuditIn(BaseModel):
 
 @api.post("/public/audit")
 @limiter.limit("10/minute")
-async def public_audit(request: Request, body: PublicAuditIn):
+async def public_audit(request: Request, body: PublicAuditIn, response: Response):
     """Run a free SEO audit without authentication. Returns score + top issues only."""
     if not validate_url(body.url):
         raise HTTPException(status_code=400, detail="Invalid URL. Please provide a valid website URL (e.g., https://example.com).")
@@ -1600,7 +1600,7 @@ class SupportContactIn(BaseModel):
 
 @api.post("/support/contact")
 @limiter.limit("3/minute")
-async def support_contact(request: Request, body: SupportContactIn):
+async def support_contact(request: Request, body: SupportContactIn, response: Response):
     """Accept a support message from the in-app widget. Stores in DB and sends email."""
     doc = {
         "id": str(uuid.uuid4()),
