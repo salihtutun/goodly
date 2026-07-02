@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/app/Common";
 import { AuthShell } from "@/pages/Login";
+import GoogleSignInButton from "@/components/app/GoogleSignInButton";
 import { Eye, EyeOff } from "lucide-react";
+import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -44,6 +46,20 @@ export default function Register() {
     }
   };
 
+  const handleGoogleAuth = async (credential) => {
+    setBusy(true); setError("");
+    try {
+      const { data } = await api.post("/auth/google", { credential });
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        toast.success("Welcome! Account created with Google.");
+        navigate("/app");
+      }
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally { setBusy(false); }
+  };
+
   return (
     <AuthShell>
       <div className="w-full max-w-md">
@@ -52,6 +68,14 @@ export default function Register() {
         <p className="mt-2 text-[#5C685C]">Plant the seed in under a minute.</p>
 
         <form onSubmit={submit} className="mt-10 space-y-5" data-testid="register-form">
+          {/* Google Sign-Up */}
+          <GoogleSignInButton onSuccess={(credential) => handleGoogleAuth(credential)} />
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#E5E0D8]" /></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-[#FDFBF7] px-3 text-[#9CA89C]">or sign up with email</span></div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Business / your name</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)}
