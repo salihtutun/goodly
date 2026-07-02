@@ -40,6 +40,9 @@ const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 // Free tools (lead magnets)
 const MetaTagChecker = lazy(() => import("@/pages/tools/MetaTagChecker"));
 const PageSpeedChecker = lazy(() => import("@/pages/tools/PageSpeedChecker"));
+// Blog
+const Blog = lazy(() => import("@/pages/Blog"));
+const BlogPost = lazy(() => import("@/pages/BlogPost"));
 
 function Lazy({ children }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -100,6 +103,9 @@ export default function App() {
             {/* Free SEO tools — lead magnets */}
             <Route path="/tools/meta-tag-checker" element={<Lazy><MetaTagChecker /></Lazy>} />
             <Route path="/tools/page-speed" element={<Lazy><PageSpeedChecker /></Lazy>} />
+            {/* Blog */}
+            <Route path="/blog" element={<Lazy><Blog /></Lazy>} />
+            <Route path="/blog/:slug" element={<Lazy><BlogPost /></Lazy>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </ErrorBoundary>
