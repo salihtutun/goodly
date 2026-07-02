@@ -44,6 +44,8 @@ const PageSpeedChecker = lazy(() => import("@/pages/tools/PageSpeedChecker"));
 // Blog
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogPost = lazy(() => import("@/pages/BlogPost"));
+// Competitor Comparison
+const CompetitorComparison = lazy(() => import("@/pages/CompetitorComparison"));
 
 function Lazy({ children }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -107,6 +109,8 @@ export default function App() {
             {/* Blog */}
             <Route path="/blog" element={<Lazy><Blog /></Lazy>} />
             <Route path="/blog/:slug" element={<Lazy><BlogPost /></Lazy>} />
+            {/* Competitor Comparison */}
+            <Route path="/app/competitors" element={<Protected><Lazy><CompetitorComparison /></Lazy></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </ErrorBoundary>

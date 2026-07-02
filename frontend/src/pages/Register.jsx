@@ -21,6 +21,16 @@ export default function Register() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const pwStrength = (() => {
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    return Math.min(4, score);
+  })();
+
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setError("");
@@ -70,6 +80,23 @@ export default function Register() {
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {password && (
+              <div className="mt-2">
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4].map((level) => (
+                    <div key={level} className={`h-1.5 flex-1 rounded-full transition-colors ${
+                      pwStrength >= level ? (pwStrength <= 2 ? "bg-[#E07A5F]" : pwStrength === 3 ? "bg-[#E6A57E]" : "bg-[#81B29A]") : "bg-[#E5E0D8]"
+                    }`} />
+                  ))}
+                </div>
+                <p className="text-xs text-[#5C685C] mt-1.5">
+                  {pwStrength <= 1 && "Weak — add uppercase, numbers, or special characters"}
+                  {pwStrength === 2 && "Fair — add more variety"}
+                  {pwStrength === 3 && "Good — almost there"}
+                  {pwStrength >= 4 && "Strong password!"}
+                </p>
+              </div>
+            )}
           </div>
 
           {error && (

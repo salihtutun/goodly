@@ -46,6 +46,7 @@ from metrics import MetricsMiddleware
 from security_headers import SecurityHeadersMiddleware
 from version_header import VersionHeaderMiddleware
 import achievements
+import competitor_analysis
 
 # Structured JSON logging for Cloud Logging
 setup_logging()
@@ -646,6 +647,31 @@ async def ai_competitors(request: Request, body: CompetitorsIn, user_id: str = D
     except Exception as e:
         logger.exception("competitors failed")
         raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+
+
+class CompareCompetitorsIn(BaseModel):
+    target_url: str
+    competitor_urls: list = Field(default_factory=list, max_length=5)
+
+
+@api.post("/competitors/compare")
+@limiter.limit("10/minute")
+async def compare_competitors_endpoint(request: Request, body: CompareCompetitorsIn, user_id: str = Depends(get_current_user_id)):
+    """Compare your site against competitors on key SEO metrics. Returns head-to-head comparison with insights and recommendations."""
+    if not body.competitor_urls:
+        raise HTTPException(status_code=400, detail="At least one competitor URL is required")
+    if not validate_url(body.target_url):
+        raise HTTPException(status_code=400, detail="Invalid target URL")
+    for url in body.competitor_urls:
+        if not validate_url(url):
+            raise HTTPException(status_code=400, detail=f"Invalid competitor URL: {url}")
+
+    try:
+        result = await competitor_analysis.compare_competitors(body.target_url, body.competitor_urls)
+        return result
+    except Exception as e:
+        logger.exception("competitor comparison failed")
+        raise HTTPException(status_code=502, detail=f"Comparison failed: {e}")
 
 
 # ---------------------------------------------------------------
