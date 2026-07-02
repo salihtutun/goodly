@@ -1545,67 +1545,70 @@ async def lifespan(app: FastAPI):
 
     # Skip DB operations if no MONGO_URL (serverless cold start)
     if os.environ.get("MONGO_URL"):
-        await db.users.create_index("email", unique=True)
-        await db.users.create_index("id", unique=True)
-        await db.projects.create_index("id", unique=True)
-        await db.projects.create_index("user_id")
-        await db.projects.create_index([("schedule", 1), ("next_audit_at", 1)])
-        await db.audits.create_index("id", unique=True)
-        await db.audits.create_index([("user_id", 1), ("created_at", -1)])
-        await db.payment_transactions.create_index("session_id", unique=True)
-        await db.serp_checks.create_index([("user_id", 1), ("created_at", -1)])
-        await db.scheduled_runs.create_index([("user_id", 1), ("run_at", -1)])
-        await db.concierge_briefs.create_index("user_id", unique=True)
-        await db.social_audits.create_index([("user_id", 1), ("created_at", -1)])
-        await db.ai_visibility_checks.create_index([("user_id", 1), ("created_at", -1)])
-        await db.gbp_audits.create_index([("user_id", 1), ("created_at", -1)])
-        await db.ai_history.create_index([("user_id", 1), ("created_at", -1)])
-        await db.users.create_index("verification_token", sparse=True)
-        await db.users.create_index("reset_token", sparse=True)
-        # TTL indexes for automatic cleanup
         try:
-            await db.serp_checks.create_index("created_at", expireAfterSeconds=90 * 24 * 3600)
-            await db.ai_history.create_index("created_at", expireAfterSeconds=365 * 24 * 3600)
-        except Exception:
-            pass  # TTL indexes may not be supported on all MongoDB versions
+            await db.users.create_index("email", unique=True)
+            await db.users.create_index("id", unique=True)
+            await db.projects.create_index("id", unique=True)
+            await db.projects.create_index("user_id")
+            await db.projects.create_index([("schedule", 1), ("next_audit_at", 1)])
+            await db.audits.create_index("id", unique=True)
+            await db.audits.create_index([("user_id", 1), ("created_at", -1)])
+            await db.payment_transactions.create_index("session_id", unique=True)
+            await db.serp_checks.create_index([("user_id", 1), ("created_at", -1)])
+            await db.scheduled_runs.create_index([("user_id", 1), ("run_at", -1)])
+            await db.concierge_briefs.create_index("user_id", unique=True)
+            await db.social_audits.create_index([("user_id", 1), ("created_at", -1)])
+            await db.ai_visibility_checks.create_index([("user_id", 1), ("created_at", -1)])
+            await db.gbp_audits.create_index([("user_id", 1), ("created_at", -1)])
+            await db.ai_history.create_index([("user_id", 1), ("created_at", -1)])
+            await db.users.create_index("verification_token", sparse=True)
+            await db.users.create_index("reset_token", sparse=True)
+            # TTL indexes for automatic cleanup
+            try:
+                await db.serp_checks.create_index("created_at", expireAfterSeconds=90 * 24 * 3600)
+                await db.ai_history.create_index("created_at", expireAfterSeconds=365 * 24 * 3600)
+            except Exception:
+                pass  # TTL indexes may not be supported on all MongoDB versions
 
-        await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})
-        await db.users.update_many({"onboarded": {"$exists": False}}, {"$set": {"onboarded": False}})
+            await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})
+            await db.users.update_many({"onboarded": {"$exists": False}}, {"$set": {"onboarded": False}})
 
-        import secrets as _secrets
-        admin_password = os.environ.get("ADMIN_PASSWORD")
-        if not admin_password:
-            admin_password = _secrets.token_urlsafe(16)
-            logger.warning("ADMIN_PASSWORD not set — generated random admin password: %s", admin_password)
-        demo_password = os.environ.get("DEMO_PASSWORD", "demo1234")
-        seeds = [
-            {"email": os.environ.get("ADMIN_EMAIL", "admin@goodly.app"),
-             "password": admin_password,
-             "name": "Admin", "role": "admin", "plan": "concierge"},
-            {"email": "demo@smallbiz.com", "password": demo_password, "name": "Demo Owner", "role": "user", "plan": "concierge"},
-        ]
-        for s in seeds:
-            existing = await db.users.find_one({"email": s["email"]})
-            if not existing:
-                await db.users.insert_one({
-                    "id": str(uuid.uuid4()),
-                    "email": s["email"],
-                    "password_hash": hash_password(s["password"]),
-                    "name": s["name"],
-                    "role": s["role"],
-                    "plan": s["plan"],
-                    "onboarded": True,
-                    "created_at": now_iso(),
-                })
-            else:
-                await db.users.update_one(
-                    {"email": s["email"]},
-                    {"$set": {"plan": existing.get("plan") or s["plan"], "onboarded": True}},
-                )
-        logger.info("Startup complete. Seeded users (if missing).")
+            import secrets as _secrets
+            admin_password = os.environ.get("ADMIN_PASSWORD")
+            if not admin_password:
+                admin_password = _secrets.token_urlsafe(16)
+                logger.warning("ADMIN_PASSWORD not set — generated random admin password: %s", admin_password)
+            demo_password = os.environ.get("DEMO_PASSWORD", "demo1234")
+            seeds = [
+                {"email": os.environ.get("ADMIN_EMAIL", "admin@goodly.app"),
+                 "password": admin_password,
+                 "name": "Admin", "role": "admin", "plan": "concierge"},
+                {"email": "demo@smallbiz.com", "password": demo_password, "name": "Demo Owner", "role": "user", "plan": "concierge"},
+            ]
+            for s in seeds:
+                existing = await db.users.find_one({"email": s["email"]})
+                if not existing:
+                    await db.users.insert_one({
+                        "id": str(uuid.uuid4()),
+                        "email": s["email"],
+                        "password_hash": hash_password(s["password"]),
+                        "name": s["name"],
+                        "role": s["role"],
+                        "plan": s["plan"],
+                        "onboarded": True,
+                        "created_at": now_iso(),
+                    })
+                else:
+                    await db.users.update_one(
+                        {"email": s["email"]},
+                        {"$set": {"plan": existing.get("plan") or s["plan"], "onboarded": True}},
+                    )
+            logger.info("Startup complete. Seeded users (if missing).")
 
-        if os.environ.get("SCHEDULER_ENABLED", "true").lower() in ("1", "true", "yes"):
-            scheduler_mod.start(db, lambda: _state.get("base_url") or "http://localhost:8001")
+            if os.environ.get("SCHEDULER_ENABLED", "true").lower() in ("1", "true", "yes"):
+                scheduler_mod.start(db, lambda: _state.get("base_url") or "http://localhost:8001")
+        except Exception as e:
+            logger.exception("DB initialization failed: %s", e)
     else:
         logger.warning("MONGO_URL not set — skipping DB initialization")
 
