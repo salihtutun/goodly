@@ -157,6 +157,10 @@ class ResetPasswordIn(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class GoogleAuthIn(BaseModel):
+    credential: str  # Google ID token from Sign In With Google
+
+
 class AuthOut(BaseModel):
     user: dict
     token: str
@@ -224,6 +228,73 @@ async def login(request: Request, body: LoginIn, response: Response):
     token = create_access_token(user["id"], email)
     _set_auth_cookie(response, token)
     return {"user": public_user(user), "token": token}
+
+
+@api.post("/auth/google", response_model=AuthOut)
+@limiter.limit("10/minute")
+async def google_auth(request: Request, body: GoogleAuthIn, response: Response):
+    """Sign in with Google. Verifies the ID token and creates/returns a user."""
+    try:
+        import google.auth.transport.requests
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+
+        # Verify the Google ID token
+        google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
+        if not google_client_id:
+            raise HTTPException(status_code=501, detail="Google Sign-In is not configured")
+
+        idinfo = id_token.verify_oauth2_token(
+            body.credential,
+            google_requests.Request(),
+            google_client_id,
+        )
+
+        email = idinfo.get("email", "").lower().strip()
+        name = idinfo.get("name", email.split("@")[0] if email else "User")
+        google_id = idinfo.get("sub", "")
+
+        if not email or not google_id:
+            raise HTTPException(status_code=400, detail="Invalid Google credential")
+
+        # Find or create user
+        user = await db.users.find_one({"email": email})
+        if not user:
+            user_doc = {
+                "id": str(uuid.uuid4()),
+                "email": email,
+                "password_hash": hash_password(str(uuid.uuid4())),  # Random password for Google users
+                "name": sanitize_name(name),
+                "role": "user",
+                "plan": "free",
+                "onboarded": False,
+                "email_verified": True,  # Google accounts are pre-verified
+                "google_id": google_id,
+                "created_at": now_iso(),
+            }
+            await db.users.insert_one(user_doc)
+            user = user_doc
+        else:
+            # Link Google ID if not already linked
+            if not user.get("google_id"):
+                await db.users.update_one(
+                    {"id": user["id"]},
+                    {"$set": {"google_id": google_id, "email_verified": True}},
+                )
+                user["google_id"] = google_id
+                user["email_verified"] = True
+
+        token = create_access_token(user["id"], email)
+        _set_auth_cookie(response, token)
+        return {"user": public_user(user), "token": token}
+
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Google credential: {e}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Google auth failed")
+        raise HTTPException(status_code=502, detail=f"Google auth failed: {e}")
 
 
 @api.post("/auth/logout")

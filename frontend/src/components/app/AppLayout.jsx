@@ -106,9 +106,9 @@ export default function AppLayout({ children }) {
         {children}
       </main>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#FDFBF7] border-t border-[#E5E0D8] flex z-40">
-        {navItems.map(({ to, label, icon: Icon, end }) => (
+      {/* Mobile bottom nav — show top 5 items */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#FDFBF7] border-t border-[#E5E0D8] flex z-40 safe-area-bottom">
+        {navItems.slice(0, 5).map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}

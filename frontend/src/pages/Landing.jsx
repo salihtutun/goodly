@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Logo, Eyebrow } from "@/components/app/Common";
 import QuickAuditWidget from "@/components/app/QuickAuditWidget";
 import CaseStudies from "@/components/app/CaseStudies";
+import IndustrySelector from "@/components/app/IndustrySelector";
 import { ArrowRight, Search, MapPin, Share2, Bot, ShieldCheck, Star, Quote, TrendingUp, Users, Clock, Phone, ArrowUp } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -156,6 +157,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Industry Selector — Choose your business type */}
+      <IndustrySelector />
 
       {/* Case Studies — Industry-specific results */}
       <CaseStudies />

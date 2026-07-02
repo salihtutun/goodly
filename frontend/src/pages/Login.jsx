@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import api, { formatApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/app/Common";
 import { Eye, EyeOff } from "lucide-react";
+import GoogleSignInButton from "@/components/app/GoogleSignInButton";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -36,7 +38,6 @@ export default function Login() {
   const useDemo = async () => {
     setDemoBusy(true);
     setEmail("demo@smallbiz.com"); setPassword("demo1234");
-    // Auto-submit after a brief delay for visual feedback
     setTimeout(async () => {
       const res = await login("demo@smallbiz.com", "demo1234");
       setDemoBusy(false);
@@ -49,6 +50,20 @@ export default function Login() {
     }, 600);
   };
 
+  const handleGoogleAuth = async (credential) => {
+    setBusy(true); setError("");
+    try {
+      const { data } = await api.post("/auth/google", { credential });
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        toast.success("Welcome! Signed in with Google.");
+        navigate("/app");
+      }
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally { setBusy(false); }
+  };
+
   return (
     <AuthShell>
       <div className="w-full max-w-md">
@@ -57,6 +72,14 @@ export default function Login() {
         <p className="mt-2 text-[#5C685C]">Sign in to keep growing.</p>
 
         <form onSubmit={submit} className="mt-10 space-y-5" data-testid="login-form">
+          {/* Google Sign-In */}
+          <GoogleSignInButton onSuccess={(credential) => handleGoogleAuth(credential)} />
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#E5E0D8]" /></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-[#FDFBF7] px-3 text-[#9CA89C]">or sign in with email</span></div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email" className="text-[#1A201A]">Email</Label>
             <Input
