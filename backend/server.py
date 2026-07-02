@@ -542,6 +542,7 @@ async def public_audit(request: Request, body: PublicAuditIn, response: Response
         "overall_score": result.get("overall_score"),
         "categories": result.get("categories"),
         "issues": result.get("issues", []),
+        "revenue_impact": result.get("revenue_impact"),
         "fetch_failed": result.get("fetch_failed", False),
         "error": result.get("error"),
     }
