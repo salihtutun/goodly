@@ -52,7 +52,16 @@ export default function MetaTagChecker() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      <main id="main-content" className="max-w-4xl mx-auto px-6 py-12">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm text-[#9CA89C] mb-6" aria-label="Breadcrumb">
+          <Link to="/" className="hover:text-[#1A201A]">Home</Link>
+          <span>/</span>
+          <Link to="/tools/meta-tag-checker" className="hover:text-[#1A201A]">Free Tools</Link>
+          <span>/</span>
+          <span className="text-[#5C685C]">Meta Tag Checker</span>
+        </nav>
+
         <div className="text-center mb-10">
           <h1 className="font-display font-bold text-4xl text-[#1A201A]">Free Meta Tag Checker</h1>
           <p className="mt-3 text-[#5C685C] text-lg">See exactly what Google sees when it looks at your page.</p>

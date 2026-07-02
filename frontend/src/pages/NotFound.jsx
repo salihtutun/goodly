@@ -4,7 +4,7 @@ import { Leaf, Home, Search, ArrowRight } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function NotFound() {
-  usePageMeta({ title: "Page not found", description: "The page you're looking for doesn't exist." });
+  usePageMeta({ title: "Page Not Found — Goodly", description: "The page you're looking for doesn't exist." });
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center px-6">
@@ -22,42 +22,15 @@ export default function NotFound() {
           The page you're looking for doesn't exist or has been moved.
         </p>
 
-        {/* Quick actions */}
-        <div className="mt-8 bg-white border border-[#E5E0D8] rounded-2xl p-5 text-left">
-          <div className="text-sm font-medium text-[#1A201A] mb-3">Try these instead:</div>
-          <Link to="/audit" className="flex items-center gap-3 py-2 text-sm text-[#5C685C] hover:text-[#1A201A] transition-colors">
-            <Search size={14} className="text-[#81B29A]" />
-            Run a free SEO audit
-            <ArrowRight size={12} className="ml-auto" />
-          </Link>
-          <Link to="/" className="flex items-center gap-3 py-2 text-sm text-[#5C685C] hover:text-[#1A201A] transition-colors">
-            <Home size={14} className="text-[#81B29A]" />
-            Go to homepage
-            <ArrowRight size={12} className="ml-auto" />
-          </Link>
-          <Link to="/login" className="flex items-center gap-3 py-2 text-sm text-[#5C685C] hover:text-[#1A201A] transition-colors">
-            <Home size={14} className="text-[#81B29A]" />
-            Sign in to your account
-            <ArrowRight size={12} className="ml-auto" />
-          </Link>
-        </div>
-
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <Button
-            asChild
-            className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6"
-          >
-            <Link to="/app">
-              <Home size={16} className="mr-2" />
-              Back to dashboard
-            </Link>
+          <Button asChild className="bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6">
+            <Link to="/"><Home size={16} className="mr-2" />Go to homepage</Link>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="rounded-full border-[#2D3E32] text-[#2D3E32] hover:bg-[#F3F0E9]"
-          >
-            <Link to="/">Go home</Link>
+          <Button asChild variant="outline" className="rounded-full border-[#2D3E32] text-[#2D3E32] hover:bg-[#F3F0E9]">
+            <Link to="/audit"><Search size={16} className="mr-2" />Run a free audit</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-full border-[#2D3E32] text-[#2D3E32] hover:bg-[#F3F0E9]">
+            <Link to="/login">Sign in</Link>
           </Button>
         </div>
       </div>

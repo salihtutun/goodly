@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// Use process.env for Jest compatibility (CRA/webpack also injects REACT_APP_* via DefinePlugin)
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
+// Vite exposes REACT_APP_* via envPrefix (see vite.config.js); fallback for local dev.
+const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
 export const API_BASE = `${BACKEND_URL}/api`;
 
 const api = axios.create({

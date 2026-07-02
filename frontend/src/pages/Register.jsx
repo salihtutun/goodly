@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/app/Common";
 import { AuthShell } from "@/pages/Login";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -16,6 +17,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -56,11 +58,18 @@ export default function Register() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required minLength={6} value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              data-testid="register-password-input"
-              className="bg-white border-[#E5E0D8] rounded-xl py-6 focus:ring-2 focus:ring-[#81B29A]"
-              placeholder="At least 6 characters" />
+            <div className="relative">
+              <Input id="password" type={showPw ? "text" : "password"} required minLength={8} value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                data-testid="register-password-input"
+                className="bg-white border-[#E5E0D8] rounded-xl py-6 pr-12 focus:ring-2 focus:ring-[#81B29A]"
+                placeholder="At least 8 characters" />
+              <button type="button" onClick={() => setShowPw(!showPw)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA89C] hover:text-[#1A201A] p-1"
+                tabIndex={-1}>
+                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           {error && (

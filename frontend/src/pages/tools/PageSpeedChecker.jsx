@@ -56,7 +56,7 @@ export default function PageSpeedChecker() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      <main id="main-content" className="max-w-4xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <h1 className="font-display font-bold text-4xl text-[#1A201A]">Free Page Speed Test</h1>
           <p className="mt-3 text-[#5C685C] text-lg">See how fast your website loads — and why it matters for Google rankings.</p>

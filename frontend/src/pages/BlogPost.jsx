@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { useEffect } from "react";
 import { Logo } from "@/components/app/Common";
 import { ArrowRight, ArrowLeft, Calendar, Clock } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
@@ -334,6 +335,24 @@ export default function BlogPost() {
 
   usePageMeta({ title: post.title, description: post.content.substring(0, 160) });
 
+  // Add Article structured data
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": post.title,
+      "description": post.content.substring(0, 160),
+      "image": post.image,
+      "datePublished": post.date,
+      "author": { "@type": "Organization", "name": "Goodly" },
+      "publisher": { "@type": "Organization", "name": "Goodly", "logo": { "@type": "ImageObject", "url": "https://goodly.app/favicon.svg" } }
+    });
+    document.head.appendChild(script);
+    return () => { if (script.parentNode) script.parentNode.removeChild(script); };
+  }, [post]);
+
   // Parse markdown-style content to HTML
   const renderContent = (text) => {
     return text
@@ -368,6 +387,15 @@ export default function BlogPost() {
       </header>
 
       <article className="max-w-3xl mx-auto px-6 py-12">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm text-[#9CA89C] mb-6" aria-label="Breadcrumb">
+          <Link to="/" className="hover:text-[#1A201A]">Home</Link>
+          <span>/</span>
+          <Link to="/blog" className="hover:text-[#1A201A]">Blog</Link>
+          <span>/</span>
+          <span className="text-[#5C685C] truncate max-w-[200px]">{post.title}</span>
+        </nav>
+
         <Link to="/blog" className="inline-flex items-center gap-1.5 text-sm text-[#81B29A] hover:text-[#5C9A7A] mb-6">
           <ArrowLeft size={14} /> Back to blog
         </Link>

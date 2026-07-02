@@ -34,7 +34,7 @@ export default function Privacy() {
 
           <div>
             <h2 className="font-display font-bold text-xl mb-3">4. AI Processing</h2>
-            <p className="text-[#5C685C]">Some features use Claude (Anthropic) to generate recommendations. When you use AI features, your inputs (business names, descriptions, URLs) are sent to Anthropic's API for processing. Anthropic does not train on customer data. See Anthropic's privacy policy for details.</p>
+            <p className="text-[#5C685C]">Some features use Google Gemini to generate recommendations. When you use AI features, your inputs (business names, descriptions, URLs) are sent to Google's API for processing. Google does not train on customer data. See Google's privacy policy for details.</p>
           </div>
 
           <div>

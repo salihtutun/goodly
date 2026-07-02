@@ -78,7 +78,7 @@ export default function Blog() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-16">
+      <main id="main-content" className="max-w-7xl mx-auto px-6 py-16">
         <div className="text-center mb-14">
           <h1 className="font-display font-bold text-4xl sm:text-5xl text-[#1A201A]">Goodly Blog</h1>
           <p className="mt-4 text-[#5C685C] text-lg max-w-2xl mx-auto">

@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Logo, Eyebrow } from "@/components/app/Common";
 import QuickAuditWidget from "@/components/app/QuickAuditWidget";
-import { ArrowRight, Search, MapPin, Share2, Bot, ShieldCheck, Star, Quote, TrendingUp, Users, Clock, Phone } from "lucide-react";
+import { ArrowRight, Search, MapPin, Share2, Bot, ShieldCheck, Star, Quote, TrendingUp, Users, Clock, Phone, ArrowUp } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Landing() {
@@ -11,6 +12,7 @@ export default function Landing() {
     description: "See how your small business ranks on Google, Instagram, and AI assistants. Free instant audit. No signup needed."
   });
   const navigate = useNavigate();
+  const [annual, setAnnual] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
@@ -218,11 +220,26 @@ export default function Landing() {
           <p className="mt-5 text-[#5C685C] text-lg max-w-2xl">
             Every plan includes AI-powered audits. No contracts. Cancel anytime.
           </p>
-          <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
+
+          {/* Annual/Monthly Toggle */}
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <button
+              onClick={() => setAnnual(false)}
+              className={`text-sm font-medium px-4 py-2 rounded-full transition-colors ${!annual ? "bg-[#2D3E32] text-white" : "text-[#5C685C] hover:text-[#1A201A]"}`}
+            >Monthly</button>
+            <button
+              onClick={() => setAnnual(true)}
+              className={`text-sm font-medium px-4 py-2 rounded-full transition-colors ${annual ? "bg-[#2D3E32] text-white" : "text-[#5C685C] hover:text-[#1A201A]"}`}
+            >Annual <span className="text-[10px] text-[#81B29A] ml-1">Save 17%</span></button>
+          </div>
+
+          <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
             <PricingCard
               testId="pricing-free"
               name="Free"
               price={0}
+              annualPrice={0}
+              annual={annual}
               tag="Get started"
               features={[
                 "3 audits per month",
@@ -237,6 +254,8 @@ export default function Landing() {
               testId="pricing-starter"
               name="Starter"
               price={49}
+              annualPrice={41}
+              annual={annual}
               tag="Most popular"
               highlighted
               features={[
@@ -255,6 +274,8 @@ export default function Landing() {
               testId="pricing-pro"
               name="Pro"
               price={149}
+              annualPrice={124}
+              annual={annual}
               tag="Growing business"
               features={[
                 "Unlimited audits",
@@ -274,6 +295,8 @@ export default function Landing() {
               testId="pricing-concierge"
               name="Concierge"
               price={1000}
+              annualPrice={1000}
+              annual={annual}
               tag="Done for you"
               features={[
                 "We do all the work",
@@ -318,7 +341,29 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Back to top button */}
+      <BackToTop />
     </div>
+  );
+}
+
+function BackToTop() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 500);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  if (!visible) return null;
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className="fixed bottom-6 left-6 z-50 bg-white border border-[#E5E0D8] rounded-full p-3 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+      aria-label="Back to top"
+    >
+      <ArrowUp size={20} className="text-[#2D3E32]" />
+    </button>
   );
 }
 
@@ -340,7 +385,9 @@ function OutcomeCard({ icon: Icon, title, body, stat, accent }) {
   );
 }
 
-function PricingCard({ name, price, tag, features, onClick, ctaLabel, highlighted, testId }) {
+function PricingCard({ name, price, annualPrice, annual, tag, features, onClick, ctaLabel, highlighted, testId }) {
+  const displayPrice = annual && annualPrice ? annualPrice : price;
+  const period = annual && annualPrice && price > 0 ? "/ month (billed annually)" : price > 0 ? "/ month" : "";
   return (
     <div data-testid={testId}
       className={`relative rounded-3xl p-8 border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
@@ -355,8 +402,13 @@ function PricingCard({ name, price, tag, features, onClick, ctaLabel, highlighte
       <div className={`mt-3 ${highlighted ? "text-[#FDFBF7]/80 label-eyebrow" : ""}`}>{highlighted && name}</div>
       {!highlighted && <div className="font-display font-bold text-2xl mt-1">{name}</div>}
       <div className="mt-4 font-display">
-        <span className="text-5xl font-bold">${price}</span>
-        {price > 0 && <span className={`text-sm ml-1 ${highlighted ? "text-[#FDFBF7]/70" : "text-[#5C685C]"}`}>/ month</span>}
+        <span className="text-5xl font-bold">${displayPrice}</span>
+        {price > 0 && <span className={`text-sm ml-1 ${highlighted ? "text-[#FDFBF7]/70" : "text-[#5C685C]"}`}>{period}</span>}
+        {annual && annualPrice && price > 0 && (
+          <div className={`text-xs mt-1 ${highlighted ? "text-[#81B29A]" : "text-[#81B29A]"}`}>
+            ${price * 12}/yr billed monthly
+          </div>
+        )}
       </div>
       <ul className="mt-6 space-y-2.5">
         {features.map((f, i) => (

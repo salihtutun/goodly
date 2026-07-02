@@ -37,5 +37,14 @@ export function usePageMeta({ title, description, image, url } = {}) {
     setMeta("twitter:title", t);
     setMeta("twitter:description", d);
     setMeta("twitter:image", i);
+
+    // Update canonical URL dynamically
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", u);
   }, [title, description, image, url]);
 }

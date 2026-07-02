@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/app/Common";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -14,6 +15,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -54,12 +56,19 @@ export default function Login() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password" className="text-[#1A201A]">Password</Label>
-            <Input
-              id="password" type="password" required value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              data-testid="login-password-input"
-              className="bg-white border-[#E5E0D8] rounded-xl py-6 focus:ring-2 focus:ring-[#81B29A]"
-            />
+            <div className="relative">
+              <Input
+                id="password" type={showPw ? "text" : "password"} required value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                data-testid="login-password-input"
+                className="bg-white border-[#E5E0D8] rounded-xl py-6 pr-12 focus:ring-2 focus:ring-[#81B29A]"
+              />
+              <button type="button" onClick={() => setShowPw(!showPw)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA89C] hover:text-[#1A201A] p-1"
+                tabIndex={-1}>
+                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -109,7 +118,7 @@ export function AuthShell({ children }) {
         <div className="absolute bottom-12 left-12 right-12 text-[#FDFBF7]">
           <div className="label-eyebrow text-[#FDFBF7]/70 mb-3">Goodly</div>
           <p className="font-display text-3xl leading-snug tracking-tight max-w-md">
-            Done-for-you SEO for startups. We get you to #1 on Google. Your phone starts ringing.
+            Get found on Google. Without learning SEO. Free audit in 30 seconds.
           </p>
         </div>
       </div>
