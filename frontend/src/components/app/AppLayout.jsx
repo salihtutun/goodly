@@ -13,6 +13,7 @@ const navItems = [
   { to: "/app/ai-visibility", label: "AI Visibility", icon: Bot, testId: "nav-ai-visibility" },
   { to: "/app/gbp", label: "Google Profile", icon: MapPin, testId: "nav-gbp" },
   { to: "/app/ai-tools", label: "AI Studio", icon: Sparkles, testId: "nav-ai" },
+  { to: "/app/competitors", label: "Competitors", icon: TrendingUp, testId: "nav-competitors" },
   { to: "/app/referral", label: "Refer & Earn", icon: Gift, testId: "nav-referral" },
   { to: "/app/billing", label: "Billing", icon: CreditCard, testId: "nav-billing" },
 ];
