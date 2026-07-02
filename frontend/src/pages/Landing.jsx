@@ -370,6 +370,7 @@ export default function Landing() {
               <div className="space-y-2 text-sm text-[#5C685C]">
                 <div><Link to="/terms" className="hover:text-[#1A201A]">Terms</Link></div>
                 <div><Link to="/privacy" className="hover:text-[#1A201A]">Privacy</Link></div>
+                <div><Link to="/sitemap.xml" className="hover:text-[#1A201A]">Sitemap</Link></div>
               </div>
             </div>
           </div>

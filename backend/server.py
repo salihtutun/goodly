@@ -1596,7 +1596,7 @@ app.include_router(api)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-cors_origins_raw = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
+cors_origins_raw = os.environ.get("CORS_ORIGINS", "http://localhost:3000,https://frontend-beta-weld-93.vercel.app")
 if cors_origins_raw == "*" and os.environ.get("ENVIRONMENT") == "production":
     cors_origins_raw = os.environ.get("PRODUCTION_DOMAIN", "https://goodly.app")
 app.add_middleware(
