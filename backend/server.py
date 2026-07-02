@@ -1589,6 +1589,51 @@ async def scheduler_runs(user: dict = Depends(get_current_user_doc)):
 
 
 # ---------------------------------------------------------------
+# Support contact endpoint
+# ---------------------------------------------------------------
+class SupportContactIn(BaseModel):
+    name: str = "Anonymous"
+    email: str = "no-email@provided.com"
+    message: str
+    page: str = ""
+
+
+@api.post("/support/contact")
+@limiter.limit("3/minute")
+async def support_contact(request: Request, body: SupportContactIn):
+    """Accept a support message from the in-app widget. Stores in DB and sends email."""
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": sanitize_name(body.name),
+        "email": body.email,
+        "message": sanitize_html(body.message),
+        "page": body.page,
+        "created_at": now_iso(),
+    }
+    try:
+        await db.support_messages.insert_one(doc)
+    except Exception:
+        pass  # Non-critical — still try to send email
+
+    # Send notification email to support
+    try:
+        await email_service.send_html_email(
+            to=os.environ.get("SUPPORT_EMAIL", "hello@goodly.app"),
+            subject=f"Support: {body.name} — {body.message[:60]}",
+            html=email_service.support_notification_html(
+                name=body.name,
+                email=body.email,
+                message=body.message,
+                page=body.page,
+            ),
+        )
+    except Exception as e:
+        logger.warning("Support email failed: %s", e)
+
+    return {"ok": True, "message": "Message received. We'll reply within 2 hours."}
+
+
+# ---------------------------------------------------------------
 # Mount + middleware
 # ---------------------------------------------------------------
 app.include_router(api)
@@ -1722,50 +1767,6 @@ async def lifespan(app: FastAPI):
 # Wire lifespan into the app (replaces deprecated on_event)
 app.router.lifespan_context = lifespan
 
-
-# ---------------------------------------------------------------
-# Support contact endpoint
-# ---------------------------------------------------------------
-class SupportContactIn(BaseModel):
-    name: str = "Anonymous"
-    email: str = "no-email@provided.com"
-    message: str
-    page: str = ""
-
-
-@api.post("/support/contact")
-@limiter.limit("3/minute")
-async def support_contact(request: Request, body: SupportContactIn):
-    """Accept a support message from the in-app widget. Stores in DB and sends email."""
-    doc = {
-        "id": str(uuid.uuid4()),
-        "name": sanitize_name(body.name),
-        "email": body.email,
-        "message": sanitize_html(body.message),
-        "page": body.page,
-        "created_at": now_iso(),
-    }
-    try:
-        await db.support_messages.insert_one(doc)
-    except Exception:
-        pass  # Non-critical — still try to send email
-
-    # Send notification email to support
-    try:
-        await email_service.send_html_email(
-            to=os.environ.get("SUPPORT_EMAIL", "hello@goodly.app"),
-            subject=f"Support: {body.name} — {body.message[:60]}",
-            html=email_service.support_notification_html(
-                name=body.name,
-                email=body.email,
-                message=body.message,
-                page=body.page,
-            ),
-        )
-    except Exception as e:
-        logger.warning("Support email failed: %s", e)
-
-    return {"ok": True, "message": "Message received. We'll reply within 2 hours."}
 
 
 _state: dict = {}
