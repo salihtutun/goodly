@@ -7,56 +7,73 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"
 class TestValidateURL:
     def test_valid_url(self):
         from validators import validate_url
-        assert validate_url("https://example.com") == "https://example.com"
+        assert validate_url("https://example.com") is True
 
-    def test_adds_https(self):
+    def test_url_without_protocol(self):
         from validators import validate_url
-        assert validate_url("example.com") == "https://example.com"
+        assert validate_url("example.com") is True
 
-    def test_strips_whitespace(self):
+    def test_url_with_whitespace(self):
         from validators import validate_url
-        assert validate_url("  https://example.com  ") == "https://example.com"
+        assert validate_url("  https://example.com  ") is True
 
-    def test_empty_raises(self):
+    def test_empty_returns_false(self):
         from validators import validate_url
-        with pytest.raises(ValueError, match="required"):
-            validate_url("")
+        assert validate_url("") is False
 
-    def test_invalid_raises(self):
+    def test_none_returns_false(self):
         from validators import validate_url
-        with pytest.raises(ValueError):
-            validate_url("!!!")
+        assert validate_url(None) is False
 
-    def test_too_long_raises(self):
+    def test_invalid_returns_false(self):
         from validators import validate_url
-        with pytest.raises(ValueError, match="too long"):
-            validate_url("https://example.com/" + "a" * 2048)
+        assert validate_url("!!!") is False
+
+    def test_no_dot_returns_false(self):
+        from validators import validate_url
+        assert validate_url("https://localhost") is False
+
+    def test_too_long_returns_false(self):
+        from validators import validate_url
+        assert validate_url("https://example.com/" + "a" * 2048) is False
+
+    def test_subdomain(self):
+        from validators import validate_url
+        assert validate_url("https://blog.example.com") is True
+
+    def test_with_path(self):
+        from validators import validate_url
+        assert validate_url("https://example.com/path/to/page") is True
 
 
 class TestValidateEmail:
     def test_valid_email(self):
         from validators import validate_email
-        assert validate_email("User@Example.COM") == "user@example.com"
+        assert validate_email("User@Example.COM") is True
 
-    def test_empty_raises(self):
+    def test_empty_returns_false(self):
         from validators import validate_email
-        with pytest.raises(ValueError, match="required"):
-            validate_email("")
+        assert validate_email("") is False
 
-    def test_no_at_raises(self):
+    def test_none_returns_false(self):
         from validators import validate_email
-        with pytest.raises(ValueError, match="Invalid email"):
-            validate_email("notanemail")
+        assert validate_email(None) is False
 
-    def test_no_dot_raises(self):
+    def test_no_at_returns_false(self):
         from validators import validate_email
-        with pytest.raises(ValueError, match="Invalid email"):
-            validate_email("user@nodot")
+        assert validate_email("notanemail") is False
 
-    def test_too_long_raises(self):
+    def test_no_dot_returns_false(self):
         from validators import validate_email
-        with pytest.raises(ValueError, match="too long"):
-            validate_email("a" * 255 + "@b.com")
+        assert validate_email("user@nodot") is False
+
+    def test_too_long_returns_false(self):
+        from validators import validate_email
+        assert validate_email("a" * 255 + "@b.com") is False
+
+    def test_standard_email(self):
+        from validators import validate_email
+        assert validate_email("hello@example.com") is True
 
 
 class TestValidateDomain:

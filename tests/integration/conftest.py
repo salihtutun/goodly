@@ -127,3 +127,11 @@ def setup():
 def client():
     """FastAPI TestClient."""
     return TestClient(app)
+
+
+@pytest.fixture
+def auth_headers(client):
+    """Return auth headers for the seeded admin user."""
+    from auth import create_access_token
+    token = create_access_token("admin-1", "admin@goodly.app")
+    return {"Authorization": f"Bearer {token}"}

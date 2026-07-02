@@ -3,34 +3,33 @@ import re
 from urllib.parse import urlparse
 
 
-def validate_url(url: str) -> str:
-    """Validate and normalize a URL. Returns cleaned URL or raises ValueError."""
+def validate_url(url: str) -> bool:
+    """Validate a URL. Returns True if valid, False otherwise."""
+    if not url or not url.strip():
+        return False
     url = url.strip()
-    if not url:
-        raise ValueError("URL is required")
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
     parsed = urlparse(url)
     if not parsed.netloc:
-        raise ValueError(f"Invalid URL: {url}")
-    # Require at least one dot in the domain (e.g., example.com)
+        return False
     if "." not in parsed.netloc:
-        raise ValueError(f"Invalid URL — domain must contain a dot: {url}")
+        return False
     if len(url) > 2048:
-        raise ValueError("URL is too long (max 2048 characters)")
-    return url
+        return False
+    return True
 
 
-def validate_email(email: str) -> str:
-    """Basic email validation. Returns cleaned email or raises ValueError."""
+def validate_email(email: str) -> bool:
+    """Basic email validation. Returns True if valid, False otherwise."""
+    if not email or not email.strip():
+        return False
     email = email.strip().lower()
-    if not email:
-        raise ValueError("Email is required")
     if "@" not in email or "." not in email.split("@")[-1]:
-        raise ValueError("Invalid email format")
+        return False
     if len(email) > 254:
-        raise ValueError("Email is too long")
-    return email
+        return False
+    return True
 
 
 def validate_domain(domain: str) -> str:
