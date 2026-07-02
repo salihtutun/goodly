@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [projects, setProjects] = useState([]);
   const [brief, setBrief] = useState(null);
   const [briefLoaded, setBriefLoaded] = useState(false);
+  const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -25,6 +26,11 @@ export default function Dashboard() {
         const [s, p] = await Promise.all([api.get("/dashboard/summary"), api.get("/projects")]);
         setSummary(s.data);
         setProjects(p.data);
+        // Fetch achievements
+        try {
+          const a = await api.get("/dashboard/achievements");
+          setAchievements(a.data);
+        } catch { /* achievements may not be available */ }
       } catch (e) {
         console.error(formatApiError(e));
       } finally {
@@ -141,6 +147,36 @@ export default function Dashboard() {
         <div className="mt-8">
           <VisibilityTile/>
         </div>
+
+        {/* Achievements */}
+        {achievements && achievements.total_earned > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <Eyebrow>Achievements</Eyebrow>
+                <h2 className="mt-1 font-display font-bold text-xl text-[#1A201A]">
+                  {achievements.total_earned} of {achievements.total_available} earned
+                </h2>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {achievements.earned.map((a) => (
+                <div key={a.id} className="bg-white border border-[#81B29A]/30 rounded-xl p-3 text-center hover:-translate-y-0.5 transition-all">
+                  <div className="text-2xl mb-1">{a.icon}</div>
+                  <div className="text-xs font-medium text-[#1A201A]">{a.name}</div>
+                  <div className="text-[10px] text-[#5C685C] mt-0.5">{a.description}</div>
+                </div>
+              ))}
+              {achievements.locked.slice(0, 6 - achievements.earned.length).map((a) => (
+                <div key={a.id} className="bg-[#F3F0E9]/50 border border-[#E5E0D8] rounded-xl p-3 text-center opacity-50">
+                  <div className="text-2xl mb-1 grayscale">{a.icon}</div>
+                  <div className="text-xs font-medium text-[#9CA89C]">{a.name}</div>
+                  <div className="text-[10px] text-[#9CA89C] mt-0.5">Locked</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick actions */}
         <div className="mt-10 grid md:grid-cols-4 gap-5">

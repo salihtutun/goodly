@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import api, { formatApiError } from "@/lib/api";
+import api, { formatApiError, API_BASE } from "@/lib/api";
 import AppLayout from "@/components/app/AppLayout";
 import { Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, Info, Sparkles, Globe, Smartphone, Image as ImageIcon, Link2, Shield, Download, Share2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, Info, Sparkles, Globe, Smartphone, Image as ImageIcon, Link2, Shield, Download, Share2, TrendingUp, TrendingDown, DollarSign, Users, Target } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { API_BASE } from "@/lib/api";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function AuditDetail() {
   usePageMeta({ title: "Audit report", description: "Detailed SEO audit results with scores, issues, and AI recommendations." });
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [audit, setAudit] = useState(null);
+  const [improvement, setImprovement] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -51,6 +51,11 @@ export default function AuditDetail() {
       try {
         const { data } = await api.get(`/audits/${id}`);
         setAudit(data);
+        // Fetch improvement data
+        try {
+          const imp = await api.get(`/audits/${id}/improvement`);
+          setImprovement(imp.data);
+        } catch { /* improvement endpoint may not have data */ }
       } catch (e) {
         toast.error(formatApiError(e));
       } finally { setLoading(false); }
@@ -154,6 +159,86 @@ export default function AuditDetail() {
           <CatTile label="Content" score={cats.content} icon={Info}/>
           <CatTile label="Social" score={cats.social} icon={Link2}/>
           <CatTile label="Security" score={cats.security} icon={Shield}/>
+        </div>
+
+        {/* Revenue Impact + Before/After */}
+        <div className="mt-6 grid md:grid-cols-2 gap-6">
+          {/* Revenue Impact */}
+          {result.revenue_impact && (
+            <div className="bg-white border border-[#E5E0D8] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <DollarSign size={18} className="text-[#E07A5F]" />
+                <div className="font-display font-bold text-[#1A201A]">Revenue Impact</div>
+              </div>
+              <p className="text-sm text-[#5C685C] mb-4">{result.revenue_impact.summary}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
+                  <div className="text-2xl font-display font-bold text-[#E07A5F]">{result.revenue_impact.traffic_loss_pct}%</div>
+                  <div className="text-xs text-[#5C685C] mt-1">Traffic you're losing</div>
+                </div>
+                <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
+                  <div className="text-2xl font-display font-bold text-[#2D3E32]">${result.revenue_impact.estimated_lost_revenue_monthly}</div>
+                  <div className="text-xs text-[#5C685C] mt-1">Est. monthly revenue lost</div>
+                </div>
+                <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
+                  <div className="text-2xl font-display font-bold text-[#81B29A]">+{result.revenue_impact.potential_traffic_gain_pct}%</div>
+                  <div className="text-xs text-[#5C685C] mt-1">Potential traffic gain</div>
+                </div>
+                <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
+                  <div className="text-2xl font-display font-bold text-[#1A201A]">{result.revenue_impact.critical_issues}</div>
+                  <div className="text-xs text-[#5C685C] mt-1">Critical issues to fix</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Before/After Improvement */}
+          {improvement?.has_previous && (
+            <div className="bg-white border border-[#E5E0D8] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                {improvement.improved ? (
+                  <TrendingUp size={18} className="text-green-500" />
+                ) : improvement.score_delta < 0 ? (
+                  <TrendingDown size={18} className="text-red-500" />
+                ) : (
+                  <Target size={18} className="text-[#5C685C]" />
+                )}
+                <div className="font-display font-bold text-[#1A201A]">Your Progress</div>
+              </div>
+              <p className="text-sm text-[#5C685C] mb-4">{improvement.message}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
+                  <div className="text-2xl font-display font-bold text-[#1A201A]">{improvement.previous_score} → {improvement.current_score}</div>
+                  <div className="text-xs text-[#5C685C] mt-1">Score change</div>
+                </div>
+                <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
+                  <div className={`text-2xl font-display font-bold ${improvement.improved ? 'text-green-600' : improvement.score_delta < 0 ? 'text-red-500' : 'text-[#5C685C]'}`}>
+                    {improvement.score_delta > 0 ? '+' : ''}{improvement.score_delta}
+                  </div>
+                  <div className="text-xs text-[#5C685C] mt-1">Points {improvement.improved ? 'gained' : 'changed'}</div>
+                </div>
+                <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
+                  <div className="text-2xl font-display font-bold text-green-600">{improvement.total_issues_fixed}</div>
+                  <div className="text-xs text-[#5C685C] mt-1">Issues fixed</div>
+                </div>
+                <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
+                  <div className="text-2xl font-display font-bold text-[#81B29A]">+{improvement.estimated_traffic_increase_pct}%</div>
+                  <div className="text-xs text-[#5C685C] mt-1">Est. traffic increase</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* First audit message */}
+          {improvement && !improvement.has_previous && (
+            <div className="bg-[#81B29A]/10 border border-[#81B29A]/30 rounded-2xl p-6 flex items-start gap-3">
+              <Target size={18} className="text-[#81B29A] mt-0.5 shrink-0" />
+              <div>
+                <div className="font-display font-bold text-[#1A201A] mb-1">First audit for this URL</div>
+                <p className="text-sm text-[#5C685C]">{improvement.message}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Detail tabs */}
