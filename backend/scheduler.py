@@ -116,6 +116,37 @@ async def _run_one_scheduled_audit(db, project: dict, base_url: str) -> dict:
         "email": email_log,
     })
 
+    # Check for rank changes and send alerts
+    if prev_score is not None:
+        score_delta = (result.get("overall_score") or 0) - prev_score
+        if abs(score_delta) >= 5:
+            try:
+                direction = "up" if score_delta > 0 else "down"
+                emoji = "🎉" if score_delta > 0 else "⚠️"
+                await email_service.send_html_email(
+                    to=user["email"],
+                    subject=f"{emoji} Your SEO score {direction} by {abs(score_delta)} points — {project['name']}",
+                    html=email_service.rank_change_html(
+                        name=(user.get("name") or user["email"].split("@")[0]),
+                        project_name=project["name"],
+                        score_delta=score_delta,
+                        current_score=result.get("overall_score") or 0,
+                        audit_url=f"{base_url.rstrip('/')}/app/audits/{audit_id}",
+                    ),
+                )
+                # Create in-app notification
+                await db.notifications.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "user_id": user["id"],
+                    "type": "rank_up" if score_delta > 0 else "rank_down",
+                    "title": f"Score {direction} by {abs(score_delta)} points",
+                    "body": f"{project['name']} went from {prev_score} to {result.get('overall_score') or 0}.",
+                    "read": False,
+                    "created_at": _iso(_now()),
+                })
+            except Exception:
+                pass  # Non-critical
+
     return {"audit_id": audit_id, "score": result.get("overall_score"), "email": email_log}
 
 

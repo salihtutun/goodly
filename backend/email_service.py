@@ -490,3 +490,45 @@ def onboarding_upgrade_html(*, name: str, billing_url: str) -> str:
   </table>
 </body></html>
 """
+
+
+def rank_change_html(*, name: str, project_name: str, score_delta: int, current_score: int, audit_url: str) -> str:
+    """Email alert when a scheduled audit detects a significant score change."""
+    direction = "up" if score_delta > 0 else "down"
+    emoji = "🎉" if score_delta > 0 else "⚠️"
+    color = "#81B29A" if score_delta > 0 else "#E07A5F"
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">{emoji} Your SEO score went {direction}!</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            Hi {name},<br/><br/>
+            Your scheduled audit for <strong>{project_name}</strong> just ran and your score changed significantly.
+          </p>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="background:#F3F0E9;border-radius:16px;width:100%">
+            <tr>
+              <td style="padding:24px;width:35%" align="center">
+                <div style="font-size:48px;font-weight:700;color:{color};line-height:1">{current_score}</div>
+                <div style="font-size:12px;color:#5C685C;margin-top:4px">/100 current</div>
+              </td>
+              <td style="padding:24px;color:#1A201A;font-size:14px;line-height:1.55">
+                <strong>{'+' if score_delta > 0 else ''}{score_delta} points</strong> {direction} since your last audit.<br/>
+                <span style="color:#5C685C">View your full report to see what changed.</span>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{audit_url}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">View full report</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""
