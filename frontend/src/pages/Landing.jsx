@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Logo, Eyebrow } from "@/components/app/Common";
 import QuickAuditWidget from "@/components/app/QuickAuditWidget";
+import CaseStudies from "@/components/app/CaseStudies";
 import { ArrowRight, Search, MapPin, Share2, Bot, ShieldCheck, Star, Quote, TrendingUp, Users, Clock, Phone, ArrowUp } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -155,6 +156,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Case Studies — Industry-specific results */}
+      <CaseStudies />
 
       {/* Testimonials — Real stories */}
       <section id="stories" className="bg-[#2D3E32] py-20 lg:py-28">
