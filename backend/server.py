@@ -45,6 +45,7 @@ from logging_config import setup_logging
 from metrics import MetricsMiddleware
 from security_headers import SecurityHeadersMiddleware
 from version_header import VersionHeaderMiddleware
+import achievements
 
 # Structured JSON logging for Cloud Logging
 setup_logging()
@@ -703,6 +704,72 @@ async def dashboard_summary(user_id: str = Depends(get_current_user_id)):
         "average_score": avg_score,
         "recent_audits": recent_audits,
     }
+
+
+@api.get("/dashboard/achievements")
+async def get_achievements(user_id: str = Depends(get_current_user_id)):
+    """Get user's earned achievements and all available achievements."""
+    user = await db.users.find_one({"id": user_id})
+    earned_ids = user.get("achievements") or [] if user else []
+    all_achievements = achievements.get_all_achievements()
+
+    earned = [a for a in all_achievements if a["id"] in earned_ids]
+    locked = [a for a in all_achievements if a["id"] not in earned_ids]
+
+    return {
+        "earned": earned,
+        "locked": locked,
+        "total_earned": len(earned),
+        "total_available": len(all_achievements),
+    }
+
+
+@api.post("/dashboard/check-achievements")
+async def check_new_achievements(user_id: str = Depends(get_current_user_id)):
+    """Check for newly earned achievements (called after audits, SERP checks, etc.)."""
+    new_achievements = await achievements.check_achievements(db, user_id)
+    return {
+        "new_achievements": new_achievements,
+        "count": len(new_achievements),
+    }
+
+
+@api.get("/notifications")
+async def get_notifications(user_id: str = Depends(get_current_user_id)):
+    """Get user notifications (rank changes, achievements, alerts)."""
+    cursor = db.notifications.find(
+        {"user_id": user_id},
+        {"_id": 0},
+        sort=[("created_at", -1)],
+    ).limit(50)
+    notifications = await cursor.to_list(50)
+
+    unread = sum(1 for n in notifications if not n.get("read", False))
+
+    return {
+        "notifications": notifications,
+        "unread": unread,
+    }
+
+
+@api.post("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user_id: str = Depends(get_current_user_id)):
+    """Mark a notification as read."""
+    await db.notifications.update_one(
+        {"id": notification_id, "user_id": user_id},
+        {"$set": {"read": True}},
+    )
+    return {"ok": True}
+
+
+@api.post("/notifications/read-all")
+async def mark_all_notifications_read(user_id: str = Depends(get_current_user_id)):
+    """Mark all notifications as read."""
+    await db.notifications.update_many(
+        {"user_id": user_id, "read": False},
+        {"$set": {"read": True}},
+    )
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------
