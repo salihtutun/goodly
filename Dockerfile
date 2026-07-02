@@ -1,19 +1,5 @@
-# Goodly — Production Dockerfile
-# Multi-stage build: frontend (Node) + backend (Python)
-
-# ---- Stage 1: Frontend Build ----
-FROM node:20-alpine AS frontend-build
-WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json* frontend/yarn.lock* ./
-RUN npm install --legacy-peer-deps 2>/dev/null || yarn install --frozen-lockfile 2>/dev/null || true
-COPY frontend/ ./
-RUN npm run build 2>/dev/null || echo "Frontend build skipped (pre-built)"
-
-# ---- Stage 2: Backend ----
+# Goodly Backend — Cloud Run Dockerfile
 FROM python:3.11-slim
-
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash app
 
 WORKDIR /app
 
@@ -27,14 +13,7 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
-COPY backend/ ./backend/
-
-# Copy frontend build from stage 1 (or pre-built)
-COPY --from=frontend-build /app/frontend/build/ ./frontend/build/
-
-# Switch to non-root user
-USER app
-WORKDIR /app/backend
+COPY backend/ .
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
