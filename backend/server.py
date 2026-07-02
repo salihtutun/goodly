@@ -511,6 +511,75 @@ async def delete_audit(audit_id: str, user_id: str = Depends(get_current_user_id
     return {"ok": True}
 
 
+@api.get("/audits/{audit_id}/improvement")
+async def get_audit_improvement(audit_id: str, user_id: str = Depends(get_current_user_id)):
+    """Compare this audit with the previous one for the same URL to show improvement."""
+    current = await db.audits.find_one({"id": audit_id, "user_id": user_id}, {"_id": 0})
+    if not current:
+        raise HTTPException(status_code=404, detail="Audit not found")
+
+    url = (current.get("result") or {}).get("url") or current.get("url")
+    current_score = (current.get("result") or {}).get("overall_score") or current.get("overall_score", 0)
+
+    # Find the previous audit for the same URL
+    previous = await db.audits.find_one(
+        {"user_id": user_id, "id": {"$ne": audit_id}, "$or": [
+            {"result.url": url},
+            {"url": url},
+        ]},
+        {"_id": 0},
+        sort=[("created_at", -1)],
+    )
+
+    if not previous:
+        return {
+            "has_previous": False,
+            "current_score": current_score,
+            "message": "This is your first audit for this URL. Run another audit after making fixes to see your improvement.",
+        }
+
+    prev_score = (previous.get("result") or {}).get("overall_score") or previous.get("overall_score", 0)
+    score_delta = current_score - prev_score
+
+    # Count issues fixed
+    current_issues = (current.get("result") or {}).get("issues") or []
+    prev_issues = (previous.get("result") or {}).get("issues") or []
+
+    current_critical = sum(1 for i in current_issues if i.get("severity") == "high")
+    prev_critical = sum(1 for i in prev_issues if i.get("severity") == "high")
+    critical_fixed = max(0, prev_critical - current_critical)
+
+    current_total = len(current_issues)
+    prev_total = len(prev_issues)
+    issues_fixed = max(0, prev_total - current_total)
+
+    # Estimated traffic impact
+    traffic_change_pct = int(score_delta * 1.5) if score_delta > 0 else 0
+
+    return {
+        "has_previous": True,
+        "current_score": current_score,
+        "previous_score": prev_score,
+        "score_delta": score_delta,
+        "improved": score_delta > 0,
+        "critical_issues_fixed": critical_fixed,
+        "total_issues_fixed": issues_fixed,
+        "previous_issue_count": prev_total,
+        "current_issue_count": current_total,
+        "estimated_traffic_increase_pct": traffic_change_pct,
+        "message": (
+            f"Your score went from {prev_score} → {current_score} (+{score_delta} points). "
+            f"You fixed {issues_fixed} issues including {critical_fixed} critical ones. "
+            f"Estimated traffic increase: +{traffic_change_pct}%."
+        ) if score_delta > 0 else (
+            f"Your score stayed at {current_score}. Keep working on those issues!"
+        ) if score_delta == 0 else (
+            f"Your score dropped from {prev_score} → {current_score} ({score_delta} points). "
+            f"New issues may have been introduced. Check your latest audit."
+        ),
+    }
+
+
 # ---------------------------------------------------------------
 # AI tools
 # ---------------------------------------------------------------

@@ -2,6 +2,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Logo } from "@/components/app/Common";
+import NotificationCenter from "@/components/app/NotificationCenter";
 import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard, ClipboardList, Share2, Bot, MapPin, Gift, Moon, Sun } from "lucide-react";
 
 const navItems = [
@@ -92,9 +93,12 @@ export default function AppLayout({ children }) {
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[#FDFBF7] border-b border-[#E5E0D8] flex items-center justify-between px-4 z-40">
         <Link to="/app"><Logo size="sm" /></Link>
-        <button onClick={handleLogout} className="text-sm text-[#5C685C] flex items-center gap-1.5" data-testid="logout-btn-mobile">
-          <User size={16}/> {user?.name?.split(" ")[0]}
-        </button>
+        <div className="flex items-center gap-3">
+          <NotificationCenter />
+          <button onClick={handleLogout} className="text-sm text-[#5C685C] flex items-center gap-1.5" data-testid="logout-btn-mobile">
+            <User size={16}/> {user?.name?.split(" ")[0]}
+          </button>
+        </div>
       </div>
 
       <main className="flex-1 min-w-0 md:p-10 p-5 pt-20 md:pt-10">
