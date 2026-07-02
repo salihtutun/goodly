@@ -332,12 +332,41 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-[#E5E0D8] py-8">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#5C685C]">
-          <div>© {new Date().getFullYear()} Goodly. Helping small businesses get found.</div>
-          <div className="flex items-center gap-6">
-            <Link to="/terms" className="hover:text-[#1A201A]">Terms</Link>
-            <Link to="/privacy" className="hover:text-[#1A201A]">Privacy</Link>
-            <a href="mailto:hello@goodly.app" className="hover:text-[#1A201A]">Contact</a>
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="font-display font-bold text-sm text-[#1A201A] mb-3">Product</div>
+              <div className="space-y-2 text-sm text-[#5C685C]">
+                <div><a href="#features" className="hover:text-[#1A201A]">Features</a></div>
+                <div><a href="#pricing" className="hover:text-[#1A201A]">Pricing</a></div>
+                <div><Link to="/audit" className="hover:text-[#1A201A]">Free Audit</Link></div>
+                <div><Link to="/register" className="hover:text-[#1A201A]">Sign Up</Link></div>
+              </div>
+            </div>
+            <div>
+              <div className="font-display font-bold text-sm text-[#1A201A] mb-3">Free Tools</div>
+              <div className="space-y-2 text-sm text-[#5C685C]">
+                <div><Link to="/tools/meta-tag-checker" className="hover:text-[#1A201A]">Meta Tag Checker</Link></div>
+                <div><Link to="/tools/page-speed" className="hover:text-[#1A201A]">Page Speed Test</Link></div>
+              </div>
+            </div>
+            <div>
+              <div className="font-display font-bold text-sm text-[#1A201A] mb-3">Resources</div>
+              <div className="space-y-2 text-sm text-[#5C685C]">
+                <div><Link to="/blog" className="hover:text-[#1A201A]">Blog</Link></div>
+                <div><a href="mailto:hello@goodly.app" className="hover:text-[#1A201A]">Contact</a></div>
+              </div>
+            </div>
+            <div>
+              <div className="font-display font-bold text-sm text-[#1A201A] mb-3">Legal</div>
+              <div className="space-y-2 text-sm text-[#5C685C]">
+                <div><Link to="/terms" className="hover:text-[#1A201A]">Terms</Link></div>
+                <div><Link to="/privacy" className="hover:text-[#1A201A]">Privacy</Link></div>
+              </div>
+            </div>
+          </div>
+          <div className="pt-6 border-t border-[#E5E0D8] text-center text-sm text-[#5C685C]">
+            © {new Date().getFullYear()} Goodly. Helping small businesses get found.
           </div>
         </div>
       </footer>

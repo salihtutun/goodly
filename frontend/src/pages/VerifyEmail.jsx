@@ -8,6 +8,7 @@ export default function VerifyEmail() {
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center px-6">
       <div className="text-center max-w-md">
+        <Link to="/" className="inline-block mb-8"><Logo /></Link>
         <div className="flex justify-center mb-8">
           <div className="h-24 w-24 rounded-full bg-[#81B29A]/10 flex items-center justify-center">
             <Mail size={48} className="text-[#81B29A]" strokeWidth={1.5} />

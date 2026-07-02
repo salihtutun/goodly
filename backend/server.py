@@ -652,7 +652,7 @@ async def ai_competitors(request: Request, body: CompetitorsIn, user_id: str = D
 # Health check
 # ---------------------------------------------------------------
 _startup_time = datetime.now(timezone.utc)
-__version__ = "1.8.0"
+__version__ = "1.9.0"
 
 
 @api.get("/")

@@ -17,6 +17,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
   const [error, setError] = useState("");
 
   const submit = async (e) => {
@@ -32,8 +33,20 @@ export default function Login() {
     }
   };
 
-  const useDemo = () => {
+  const useDemo = async () => {
+    setDemoBusy(true);
     setEmail("demo@smallbiz.com"); setPassword("demo1234");
+    // Auto-submit after a brief delay for visual feedback
+    setTimeout(async () => {
+      const res = await login("demo@smallbiz.com", "demo1234");
+      setDemoBusy(false);
+      if (res.ok) {
+        toast.success("Welcome! You're using the demo account.");
+        navigate("/app");
+      } else {
+        setError(res.error);
+      }
+    }, 600);
   };
 
   return (
@@ -87,8 +100,8 @@ export default function Login() {
         </form>
 
         <div className="mt-8 flex items-center justify-between text-sm">
-          <button onClick={useDemo} data-testid="use-demo-btn" className="text-[#5C685C] hover:text-[#E07A5F]">
-            Use demo account
+          <button onClick={useDemo} disabled={demoBusy} data-testid="use-demo-btn" className="text-[#5C685C] hover:text-[#E07A5F] disabled:opacity-50">
+            {demoBusy ? "Signing in..." : "Use demo account"}
           </button>
           <Link to="/register" data-testid="goto-register-link" className="text-[#2D3E32] font-medium hover:text-[#4A5F4F]">
             Create account →

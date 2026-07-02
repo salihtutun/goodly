@@ -58,6 +58,15 @@ export default function Terms() {
           </div>
         </section>
       </main>
+      <footer className="border-t border-[#E5E0D8] py-6">
+        <div className="max-w-3xl mx-auto px-6 flex items-center justify-center gap-6 text-sm text-[#5C685C]">
+          <Link to="/privacy" className="hover:text-[#1A201A]">Privacy Policy</Link>
+          <span>·</span>
+          <Link to="/" className="hover:text-[#1A201A]">Home</Link>
+          <span>·</span>
+          <a href="mailto:hello@goodly.app" className="hover:text-[#1A201A]">Contact</a>
+        </div>
+      </footer>
     </div>
   );
 }
