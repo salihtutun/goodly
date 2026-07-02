@@ -39,8 +39,10 @@ PLANS: Dict[str, dict] = {
         "id": "starter",
         "name": "Starter",
         "price_usd": 49.0,
+        "price_annual_usd": 490.0,  # $41/mo — 2 months free
         "audit_limit": 10,
         "project_limit": 3,
+        "trial_days": 7,  # 7-day free trial
         "features": [
             "10 SEO audits per month",
             "3 saved projects",
@@ -61,13 +63,16 @@ PLANS: Dict[str, dict] = {
             "gbp_audit": False,
         },
         "stripe_price_env": "STRIPE_PRICE_ID_STARTER",
+        "stripe_price_annual_env": "STRIPE_PRICE_ID_STARTER_ANNUAL",
     },
     "pro": {
         "id": "pro",
         "name": "Pro",
         "price_usd": 149.0,
+        "price_annual_usd": 1490.0,  # $124/mo — save $298
         "audit_limit": None,
         "project_limit": 15,
+        "trial_days": 7,  # 7-day free trial
         "features": [
             "Unlimited SEO audits",
             "15 saved projects",
@@ -91,6 +96,7 @@ PLANS: Dict[str, dict] = {
             "gbp_audit": True,
         },
         "stripe_price_env": "STRIPE_PRICE_ID_PRO",
+        "stripe_price_annual_env": "STRIPE_PRICE_ID_PRO_ANNUAL",
     },
     "concierge": {
         "id": "concierge",

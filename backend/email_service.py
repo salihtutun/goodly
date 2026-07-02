@@ -273,3 +273,220 @@ def referral_invite_html(*, referrer_name: str, referral_link: str) -> str:
   </table>
 </body></html>
 """
+
+
+def support_notification_html(*, name: str, email: str, message: str, page: str) -> str:
+    """Internal notification when a user submits a support request."""
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:20px;color:#1A201A">New support request</h1>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="width:100%">
+            <tr><td style="padding:8px 0;color:#5C685C;font-size:13px">From</td><td style="padding:8px 0;color:#1A201A;font-size:14px">{name} ({email})</td></tr>
+            <tr><td style="padding:8px 0;color:#5C685C;font-size:13px">Page</td><td style="padding:8px 0;color:#1A201A;font-size:14px">{page or 'Unknown'}</td></tr>
+            <tr><td style="padding:8px 0;color:#5C685C;font-size:13px" colspan="2">Message</td></tr>
+            <tr><td style="padding:12px;background:#F3F0E9;border-radius:12px;color:#1A201A;font-size:14px;line-height:1.55" colspan="2">{message}</td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="mailto:{email}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">Reply to {name}</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""
+
+
+def onboarding_welcome_html(*, name: str, dashboard_url: str) -> str:
+    """Day 0: Welcome email sent immediately after signup."""
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">Welcome to Goodly, {name}!</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            You just took the first step to getting your business found online. Here's what to do next:
+          </p>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="width:100%">
+            <tr><td style="padding:12px 0;border-bottom:1px solid #E5E0D8">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">1. Run your first audit</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">Paste your website URL and get a score in 30 seconds.</div>
+            </td></tr>
+            <tr><td style="padding:12px 0;border-bottom:1px solid #E5E0D8">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">2. Read your action plan</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">We'll tell you exactly what to fix — in plain English.</div>
+            </td></tr>
+            <tr><td style="padding:12px 0">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">3. Watch your score climb</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">Re-audit anytime and track your progress.</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{dashboard_url}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">Run my first audit</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""
+
+
+def onboarding_howto_html(*, name: str, dashboard_url: str) -> str:
+    """Day 1: How to read your audit report."""
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">How to read your audit report</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            Hi {name},<br/><br/>
+            Your audit report has three parts:
+          </p>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="width:100%">
+            <tr><td style="padding:12px 0;border-bottom:1px solid #E5E0D8">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">Overall Score (0-100)</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">A quick health check. Above 80 is great, 60-80 needs work, below 60 needs immediate attention.</div>
+            </td></tr>
+            <tr><td style="padding:12px 0;border-bottom:1px solid #E5E0D8">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">Category Breakdown</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">See which areas are strong (meta tags, mobile, speed) and which need work.</div>
+            </td></tr>
+            <tr><td style="padding:12px 0">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">Issue List with Fixes</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">Every issue comes with a plain-English fix. Start with the red (critical) ones.</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{dashboard_url}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">View my report</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""
+
+
+def onboarding_quickwins_html(*, name: str, dashboard_url: str) -> str:
+    """Day 3: 3 quick wins to boost your score."""
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">3 quick wins to boost your score today</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            Hi {name},<br/><br/>
+            Most small businesses can boost their score by 15-20 points in an afternoon. Here's how:
+          </p>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="width:100%">
+            <tr><td style="padding:12px 0;border-bottom:1px solid #E5E0D8">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">1. Add a meta description</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">This is the text that shows under your link on Google. 120-160 characters that describe your page. Takes 2 minutes.</div>
+            </td></tr>
+            <tr><td style="padding:12px 0;border-bottom:1px solid #E5E0D8">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">2. Add alt text to your images</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">Every image should have a short description. Helps Google understand your page AND makes it accessible.</div>
+            </td></tr>
+            <tr><td style="padding:12px 0">
+              <div style="font-weight:600;color:#1A201A;font-size:15px">3. Make sure you have one H1 heading</div>
+              <div style="color:#5C685C;font-size:13px;margin-top:4px">Your main heading tells Google what the page is about. One clear H1 per page.</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{dashboard_url}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">Re-audit my site</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""
+
+
+def onboarding_competitors_html(*, name: str, dashboard_url: str) -> str:
+    """Day 5: See how you compare to competitors."""
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">See how you compare to competitors</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            Hi {name},<br/><br/>
+            Want to know what your competitors are doing right? Upgrade to Pro and we'll show you exactly how you stack up — and how to beat them.
+          </p>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="background:#F3F0E9;border-radius:16px;width:100%">
+            <tr><td style="padding:20px">
+              <div style="font-weight:600;color:#1A201A;font-size:15px;margin-bottom:8px">Pro plan includes:</div>
+              <div style="color:#5C685C;font-size:13px;line-height:1.8">✓ Competitor analysis (3 competitors)<br/>✓ Daily automated re-audits<br/>✓ All social platforms<br/>✓ AI visibility monitoring<br/>✓ Google Business Profile audit</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{dashboard_url}" style="display:inline-block;background:#E07A5F;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">Upgrade to Pro — $149/mo</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""
+
+
+def onboarding_upgrade_html(*, name: str, billing_url: str) -> str:
+    """Day 7: Upgrade to unlock SERP tracking."""
+    return f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1A201A">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFBF7;padding:32px 16px">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E5E0D8;border-radius:24px;overflow:hidden">
+        <tr><td style="padding:32px 32px 0 32px">
+          <h1 style="margin:0;font-size:24px;color:#1A201A">You've used your 3 free audits this month</h1>
+          <p style="margin:16px 0 0;color:#5C685C;font-size:15px;line-height:1.55">
+            Hi {name},<br/><br/>
+            Hope you're seeing results! To keep auditing and unlock more features, upgrade to Starter:
+          </p>
+        </td></tr>
+        <tr><td style="padding:24px 32px">
+          <table cellpadding="0" cellspacing="0" style="background:#F3F0E9;border-radius:16px;width:100%">
+            <tr><td style="padding:20px">
+              <div style="font-weight:600;color:#1A201A;font-size:15px;margin-bottom:8px">Starter — $49/mo</div>
+              <div style="color:#5C685C;font-size:13px;line-height:1.8">✓ 10 audits per month<br/>✓ Track 5 keywords on Google<br/>✓ Weekly automated re-audits<br/>✓ PDF reports<br/>✓ Instagram audit<br/>✓ 7-day free trial — cancel anytime</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px" align="center">
+          <a href="{billing_url}" style="display:inline-block;background:#2D3E32;color:#FDFBF7;text-decoration:none;padding:14px 32px;border-radius:999px;font-weight:500;font-size:15px">Start 7-day free trial</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""

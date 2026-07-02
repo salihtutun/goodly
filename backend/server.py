@@ -40,6 +40,7 @@ import ai_visibility
 import gbp_service
 import email_service
 from sanitize import sanitize_html, sanitize_name
+from validators import validate_url, validate_email, validate_domain
 from logging_config import setup_logging
 from metrics import MetricsMiddleware
 from security_headers import SecurityHeadersMiddleware
@@ -176,6 +177,8 @@ def _set_auth_cookie(response: Response, token: str):
 @limiter.limit("3/minute")
 async def register(request: Request, body: RegisterIn, response: Response):
     email = body.email.lower().strip()
+    if not validate_email(email):
+        raise HTTPException(status_code=400, detail="Invalid email address.")
     existing = await db.users.find_one({"email": email})
     if existing:
         raise HTTPException(status_code=400, detail="An account with this email already exists")
@@ -335,6 +338,8 @@ class ProjectUpdate(BaseModel):
 
 @api.post("/projects")
 async def create_project(body: ProjectIn, user: dict = Depends(get_current_user_doc)):
+    if not validate_url(body.url):
+        raise HTTPException(status_code=400, detail="Invalid URL. Please provide a valid website URL (e.g., https://example.com).")
     plan = get_plan(user.get("plan"))
     current_count = await db.projects.count_documents({"user_id": user["id"]})
     if plan["project_limit"] is not None and current_count >= plan["project_limit"]:
@@ -456,6 +461,8 @@ class PublicAuditIn(BaseModel):
 @limiter.limit("10/minute")
 async def public_audit(request: Request, body: PublicAuditIn):
     """Run a free SEO audit without authentication. Returns score + top issues only."""
+    if not validate_url(body.url):
+        raise HTTPException(status_code=400, detail="Invalid URL. Please provide a valid website URL (e.g., https://example.com).")
     result = await analyze_url(body.url)
     return {
         "url": result.get("url", body.url),
@@ -1478,6 +1485,51 @@ async def lifespan(app: FastAPI):
 
 # Wire lifespan into the app (replaces deprecated on_event)
 app.router.lifespan_context = lifespan
+
+
+# ---------------------------------------------------------------
+# Support contact endpoint
+# ---------------------------------------------------------------
+class SupportContactIn(BaseModel):
+    name: str = "Anonymous"
+    email: str = "no-email@provided.com"
+    message: str
+    page: str = ""
+
+
+@api.post("/support/contact")
+@limiter.limit("3/minute")
+async def support_contact(request: Request, body: SupportContactIn):
+    """Accept a support message from the in-app widget. Stores in DB and sends email."""
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": sanitize_name(body.name),
+        "email": body.email,
+        "message": sanitize_html(body.message),
+        "page": body.page,
+        "created_at": now_iso(),
+    }
+    try:
+        await db.support_messages.insert_one(doc)
+    except Exception:
+        pass  # Non-critical — still try to send email
+
+    # Send notification email to support
+    try:
+        await email_service.send_html_email(
+            to=os.environ.get("SUPPORT_EMAIL", "hello@goodly.app"),
+            subject=f"Support: {body.name} — {body.message[:60]}",
+            html=email_service.support_notification_html(
+                name=body.name,
+                email=body.email,
+                message=body.message,
+                page=body.page,
+            ),
+        )
+    except Exception as e:
+        logger.warning("Support email failed: %s", e)
+
+    return {"ok": True, "message": "Message received. We'll reply within 2 hours."}
 
 
 _state: dict = {}

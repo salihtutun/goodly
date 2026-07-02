@@ -204,6 +204,10 @@ async def analyze_url(raw_url: str) -> Dict:
     }
     overall = int(sum(scores[k] * weights[k] for k in weights))
 
+    # --- Revenue impact estimates ---
+    # Estimate how much traffic/revenue the site is losing based on issues
+    revenue_impact = _estimate_revenue_impact(overall, issues, word_count, load_ms, is_https, has_viewport)
+
     return {
         "url": url,
         "fetch_failed": False,
@@ -255,4 +259,92 @@ async def analyze_url(raw_url: str) -> Dict:
             "text_preview": text[:500],
         },
         "issues": issues,
+        "revenue_impact": revenue_impact,
+    }
+
+
+def _estimate_revenue_impact(overall_score: int, issues: list, word_count: int, load_ms: float, is_https: bool, has_viewport: bool) -> dict:
+    """Estimate how much potential revenue the site is losing due to SEO issues.
+
+    Based on industry benchmarks:
+    - Page 1 gets ~92% of clicks, page 2 gets ~5%, page 3+ gets ~3%
+    - Each position drop loses ~30% of clicks
+    - Slow pages lose ~7% of visitors per second over 2s
+    - Mobile-unfriendly sites lose ~50% of mobile traffic
+    - Missing meta descriptions reduce CTR by ~15%
+    - HTTPS is a ranking signal and trust factor (~5% conversion impact)
+    """
+    critical_count = sum(1 for i in issues if i.get("severity") == "high")
+    medium_count = sum(1 for i in issues if i.get("severity") == "medium")
+    low_count = sum(1 for i in issues if i.get("severity") == "low")
+
+    # Estimated traffic loss percentage
+    traffic_loss_pct = 0
+
+    # Missing/bad meta tags = lower CTR in search results
+    has_title_issue = any("title" in str(i.get("message", "")).lower() for i in issues)
+    has_desc_issue = any("description" in str(i.get("message", "")).lower() for i in issues)
+    if has_title_issue:
+        traffic_loss_pct += 10
+    if has_desc_issue:
+        traffic_loss_pct += 15
+
+    # Performance impact
+    if load_ms > 3500:
+        traffic_loss_pct += 20
+    elif load_ms > 1800:
+        traffic_loss_pct += 10
+
+    # Mobile impact
+    if not has_viewport:
+        traffic_loss_pct += 25
+
+    # HTTPS impact
+    if not is_https:
+        traffic_loss_pct += 10
+
+    # Content impact
+    if word_count < 300:
+        traffic_loss_pct += 15
+    elif word_count < 600:
+        traffic_loss_pct += 5
+
+    # Cap at 70% (can't lose more than that)
+    traffic_loss_pct = min(traffic_loss_pct, 70)
+
+    # Estimate monthly revenue impact
+    # Assume a small business site gets ~1000 visitors/month
+    # Average conversion rate ~2%, average sale ~$100
+    estimated_monthly_visitors = 1000
+    avg_conversion_rate = 0.02
+    avg_sale_value = 100
+
+    lost_visitors = int(estimated_monthly_visitors * (traffic_loss_pct / 100))
+    lost_conversions = int(lost_visitors * avg_conversion_rate)
+    lost_revenue_monthly = int(lost_conversions * avg_sale_value)
+
+    # Potential improvement
+    potential_score_gain = min(100 - overall_score, critical_count * 8 + medium_count * 4 + low_count * 2)
+    potential_traffic_gain_pct = int(traffic_loss_pct * 0.7)  # Can recover ~70% of lost traffic by fixing issues
+
+    # Summary message
+    if overall_score >= 80:
+        summary = "Your site is in good shape. Small tweaks could push you to the top of search results."
+    elif overall_score >= 60:
+        summary = f"You're leaving money on the table. Fixing {critical_count} critical and {medium_count} medium issues could boost your traffic significantly."
+    elif overall_score >= 40:
+        summary = f"Your site has {critical_count} critical issues costing you customers. Fixing them could 2-3x your search traffic."
+    else:
+        summary = f"Your site is nearly invisible to search engines. {critical_count} critical issues need immediate attention to start getting found."
+
+    return {
+        "traffic_loss_pct": traffic_loss_pct,
+        "estimated_lost_visitors_monthly": lost_visitors,
+        "estimated_lost_revenue_monthly": lost_revenue_monthly,
+        "potential_score_gain": potential_score_gain,
+        "potential_traffic_gain_pct": potential_traffic_gain_pct,
+        "critical_issues": critical_count,
+        "medium_issues": medium_count,
+        "low_issues": low_count,
+        "summary": summary,
     }

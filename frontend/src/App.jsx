@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PageLoader } from "@/components/app/Common";
 import OnboardingTour from "@/components/app/OnboardingTour";
 import ErrorBoundary from "@/components/app/ErrorBoundary";
+import SupportWidget from "@/components/app/SupportWidget";
 import { Toaster } from "sonner";
 
 // Eager-loaded (critical path — landing, login, 404)
@@ -99,6 +100,7 @@ export default function App() {
         </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>
+      <SupportWidget />
     </div>
   );
 }
