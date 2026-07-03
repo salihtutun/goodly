@@ -43,6 +43,8 @@ const MetaTagChecker = lazy(() => import("@/pages/tools/MetaTagChecker"));
 const PageSpeedChecker = lazy(() => import("@/pages/tools/PageSpeedChecker"));
 const MobileFriendlyChecker = lazy(() => import("@/pages/tools/MobileFriendlyChecker"));
 const KeywordDensityChecker = lazy(() => import("@/pages/tools/KeywordDensityChecker"));
+const SSLChecker = lazy(() => import("@/pages/tools/SSLChecker"));
+const SchemaValidator = lazy(() => import("@/pages/tools/SchemaValidator"));
 // Blog
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogPost = lazy(() => import("@/pages/BlogPost"));
@@ -110,6 +112,8 @@ export default function App() {
             <Route path="/tools/page-speed" element={<Lazy><PageSpeedChecker /></Lazy>} />
             <Route path="/tools/mobile-friendly" element={<Lazy><MobileFriendlyChecker /></Lazy>} />
             <Route path="/tools/keyword-density" element={<Lazy><KeywordDensityChecker /></Lazy>} />
+            <Route path="/tools/ssl-checker" element={<Lazy><SSLChecker /></Lazy>} />
+            <Route path="/tools/schema-validator" element={<Lazy><SchemaValidator /></Lazy>} />
             {/* Blog */}
             <Route path="/blog" element={<Lazy><Blog /></Lazy>} />
             <Route path="/blog/:slug" element={<Lazy><BlogPost /></Lazy>} />
