@@ -41,6 +41,8 @@ const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 // Free tools (lead magnets)
 const MetaTagChecker = lazy(() => import("@/pages/tools/MetaTagChecker"));
 const PageSpeedChecker = lazy(() => import("@/pages/tools/PageSpeedChecker"));
+const MobileFriendlyChecker = lazy(() => import("@/pages/tools/MobileFriendlyChecker"));
+const KeywordDensityChecker = lazy(() => import("@/pages/tools/KeywordDensityChecker"));
 // Blog
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogPost = lazy(() => import("@/pages/BlogPost"));
@@ -106,6 +108,8 @@ export default function App() {
             {/* Free SEO tools — lead magnets */}
             <Route path="/tools/meta-tag-checker" element={<Lazy><MetaTagChecker /></Lazy>} />
             <Route path="/tools/page-speed" element={<Lazy><PageSpeedChecker /></Lazy>} />
+            <Route path="/tools/mobile-friendly" element={<Lazy><MobileFriendlyChecker /></Lazy>} />
+            <Route path="/tools/keyword-density" element={<Lazy><KeywordDensityChecker /></Lazy>} />
             {/* Blog */}
             <Route path="/blog" element={<Lazy><Blog /></Lazy>} />
             <Route path="/blog/:slug" element={<Lazy><BlogPost /></Lazy>} />

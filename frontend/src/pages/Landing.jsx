@@ -15,6 +15,7 @@ export default function Landing() {
   });
   const navigate = useNavigate();
   const [annual, setAnnual] = useState(false);
+  const [selectedIndustry, setSelectedIndustry] = useState("restaurant");
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
@@ -159,10 +160,10 @@ export default function Landing() {
       </section>
 
       {/* Industry Selector — Choose your business type */}
-      <IndustrySelector />
+      <IndustrySelector selected={selectedIndustry} onSelect={setSelectedIndustry} />
 
       {/* Case Studies — Industry-specific results */}
-      <CaseStudies />
+      <CaseStudies filter={selectedIndustry} />
 
       {/* Testimonials — Real stories */}
       <section id="stories" className="bg-[#2D3E32] py-20 lg:py-28">
