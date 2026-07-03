@@ -7,6 +7,7 @@ import CaseStudies from "@/components/app/CaseStudies";
 import IndustrySelector from "@/components/app/IndustrySelector";
 import TrustBadges from "@/components/app/TrustBadges";
 import MediaMentions from "@/components/app/MediaMentions";
+import FAQ from "@/components/app/FAQ";
 import { ArrowRight, Search, MapPin, Share2, Bot, ShieldCheck, Star, Quote, TrendingUp, Users, Clock, Phone, ArrowUp } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -332,6 +333,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* FAQ */}
+      <FAQ />
 
       {/* Final CTA */}
       <section className="py-20 lg:py-28">
