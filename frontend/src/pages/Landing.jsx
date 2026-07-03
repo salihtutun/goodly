@@ -5,6 +5,7 @@ import { Logo, Eyebrow } from "@/components/app/Common";
 import QuickAuditWidget from "@/components/app/QuickAuditWidget";
 import CaseStudies from "@/components/app/CaseStudies";
 import IndustrySelector from "@/components/app/IndustrySelector";
+import TrustBadges from "@/components/app/TrustBadges";
 import { ArrowRight, Search, MapPin, Share2, Bot, ShieldCheck, Star, Quote, TrendingUp, Users, Clock, Phone, ArrowUp } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -72,6 +73,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Trust Badges — Social proof counters */}
+      <TrustBadges />
 
       {/* How it works — 3 simple steps */}
       <section id="how" className="bg-[#F3F0E9] py-20 lg:py-28">
