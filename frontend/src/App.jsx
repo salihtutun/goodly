@@ -46,6 +46,7 @@ const KeywordDensityChecker = lazy(() => import("@/pages/tools/KeywordDensityChe
 const SSLChecker = lazy(() => import("@/pages/tools/SSLChecker"));
 const SchemaValidator = lazy(() => import("@/pages/tools/SchemaValidator"));
 const RobotsChecker = lazy(() => import("@/pages/tools/RobotsChecker"));
+const HeadingChecker = lazy(() => import("@/pages/tools/HeadingChecker"));
 // Free Tools Hub
 const FreeTools = lazy(() => import("@/pages/FreeTools"));
 // Blog
@@ -118,6 +119,7 @@ export default function App() {
             <Route path="/tools/ssl-checker" element={<Lazy><SSLChecker /></Lazy>} />
             <Route path="/tools/schema-validator" element={<Lazy><SchemaValidator /></Lazy>} />
             <Route path="/tools/robots-checker" element={<Lazy><RobotsChecker /></Lazy>} />
+            <Route path="/tools/heading-checker" element={<Lazy><HeadingChecker /></Lazy>} />
             {/* Free Tools Hub */}
             <Route path="/tools" element={<Lazy><FreeTools /></Lazy>} />
             {/* Blog */}
