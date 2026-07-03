@@ -6,6 +6,7 @@ import QuickAuditWidget from "@/components/app/QuickAuditWidget";
 import CaseStudies from "@/components/app/CaseStudies";
 import IndustrySelector from "@/components/app/IndustrySelector";
 import TrustBadges from "@/components/app/TrustBadges";
+import MediaMentions from "@/components/app/MediaMentions";
 import { ArrowRight, Search, MapPin, Share2, Bot, ShieldCheck, Star, Quote, TrendingUp, Users, Clock, Phone, ArrowUp } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -76,6 +77,9 @@ export default function Landing() {
 
       {/* Trust Badges — Social proof counters */}
       <TrustBadges />
+
+      {/* Media Mentions — As seen on */}
+      <MediaMentions />
 
       {/* How it works — 3 simple steps */}
       <section id="how" className="bg-[#F3F0E9] py-20 lg:py-28">
@@ -361,6 +365,8 @@ export default function Landing() {
               <div className="space-y-2 text-sm text-[#5C685C]">
                 <div><Link to="/tools/meta-tag-checker" className="hover:text-[#1A201A]">Meta Tag Checker</Link></div>
                 <div><Link to="/tools/page-speed" className="hover:text-[#1A201A]">Page Speed Test</Link></div>
+                <div><Link to="/tools/mobile-friendly" className="hover:text-[#1A201A]">Mobile-Friendly Test</Link></div>
+                <div><Link to="/tools/keyword-density" className="hover:text-[#1A201A]">Keyword Density</Link></div>
               </div>
             </div>
             <div>
