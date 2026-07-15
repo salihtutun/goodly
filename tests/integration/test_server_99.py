@@ -8,7 +8,7 @@ import server as srv
 
 def _auth_headers(client):
     resp = client.post("/api/auth/login", json={
-        "email": "admin@goodly.app", "password": "admin-secret-123",
+        "email": "admin@searchgoodly.com", "password": "admin-secret-123",
     })
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return {"Authorization": f"Bearer {resp.json()['token']}"}

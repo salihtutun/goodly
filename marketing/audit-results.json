@@ -1,0 +1,198 @@
+[
+  {
+    "url": "https://www.loumalnatis.com",
+    "industry": "restaurant",
+    "score": 86,
+    "issues_total": 4,
+    "high": 1,
+    "medium": 1,
+    "low": 2,
+    "monthly_loss": 950,
+    "top_issue": "Meta description is 189 characters (long)"
+  },
+  {
+    "url": "https://www.joespizzanyc.com",
+    "industry": "restaurant",
+    "score": 62,
+    "issues_total": 7,
+    "high": 2,
+    "medium": 3,
+    "low": 2,
+    "monthly_loss": 3150,
+    "top_issue": "Title is only 11 characters (too short)"
+  },
+  {
+    "url": "https://www.frankpepepizzeria.com",
+    "industry": "restaurant",
+    "error": "'NoneType' object has no attribute 'get'"
+  },
+  {
+    "url": "https://www.patsysofboston.com",
+    "industry": "restaurant",
+    "error": "'NoneType' object has no attribute 'get'"
+  },
+  {
+    "url": "https://www.rotorooter.com",
+    "industry": "plumber",
+    "score": 91,
+    "issues_total": 2,
+    "high": 0,
+    "medium": 1,
+    "low": 1,
+    "monthly_loss": 400,
+    "top_issue": "4 of 6 images missing alt text"
+  },
+  {
+    "url": "https://www.mrrooter.com",
+    "industry": "plumber",
+    "score": 96,
+    "issues_total": 2,
+    "high": 0,
+    "medium": 1,
+    "low": 1,
+    "monthly_loss": 550,
+    "top_issue": "Title is 70 characters (too long)"
+  },
+  {
+    "url": "https://www.benjaminfranklinplumbing.com",
+    "industry": "plumber",
+    "score": 95,
+    "issues_total": 2,
+    "high": 0,
+    "medium": 1,
+    "low": 1,
+    "monthly_loss": 400,
+    "top_issue": "13 of 36 images missing alt text"
+  },
+  {
+    "url": "https://www.ars.com",
+    "industry": "plumber",
+    "score": 94,
+    "issues_total": 2,
+    "high": 0,
+    "medium": 1,
+    "low": 1,
+    "monthly_loss": 550,
+    "top_issue": "Title is 61 characters (too long)"
+  },
+  {
+    "url": "https://www.supercuts.com",
+    "industry": "salon",
+    "score": 49,
+    "issues_total": 7,
+    "high": 3,
+    "medium": 1,
+    "low": 3,
+    "monthly_loss": 3900,
+    "top_issue": "Missing <title> tag"
+  },
+  {
+    "url": "https://www.greatclips.com",
+    "industry": "salon",
+    "score": 93,
+    "issues_total": 3,
+    "high": 0,
+    "medium": 1,
+    "low": 2,
+    "monthly_loss": 500,
+    "top_issue": "15 of 30 images missing alt text"
+  },
+  {
+    "url": "https://www.sportclips.com",
+    "industry": "salon",
+    "score": 80,
+    "issues_total": 4,
+    "high": 0,
+    "medium": 2,
+    "low": 2,
+    "monthly_loss": 750,
+    "top_issue": "2 <h1> tags found"
+  },
+  {
+    "url": "https://www.drybar.com",
+    "industry": "salon",
+    "score": 41,
+    "issues_total": 8,
+    "high": 3,
+    "medium": 2,
+    "low": 3,
+    "monthly_loss": 3350,
+    "top_issue": "Title is only 16 characters (too short)"
+  },
+  {
+    "url": "https://www.aspen dental.com",
+    "industry": "dentist",
+    "error": "'NoneType' object has no attribute 'get'"
+  },
+  {
+    "url": "https://www.pacificdentalservices.com",
+    "industry": "dentist",
+    "score": 80,
+    "issues_total": 5,
+    "high": 0,
+    "medium": 2,
+    "low": 3,
+    "monthly_loss": 1100,
+    "top_issue": "Title is 63 characters (too long)"
+  },
+  {
+    "url": "https://www.heartlanddental.com",
+    "industry": "dentist",
+    "score": 81,
+    "issues_total": 4,
+    "high": 0,
+    "medium": 1,
+    "low": 3,
+    "monthly_loss": 1300,
+    "top_issue": "Meta description is 163 characters (long)"
+  },
+  {
+    "url": "https://www.westerndental.com",
+    "industry": "dentist",
+    "score": 91,
+    "issues_total": 2,
+    "high": 0,
+    "medium": 1,
+    "low": 1,
+    "monthly_loss": 400,
+    "top_issue": "13 of 36 images missing alt text"
+  },
+  {
+    "url": "https://www.acehardware.com",
+    "industry": "retail",
+    "score": 81,
+    "issues_total": 4,
+    "high": 1,
+    "medium": 1,
+    "low": 2,
+    "monthly_loss": 900,
+    "top_issue": "No <h1> heading found"
+  },
+  {
+    "url": "https://www.tractorsupply.com",
+    "industry": "retail",
+    "error": "'NoneType' object has no attribute 'get'"
+  },
+  {
+    "url": "https://www.hobbylobby.com",
+    "industry": "retail",
+    "score": 92,
+    "issues_total": 2,
+    "high": 0,
+    "medium": 1,
+    "low": 1,
+    "monthly_loss": 400,
+    "top_issue": "26 of 45 images missing alt text"
+  },
+  {
+    "url": "https://www.michaels.com",
+    "industry": "retail",
+    "score": 85,
+    "issues_total": 4,
+    "high": 1,
+    "medium": 2,
+    "low": 1,
+    "monthly_loss": 1250,
+    "top_issue": "Title is 68 characters (too long)"
+  }
+]

@@ -54,7 +54,7 @@ export default function Terms() {
 
           <div>
             <h2 className="font-display font-bold text-xl mb-3">8. Contact</h2>
-            <p className="text-[#5C685C]">For questions about these Terms, contact us at <a href="mailto:legal@goodly.app" className="text-[#2D3E32] underline">legal@goodly.app</a>.</p>
+            <p className="text-[#5C685C]">For questions about these Terms, contact us at <a href="mailto:legal@searchgoodly.com" className="text-[#2D3E32] underline">legal@searchgoodly.com</a>.</p>
           </div>
         </section>
       </main>
@@ -64,7 +64,7 @@ export default function Terms() {
           <span>·</span>
           <Link to="/" className="hover:text-[#1A201A]">Home</Link>
           <span>·</span>
-          <a href="mailto:hello@goodly.app" className="hover:text-[#1A201A]">Contact</a>
+          <a href="mailto:hello@searchgoodly.com" className="hover:text-[#1A201A]">Contact</a>
         </div>
       </footer>
     </div>

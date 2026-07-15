@@ -1,5 +1,7 @@
 """Input validation utilities — URL, email, and domain sanitization."""
+import ipaddress
 import re
+import socket
 from urllib.parse import urlparse
 
 
@@ -17,6 +19,46 @@ def validate_url(url: str) -> bool:
         return False
     if len(url) > 2048:
         return False
+    return True
+
+
+def is_public_url(url: str) -> bool:
+    """SSRF guard: True only if the URL's host resolves exclusively to public IPs.
+
+    Blocks loopback, RFC1918/private, link-local (incl. cloud metadata
+    169.254.169.254), reserved, and multicast addresses. Performs blocking DNS
+    resolution — call via asyncio.to_thread from async code.
+    """
+    if not url or not url.strip():
+        return False
+    url = url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = parsed.hostname
+    if not host:
+        return False
+    try:
+        addr_infos = socket.getaddrinfo(host, None)
+    except socket.gaierror:
+        # Unresolvable hosts can't be fetched anyway; treat as not public.
+        return False
+    for info in addr_infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            return False
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            return False
     return True
 
 

@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"
 
 def _auth_headers(client):
     resp = client.post("/api/auth/login", json={
-        "email": "admin@goodly.app", "password": "admin-secret-123",
+        "email": "admin@searchgoodly.com", "password": "admin-secret-123",
     })
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return {"Authorization": f"Bearer {resp.json()['token']}"}
@@ -47,7 +47,7 @@ class TestEmailFailures:
         with patch("server.email_service.send_html_email") as mock_send:
             mock_send.side_effect = Exception("SMTP down")
             resp = client.post("/api/auth/forgot-password", json={
-                "email": "admin@goodly.app",
+                "email": "admin@searchgoodly.com",
             })
             assert resp.status_code == 200
             assert resp.json()["ok"] is True
@@ -95,7 +95,7 @@ class TestStripeCustomerIdFailure:
         import server as srv
         headers = _auth_headers(client)
         srv._client["goodly_test"].payment_transactions.insert_one({
-            "id": "tx-custfail", "user_id": "admin-1", "user_email": "admin@goodly.app",
+            "id": "tx-custfail", "user_id": "admin-1", "user_email": "admin@searchgoodly.com",
             "session_id": "cs_custfail", "plan_id": "concierge", "amount": 1000,
             "currency": "usd", "payment_status": "initiated", "status": "open",
             "applied": False, "metadata": {}, "created_at": "2026-01-01T00:00:00",
@@ -128,7 +128,7 @@ class TestPortalCustomerFromTx:
             {"id": "admin-1"}, {"$unset": {"stripe_customer_id": ""}}
         )
         srv._client["goodly_test"].payment_transactions.insert_one({
-            "id": "tx-portal", "user_id": "admin-1", "user_email": "admin@goodly.app",
+            "id": "tx-portal", "user_id": "admin-1", "user_email": "admin@searchgoodly.com",
             "session_id": "cs_portal", "plan_id": "concierge", "amount": 1000,
             "currency": "usd", "payment_status": "paid", "status": "complete",
             "applied": True, "stripe_customer_id": "cus_from_tx",

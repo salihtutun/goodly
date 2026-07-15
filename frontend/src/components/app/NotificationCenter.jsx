@@ -10,9 +10,18 @@ export default function NotificationCenter() {
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
 
+  const fetchNotifications = async () => {
+    try {
+      const { data } = await api.get("/notifications");
+      setNotifications(data.notifications || []);
+      setUnread(data.unread || 0);
+    } catch {
+      // Graceful degradation — notifications are non-critical
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
-    // Poll every 2 minutes
     const interval = setInterval(fetchNotifications, 120000);
     return () => clearInterval(interval);
   }, []);
@@ -24,18 +33,6 @@ export default function NotificationCenter() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const fetchNotifications = async () => {
-    try {
-      const { data } = await api.get("/notifications");
-      setNotifications(data.notifications || []);
-      setUnread(data.unread || 0);
-    } catch {
-      // Notifications endpoint may not exist yet — use mock data
-      setNotifications(getMockNotifications());
-      setUnread(2);
-    }
-  };
 
   const markRead = async (id) => {
     try { await api.post(`/notifications/${id}/read`); } catch {}
@@ -127,39 +124,3 @@ export default function NotificationCenter() {
   );
 }
 
-function getMockNotifications() {
-  return [
-    {
-      id: "1",
-      type: "rank_up",
-      title: "Keyword moved up!",
-      body: "'best pizza NYC' moved from #8 to #4 on Google.",
-      time: "2 hours ago",
-      read: false,
-    },
-    {
-      id: "2",
-      type: "alert",
-      title: "3 critical issues found",
-      body: "Your latest audit found missing meta tags and slow page speed.",
-      time: "1 day ago",
-      read: false,
-    },
-    {
-      id: "3",
-      type: "achievement",
-      title: "Score Improver badge earned!",
-      body: "Your SEO score improved by 15+ points. Great work!",
-      time: "3 days ago",
-      read: true,
-    },
-    {
-      id: "4",
-      type: "rank_down",
-      title: "Keyword dropped",
-      body: "'emergency plumber' dropped from #3 to #7. Check your audit.",
-      time: "5 days ago",
-      read: true,
-    },
-  ];
-}

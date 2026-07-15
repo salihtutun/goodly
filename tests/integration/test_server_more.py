@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"
 
 def _auth_headers(client):
     resp = client.post("/api/auth/login", json={
-        "email": "admin@goodly.app", "password": "admin-secret-123",
+        "email": "admin@searchgoodly.com", "password": "admin-secret-123",
     })
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return {"Authorization": f"Bearer {resp.json()['token']}"}
@@ -133,7 +133,7 @@ class TestBillingMore:
         import server as srv
         headers = _auth_headers(client)
         srv._client["goodly_test"].payment_transactions.insert_one({
-            "id": "tx-1", "user_id": "admin-1", "user_email": "admin@goodly.app",
+            "id": "tx-1", "user_id": "admin-1", "user_email": "admin@searchgoodly.com",
             "session_id": "cs_status_123", "plan_id": "pro", "amount": 29,
             "currency": "usd", "payment_status": "initiated", "status": "open",
             "applied": False, "metadata": {}, "created_at": "2026-01-01T00:00:00",
@@ -154,7 +154,7 @@ class TestBillingMore:
         import server as srv
         headers = _auth_headers(client)
         srv._client["goodly_test"].payment_transactions.insert_one({
-            "id": "tx-2", "user_id": "admin-1", "user_email": "admin@goodly.app",
+            "id": "tx-2", "user_id": "admin-1", "user_email": "admin@searchgoodly.com",
             "session_id": "cs_err_123", "plan_id": "pro", "amount": 29,
             "currency": "usd", "payment_status": "initiated", "status": "open",
             "applied": False, "metadata": {}, "created_at": "2026-01-01T00:00:00",
@@ -198,10 +198,9 @@ class TestBillingMore:
     def test_webhook_missing_signature(self, client):
         """Cover lines 757-758: webhook missing signature."""
         # STRIPE_WEBHOOK_SECRET is set in conftest, so it goes to try block
-        # Missing signature causes construct_event to fail → returns {"received": False}
+        # Missing signature causes construct_event to fail → 400
         resp = client.post("/api/webhook/stripe", content=b'{"type":"checkout.session.completed"}')
-        assert resp.status_code == 200
-        assert resp.json()["received"] is False
+        assert resp.status_code == 400
 
     def test_webhook_invalid_signature(self, client):
         """Cover lines 765-770: webhook invalid signature."""
@@ -209,7 +208,7 @@ class TestBillingMore:
             json={"type": "checkout.session.completed"},
             headers={"stripe-signature": "invalid_sig"},
         )
-        assert resp.status_code == 200  # Returns {"received": False}
+        assert resp.status_code == 400
 
     def test_webhook_success(self, client):
         """Cover lines 772-783: webhook success path."""
@@ -433,13 +432,14 @@ class TestLifespan:
         import server as srv
         from server import lifespan
         import asyncio
+        import pytest
 
         async def run():
             async with lifespan(srv.app):
                 pass
 
-        asyncio.run(run())
-        assert os.environ.get("JWT_SECRET")
+        with pytest.raises(RuntimeError, match="JWT_SECRET must be set in production"):
+            asyncio.run(run())
 
     def test_lifespan_with_mongo(self, monkeypatch):
         """Cover lines 1340-1401: lifespan with MONGO_URL."""

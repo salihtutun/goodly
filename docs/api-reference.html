@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goodly — API Reference</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; color: white; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #34d399; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.75rem; font-weight: 700; }
+    .subtitle { color: #94a3b8; font-size: 0.85rem; margin-left: 1.75rem; }
+    .back-link { color: #64748b; font-size: 0.75rem; text-decoration: none; margin-bottom: 2rem; display: inline-block; }
+    .back-link:hover { color: #94a3b8; }
+    h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 0.5rem; }
+    .section-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-emerald { background: #34d399; } .dot-rose { background: #fb7185; } .dot-amber { background: #fbbf24; }
+    .dot-violet { background: #a78bfa; } .dot-cyan { background: #22d3ee; }
+    .endpoint { background: rgba(15, 23, 42, 0.5); border: 1px solid #1e293b; border-radius: 0.75rem; margin-bottom: 0.75rem; overflow: hidden; }
+    .ep-header { padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid rgba(30, 41, 59, 0.5); }
+    .method { padding: 3px 10px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+    .method-get { background: rgba(34, 211, 238, 0.15); color: #22d3ee; }
+    .method-post { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .method-put { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .method-delete { background: rgba(251, 113, 133, 0.15); color: #fb7185; }
+    .ep-path { font-size: 0.8rem; font-weight: 500; }
+    .ep-auth { margin-left: auto; font-size: 0.6rem; padding: 2px 8px; border-radius: 999px; }
+    .auth-public { background: rgba(52, 211, 153, 0.1); color: #34d399; }
+    .auth-required { background: rgba(251, 113, 133, 0.1); color: #fb7185; }
+    .auth-admin { background: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+    .ep-body { padding: 0.75rem 1.25rem; }
+    .ep-desc { color: #94a3b8; font-size: 0.75rem; line-height: 1.5; }
+    .ep-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.65rem; color: #64748b; }
+    .ep-meta span { display: flex; align-items: center; gap: 0.25rem; }
+    .footer { text-align: center; margin-top: 3rem; color: #475569; font-size: 0.7rem; }
+    .footer a { color: #64748b; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Back to Documentation</a>
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>API Reference</h1>
+      </div>
+      <p class="subtitle">83 endpoints across 3 route modules — all rate-limited with feature flags</p>
+    </div>
+
+    <h2><div class="section-dot dot-rose"></div> Authentication</h2>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/auth/login</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body">
+        <p class="ep-desc">Authenticate with email + password. Returns JWT in HttpOnly cookie + user object.</p>
+        <div class="ep-meta"><span>Rate: 10/min</span><span>Body: email, password</span></div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/auth/register</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body">
+        <p class="ep-desc">Create new account. Optional website URL triggers first audit. Sends verification email.</p>
+        <div class="ep-meta"><span>Rate: 5/min</span><span>Body: name, email, password, url?</span></div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/auth/me</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body">
+        <p class="ep-desc">Get current user profile from JWT cookie.</p>
+        <div class="ep-meta"><span>Rate: 30/min</span></div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/auth/logout</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Clear JWT cookie.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/auth/forgot-password</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Send password reset email. Always returns success (prevents email enumeration).</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/auth/reset-password</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Reset password with token from email.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/auth/verify-email</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Verify email with token. Redirects to frontend login.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/auth/onboarded</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Mark user as onboarded.</p></div>
+    </div>
+
+    <h2><div class="section-dot dot-cyan"></div> Dashboard</h2>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/dashboard/summary</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Dashboard summary — projects count, audits count, average score, recent audits.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/dashboard/visibility</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Multi-channel visibility score — Google, GBP, Instagram, TikTok, YouTube, AI assistants.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/dashboard/achievements</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">User achievements and badges (11 total).</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/dashboard/notifications</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">User notifications — rank changes, audit completions, tips.</p></div>
+    </div>
+
+    <h2><div class="section-dot dot-amber"></div> Audits</h2>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/audits</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Run a new SEO audit on a URL. Returns 50+ signals, score, issues, revenue impact.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/audits</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">List user's audit history.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/audits/:id</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Get audit detail with AI recommendations.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/audits/public</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Run a public audit (no login required). Triggers nurture email sequence.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/audits/:id/share</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Generate shareable link for an audit.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/shared/:token</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">View a shared audit by token.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/audits/:id/pdf</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Download audit as PDF report.</p></div>
+    </div>
+
+    <h2><div class="section-dot dot-violet"></div> Projects</h2>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/projects</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">List user's projects.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/projects</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Create a new project.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/projects/:id</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Get project detail with audit history and keyword rankings.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-delete">DELETE</span>
+        <span class="ep-path">/api/projects/:id</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Delete a project.</p></div>
+    </div>
+
+    <h2><div class="section-dot dot-rose"></div> Billing</h2>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/billing/plans</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">List available plans (Free, Starter, Pro, Concierge).</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/billing/me</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Get user's current plan, usage, and transaction history.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/billing/checkout</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Create Stripe checkout session. Returns redirect URL.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/billing/portal</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Create Stripe customer portal session.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/billing/webhook</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Stripe webhook handler — checkout.session.completed, subscription updates.</p></div>
+    </div>
+
+    <h2><div class="section-dot dot-cyan"></div> Social, GBP, AI, SERP</h2>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/social/audits</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">List social media audit history.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/social/audit</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Run social media audit (Instagram, TikTok, YouTube).</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/gbp/audits</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">List Google Business Profile audit history.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/gbp/audit</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Run GBP audit.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/ai-visibility/history</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">AI visibility check history.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/ai-visibility/check</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Run AI visibility check (ChatGPT, Siri, Gemini).</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/serp/history</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">SERP rank tracking history.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/serp/check</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Check keyword ranking (SerpAPI with DuckDuckGo fallback).</p></div>
+    </div>
+
+    <h2><div class="section-dot dot-amber"></div> Other Endpoints</h2>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/health</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Health check — service status, database, AI, Stripe, email, scheduler.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/concierge/brief</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Get concierge onboarding brief.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/concierge/onboarding</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Submit concierge onboarding form.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/support</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Submit support request. Emails support team.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/referrals/invite</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Send referral invite email.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/scheduler/run-now</span>
+        <span class="ep-auth auth-admin">Admin Only</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Manually trigger scheduled audits.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/scheduler/runs</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Scheduled audit run history.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/blog/posts</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">List blog posts.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-get">GET</span>
+        <span class="ep-path">/api/blog/posts/:slug</span>
+        <span class="ep-auth auth-public">Public</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Get single blog post by slug.</p></div>
+    </div>
+    <div class="endpoint">
+      <div class="ep-header">
+        <span class="method method-post">POST</span>
+        <span class="ep-path">/api/competitors/compare</span>
+        <span class="ep-auth auth-required">Auth Required</span>
+      </div>
+      <div class="ep-body"><p class="ep-desc">Compare your site against up to 3 competitors.</p></div>
+    </div>
+
+    <p class="footer">
+      Goodly API Reference • 83 endpoints • 3 modules • <a href="index.html">Documentation Home</a>
+    </p>
+  </div>
+</body>
+</html>

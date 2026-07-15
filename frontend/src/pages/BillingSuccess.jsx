@@ -25,6 +25,7 @@ export default function BillingSuccess() {
       return;
     }
     let cancelled = false;
+    let timer = null;
 
     const poll = async () => {
       if (cancelled) return;
@@ -48,13 +49,13 @@ export default function BillingSuccess() {
           setState({ status: "error", message: "Still processing. Check your email — we'll confirm shortly." });
           return;
         }
-        setTimeout(poll, POLL_INTERVAL);
+        timer = setTimeout(poll, POLL_INTERVAL);
       } catch (e) {
         setState({ status: "error", message: formatApiError(e) });
       }
     };
     poll();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
   }, [sessionId, refresh]);
 
   return (

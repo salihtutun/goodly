@@ -1,8 +1,6 @@
-"""E2E tests for Goodly — critical user journeys.
-
-Run: npx playwright test
-Requires: FRONTEND_URL env var (defaults to http://localhost:3000)
-"""
+// E2E tests for Goodly — critical user journeys.
+// Run: npx playwright test
+// Requires: FRONTEND_URL env var (defaults to http://localhost:3000)
 const { test, expect } = require('@playwright/test');
 
 const TEST_EMAIL = `e2e-${Date.now()}@goodly-test.com`;
@@ -32,7 +30,7 @@ test.describe('Auth Flow', () => {
 
   test('login with wrong password shows error', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('[data-testid="login-email-input"]', 'admin@goodly.app');
+    await page.fill('[data-testid="login-email-input"]', 'admin@searchgoodly.com');
     await page.fill('[data-testid="login-password-input"]', 'wrong-password');
     await page.click('[data-testid="login-submit-btn"]');
     await expect(page.locator('[data-testid="login-error"]')).toBeVisible();
@@ -42,7 +40,7 @@ test.describe('Auth Flow', () => {
     await page.goto('/login');
     await page.click('[data-testid="forgot-password-link"]');
     await expect(page).toHaveURL('/forgot-password');
-    await page.fill('[data-testid="forgot-email-input"]', 'admin@goodly.app');
+    await page.fill('[data-testid="forgot-email-input"]', 'admin@searchgoodly.com');
     await page.click('[data-testid="forgot-submit-btn"]');
     await expect(page.locator('[data-testid="forgot-success"]')).toBeVisible();
   });
@@ -91,9 +89,9 @@ test.describe('Navigation', () => {
   test('sidebar navigation works', async ({ page }) => {
     // Login first
     await page.goto('/login');
-    await page.fill('[data-testid="login-email-input"]', 'admin@goodly.app');
+    await page.fill('[data-testid="login-email-input"]', 'admin@searchgoodly.com');
     await page.fill('[data-testid="login-password-input"]', 'admin-secret-123');
-    await page.click('[data-testid="login-submit-btn"');
+    await page.click('[data-testid="login-submit-btn"]');
     await expect(page).toHaveURL(/\/app/);
 
     // Navigate to projects

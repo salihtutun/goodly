@@ -1,7 +1,7 @@
 """Competitor analysis — compare a site against its top competitors."""
 
 import asyncio
-from typing import Dict, List, Optional
+from typing import Dict, List
 from seo_analyzer import analyze_url
 
 

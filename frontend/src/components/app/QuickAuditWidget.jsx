@@ -2,14 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Loader2, Search, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { ArrowRight, Loader2, Search, CheckCircle2, XCircle, AlertTriangle, Mail, Check } from "lucide-react";
 import api from "@/lib/api";
 
-export default function QuickAuditWidget({ onComplete }) {
+export default function QuickAuditWidget({ onComplete, submitTestId }) {
   const [url, setUrl] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -29,13 +32,42 @@ export default function QuickAuditWidget({ onComplete }) {
 
     try {
       const { data } = await api.post("/public/audit", { url: normalized });
+      // Backend returns 200 with fetch_failed when the site can't be audited.
+      if (data?.fetch_failed) {
+        setError(data.error || "Could not analyze this URL. Please check and try again.");
+        return;
+      }
       setResult(data);
       if (onComplete) onComplete(data);
     } catch (err) {
-      const msg = err?.response?.data?.detail || "Could not analyze this URL. Please check and try again.";
-      setError(msg);
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      const detail = data?.detail || data?.error || data?.message;
+      if (status === 429) {
+        setError("Too many audits just now — wait a minute and try again.");
+      } else if (typeof detail === "string" && detail.trim()) {
+        setError(detail);
+      } else {
+        setError("Could not analyze this URL. Please check and try again.");
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEmailSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim() || !result) return;
+
+    setEmailLoading(true);
+    try {
+      await api.post("/public/audit", { url: result.url, email: email.trim() });
+      setEmailSent(true);
+    } catch {
+      // Best-effort email capture — don't block the user
+      setEmailSent(true);
+    } finally {
+      setEmailLoading(false);
     }
   };
 
@@ -73,6 +105,7 @@ export default function QuickAuditWidget({ onComplete }) {
             </div>
             <Button
               type="submit"
+              data-testid={submitTestId}
               disabled={loading || !url.trim()}
               className="rounded-r-2xl rounded-l-none py-7 px-8 text-lg bg-[#E07A5F] hover:bg-[#D06A4F] text-white font-semibold shadow-sm"
             >
@@ -150,6 +183,58 @@ export default function QuickAuditWidget({ onComplete }) {
             </div>
           )}
 
+          {/* Concierge CTA for low-scoring sites */}
+          {result.overall_score < 50 && (
+            <div className="bg-[#E07A5F]/10 rounded-xl p-4 mb-4 border border-[#E07A5F]/20">
+              <p className="text-sm text-[#1A201A] font-medium mb-2">
+                Want an expert to fix this for you? We'll get you to page one in 90 days — or you don't pay.
+              </p>
+              <a
+                href={`mailto:hello@searchgoodly.com?subject=Concierge%20inquiry%20-%20${encodeURIComponent(result.url)}%20(Score:%20${result.overall_score})`}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#E07A5F] hover:text-[#C86A51]"
+              >
+                Talk to a specialist <ArrowRight size={14} />
+              </a>
+            </div>
+          )}
+
+          {/* Email capture for nurture sequence */}
+          {!emailSent ? (
+            <form onSubmit={handleEmailSubmit} className="mb-4">
+              <p className="text-sm text-[#1A201A] font-medium mb-2">
+                Get your full report + 3 free fix-it tips by email
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA89C]" size={16} />
+                  <Input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 py-2.5 text-sm rounded-xl border-[#D4CFC4] bg-white"
+                    disabled={emailLoading}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={emailLoading || !email.trim()}
+                  className="rounded-xl bg-[#81B29A] hover:bg-[#6A9A82] text-white text-sm py-2.5 px-4"
+                >
+                  {emailLoading ? <Loader2 className="animate-spin" size={16} /> : "Send"}
+                </Button>
+              </div>
+              <p className="mt-1.5 text-xs text-[#9CA89C]">
+                No spam. Just your report and 3 helpful emails.
+              </p>
+            </form>
+          ) : (
+            <div className="mb-4 bg-[#81B29A]/10 rounded-xl p-3 border border-[#81B29A]/20 flex items-center gap-2">
+              <Check size={16} className="text-[#81B29A]" />
+              <span className="text-sm text-[#1A201A] font-medium">Report sent! Check your inbox.</span>
+            </div>
+          )}
+
           <div className="flex gap-3">
             <Button
               onClick={() => navigate("/register")}
@@ -159,7 +244,7 @@ export default function QuickAuditWidget({ onComplete }) {
             </Button>
             <Button
               variant="outline"
-              onClick={() => { setResult(null); setUrl(""); }}
+              onClick={() => { setResult(null); setUrl(""); setEmail(""); setEmailSent(false); }}
               className="rounded-xl border-[#D4CFC4] text-[#5C685C]"
             >
               Try another URL

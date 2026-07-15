@@ -26,7 +26,7 @@ echo -n "$NEW_SECRET" | gcloud secrets versions add JWT_SECRET --data-file=-
 gcloud run deploy goodly-api --region=us-central1 --source=.
 
 # 4. Verify
-curl https://api.goodly.app/api/health
+curl https://api.searchgoodly.com/api/health
 ```
 
 ### GEMINI_API_KEY
@@ -39,7 +39,7 @@ echo -n "NEW_KEY" | gcloud secrets versions add GEMINI_API_KEY --data-file=-
 gcloud run deploy goodly-api --region=us-central1 --source=.
 
 # 4. Test AI feature
-curl -X POST https://api.goodly.app/api/ai/meta-tags \
+curl -X POST https://api.searchgoodly.com/api/ai/meta-tags \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"business_name":"Test","description":"Test"}'
@@ -58,10 +58,10 @@ echo -n "whsec_NEW_SECRET" | gcloud secrets versions add STRIPE_WEBHOOK_SECRET -
 gcloud run deploy goodly-api --region=us-central1 --source=.
 
 # 5. Test checkout
-curl -X POST https://api.goodly.app/api/billing/checkout \
+curl -X POST https://api.searchgoodly.com/api/billing/checkout \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"plan_id":"concierge","origin_url":"https://goodly.app"}'
+  -d '{"plan_id":"concierge","origin_url":"https://searchgoodly.com"}'
 ```
 
 ### MONGO_URL (password rotation)
@@ -76,7 +76,7 @@ echo -n "mongodb+srv://user:NEW_PASS@cluster.mongodb.net/goodly" | \
 gcloud run deploy goodly-api --region=us-central1 --source=.
 
 # 5. Verify DB connection
-curl https://api.goodly.app/api/health | jq .database
+curl https://api.searchgoodly.com/api/health | jq .database
 ```
 
 ## Pre-Rotation Checklist

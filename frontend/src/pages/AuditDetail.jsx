@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import api, { formatApiError, API_BASE } from "@/lib/api";
 import AppLayout from "@/components/app/AppLayout";
 import { Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, Info, Sparkles, Globe, Smartphone, Image as ImageIcon, Link2, Shield, Download, Share2, TrendingUp, TrendingDown, DollarSign, Users, Target } from "lucide-react";
+import { ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, Info, Sparkles, Globe, Smartphone, Image as ImageIcon, Link2, Shield, Download, Share2, TrendingUp, TrendingDown, DollarSign, Users, Target, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageMeta } from "@/hooks/usePageMeta";
@@ -14,18 +14,19 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 export default function AuditDetail() {
   usePageMeta({ title: "Audit report", description: "Detailed SEO audit results with scores, issues, and AI recommendations." });
   const { id } = useParams();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [audit, setAudit] = useState(null);
   const [improvement, setImprovement] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const downloadPdf = async () => {
     setDownloading(true);
     try {
-      // Auth via HttpOnly cookie (withCredentials: true)
+      // Auth via HttpOnly cookie (withCredentials: true) — no token header needed
       const resp = await fetch(`${API_BASE}/audits/${id}/pdf`, {
-        headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
       if (resp.status === 402) {
@@ -62,7 +63,7 @@ export default function AuditDetail() {
     })();
   }, [id]);
 
-  if (loading) return <AppLayout><div className="text-[#5C685C]">Loading audit…</div></AppLayout>;
+  if (loading) return <AppLayout><div className="p-8 space-y-6 animate-pulse"><div className="h-8 bg-[#F3F0E9] rounded w-1/3" /><div className="h-4 bg-[#F3F0E9] rounded w-1/2" /><div className="grid grid-cols-3 gap-4 mt-6">{[1,2,3].map(i=><div key={i} className="h-24 bg-[#F3F0E9] rounded-2xl" />)}</div><div className="h-64 bg-[#F3F0E9] rounded-2xl mt-6" /></div></AppLayout>;
   if (!audit) return <AppLayout><div className="text-[#5C685C]">Audit not found.</div></AppLayout>;
 
   const result = audit.result || {};
@@ -97,13 +98,31 @@ export default function AuditDetail() {
           </Link>
           <div className="flex items-center gap-2">
             <Button onClick={() => {
-              const text = `I just got a ${result.overall_score}/100 SEO score for ${result.url} on Goodly. Try it free: ${window.location.origin}`;
-              navigator.clipboard.writeText(text);
-              toast.success("Copied! Share with your network.");
+              // Navigate to Content Studio with audit data pre-filled
+              const issues = (result.issues || []).map(i => `${i.title}: ${i.description || ""}`).join("\n");
+              navigate(`/app/content-studio?tab=fix&url=${encodeURIComponent(result.url)}&issues=${encodeURIComponent(issues)}`);
+            }} data-testid="fix-issues-btn"
+              className="bg-[#2D3E32] hover:bg-[#1A201A] text-[#FDFBF7] rounded-full">
+              <Wrench size={16} className="mr-1.5"/>
+              Fix These Issues
+            </Button>
+            <Button onClick={async () => {
+              setSharing(true);
+              try {
+                const { data } = await api.post(`/audits/${id}/share`);
+                await navigator.clipboard.writeText(data.share_url);
+                toast.success("Share link copied! Anyone can view this audit.");
+              } catch (e) {
+                const text = `I just got a ${result.overall_score}/100 SEO score for ${result.url} on Goodly. Try it free: ${window.location.origin}`;
+                navigator.clipboard.writeText(text);
+                toast.success("Copied! Share with your network.");
+              } finally {
+                setSharing(false);
+              }
             }} data-testid="share-audit-btn"
               className="bg-[#81B29A] hover:bg-[#6A9A82] text-[#FDFBF7] rounded-full">
               <Share2 size={16} className="mr-1.5"/>
-              Share
+              {sharing ? "Sharing…" : "Share"}
             </Button>
             <Button onClick={downloadPdf} disabled={downloading} data-testid="download-pdf-btn"
               className="bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7] rounded-full">
@@ -224,6 +243,58 @@ export default function AuditDetail() {
                 <div className="bg-[#F3F0E9] rounded-xl p-3 text-center">
                   <div className="text-2xl font-display font-bold text-[#81B29A]">+{improvement.estimated_traffic_increase_pct}%</div>
                   <div className="text-xs text-[#5C685C] mt-1">Est. traffic increase</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Before/After Meta Tag Comparison */}
+          {improvement?.optimized_meta && improvement?.current_meta && (
+            <div className="bg-white border border-[#E5E0D8] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles size={18} className="text-[#E07A5F]" />
+                <div className="font-display font-bold text-[#1A201A]">Meta Tag Comparison</div>
+              </div>
+              <p className="text-sm text-[#5C685C] mb-4">See how AI-optimized meta tags compare to your current ones. Better tags = higher click-through rates.</p>
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Current */}
+                <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl p-4">
+                  <div className="text-xs text-[#5C685C] uppercase tracking-wider mb-3">Current</div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs text-[#5C685C] mb-1">Title ({improvement.current_meta?.title_length || 0} chars)</div>
+                      <div className="text-sm text-[#1A201A] bg-white border border-[#E5E0D8] rounded-lg p-2.5 font-medium">
+                        {improvement.current_meta?.title || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-[#5C685C] mb-1">Description ({improvement.current_meta?.description_length || 0} chars)</div>
+                      <div className="text-sm text-[#1A201A] bg-white border border-[#E5E0D8] rounded-lg p-2.5">
+                        {improvement.current_meta?.description || "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* AI Optimized */}
+                <div className="bg-[#81B29A]/5 border border-[#81B29A]/30 rounded-xl p-4">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Sparkles size={12} className="text-[#81B29A]" />
+                    <div className="text-xs text-[#81B29A] uppercase tracking-wider font-medium">AI Optimized</div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs text-[#5C685C] mb-1">Title ({improvement.optimized_meta?.title?.length || 0} chars)</div>
+                      <div className="text-sm text-[#1A201A] bg-white border border-[#81B29A]/30 rounded-lg p-2.5 font-medium">
+                        {improvement.optimized_meta?.title || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-[#5C685C] mb-1">Description ({improvement.optimized_meta?.description?.length || 0} chars)</div>
+                      <div className="text-sm text-[#1A201A] bg-white border border-[#81B29A]/30 rounded-lg p-2.5">
+                        {improvement.optimized_meta?.description || "—"}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

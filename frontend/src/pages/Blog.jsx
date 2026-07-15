@@ -1,9 +1,13 @@
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Logo } from "@/components/app/Common";
+import JsonLd, { webAppSchema } from "@/components/app/JsonLd";
 import { ArrowRight, Calendar, Clock, Tag } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import api from "@/lib/api";
 
-const POSTS = [
+// Fallback posts if API is unavailable
+const FALLBACK_POSTS = [
   {
     slug: "seo-mistakes-small-businesses-make",
     title: "10 SEO Mistakes Small Businesses Make (And How to Fix Them)",
@@ -66,8 +70,35 @@ export default function Blog() {
     description: "Practical SEO tips, guides, and strategies for small businesses. Learn how to get found on Google, Instagram, and AI assistants."
   });
 
+  const [posts, setPosts] = useState(FALLBACK_POSTS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchPosts() {
+      try {
+        const { data } = await api.get("/blog/posts?limit=20");
+        if (!cancelled && data?.posts?.length > 0) {
+          setPosts(data.posts.map(p => ({
+            ...p,
+            date: new Date(p.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+            readTime: estimateReadTime(p.content || ""),
+            image: p.image_url || "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=600",
+          })));
+        }
+      } catch (e) {
+        // Use fallback posts
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchPosts();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
+      <JsonLd data={webAppSchema("Goodly Blog", "SEO tips, guides, and strategies for small businesses. Learn how to get found on Google, Google Maps, and AI assistants.", "/blog")} />
       <header className="border-b border-[#E5E0D8] bg-[#FDFBF7] sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/"><Logo /></Link>
@@ -86,37 +117,52 @@ export default function Blog() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {POSTS.map((post) => (
-            <Link
-              key={post.slug}
-              to={`/blog/${post.slug}`}
-              className="group bg-white border border-[#E5E0D8] rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
-            >
-              <div className="aspect-[16/9] overflow-hidden">
-                <img
-                  src={post.image}
-                  alt={post.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-3 text-xs text-[#9CA89C] mb-3">
-                  <span className="flex items-center gap-1"><Calendar size={12} /> {post.date}</span>
-                  <span className="flex items-center gap-1"><Clock size={12} /> {post.readTime}</span>
-                  <span className="bg-[#F3F0E9] text-[#5C685C] px-2 py-0.5 rounded-full">{post.category}</span>
-                </div>
-                <h2 className="font-display font-bold text-lg text-[#1A201A] group-hover:text-[#2D3E32] transition-colors leading-snug">
-                  {post.title}
-                </h2>
-                <p className="mt-2 text-sm text-[#5C685C] leading-relaxed">{post.excerpt}</p>
-                <div className="mt-4 flex items-center gap-1 text-sm text-[#81B29A] font-medium">
-                  Read more <ArrowRight size={14} />
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1,2,3].map(i => (
+              <div key={i} className="bg-white border border-[#E5E0D8] rounded-2xl overflow-hidden animate-pulse">
+                <div className="aspect-[16/9] bg-[#F3F0E9]" />
+                <div className="p-6 space-y-3">
+                  <div className="h-3 bg-[#F3F0E9] rounded w-1/3" />
+                  <div className="h-5 bg-[#F3F0E9] rounded w-full" />
+                  <div className="h-4 bg-[#F3F0E9] rounded w-2/3" />
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {posts.map((post) => (
+              <Link
+                key={post.slug}
+                to={`/blog/${post.slug}`}
+                className="group bg-white border border-[#E5E0D8] rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
+              >
+                <div className="aspect-[16/9] overflow-hidden">
+                  <img
+                    src={post.image || post.image_url}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center gap-3 text-xs text-[#9CA89C] mb-3">
+                    <span className="flex items-center gap-1"><Calendar size={12} /> {post.date}</span>
+                    <span className="flex items-center gap-1"><Clock size={12} /> {post.readTime}</span>
+                    <span className="bg-[#F3F0E9] text-[#5C685C] px-2 py-0.5 rounded-full">{post.category}</span>
+                  </div>
+                  <h2 className="font-display font-bold text-lg text-[#1A201A] group-hover:text-[#2D3E32] transition-colors leading-snug">
+                    {post.title}
+                  </h2>
+                  <p className="mt-2 text-sm text-[#5C685C] leading-relaxed">{post.excerpt}</p>
+                  <div className="mt-4 flex items-center gap-1 text-sm text-[#81B29A] font-medium">
+                    Read more <ArrowRight size={14} />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* CTA */}
         <div className="mt-16 bg-gradient-to-r from-[#2D3E32] to-[#4A5F4F] rounded-2xl p-10 text-center text-white">
@@ -135,4 +181,10 @@ export default function Blog() {
       </footer>
     </div>
   );
+}
+
+function estimateReadTime(content) {
+  const words = (content || "").split(/\s+/).length;
+  const minutes = Math.max(1, Math.ceil(words / 200));
+  return `${minutes} min read`;
 }

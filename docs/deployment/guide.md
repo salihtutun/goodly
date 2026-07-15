@@ -7,7 +7,7 @@
 - Stripe account with live API keys
 - Resend account with verified domain
 - Google Gemini API key (from Google AI Studio)
-- Domain name (goodly.app or custom)
+- Domain name (searchgoodly.com or custom)
 
 ## Quick Deploy
 
@@ -63,7 +63,7 @@ gcloud run deploy goodly-api \
   --min-instances 0 \
   --max-instances 10 \
   --timeout 300 \
-  --set-env-vars="ENVIRONMENT=production,DB_NAME=goodly,SCHEDULER_ENABLED=true,FRONTEND_URL=https://goodly.app,PRODUCTION_DOMAIN=https://goodly.app,CORS_ORIGINS=https://goodly.app,SENDER_EMAIL=hello@goodly.app,ADMIN_EMAIL=admin@goodly.app" \
+  --set-env-vars="ENVIRONMENT=production,DB_NAME=goodly,SCHEDULER_ENABLED=true,FRONTEND_URL=https://searchgoodly.com,PRODUCTION_DOMAIN=https://searchgoodly.com,CORS_ORIGINS=https://searchgoodly.com,SENDER_EMAIL=hello@searchgoodly.com,ADMIN_EMAIL=admin@searchgoodly.com" \
   --set-secrets="MONGO_URL=MONGO_URL:latest,JWT_SECRET=JWT_SECRET:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,STRIPE_API_KEY=STRIPE_API_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest"
 ```
 
@@ -72,14 +72,14 @@ gcloud run deploy goodly-api \
 ```bash
 gcloud run domain-mappings create \
   --service=goodly-api \
-  --domain=api.goodly.app \
+  --domain=api.searchgoodly.com \
   --region=us-central1
 ```
 
 ### 5. Set up Stripe Webhook
 
 1. Go to Stripe Dashboard → Webhooks
-2. Add endpoint: `https://api.goodly.app/api/webhook/stripe`
+2. Add endpoint: `https://api.searchgoodly.com/api/webhook/stripe`
 3. Select events: `checkout.session.completed`, `customer.subscription.updated`
 4. Copy signing secret → store as `STRIPE_WEBHOOK_SECRET`
 
@@ -88,7 +88,7 @@ gcloud run domain-mappings create \
 ```bash
 cd frontend
 # Set environment variables
-export REACT_APP_BACKEND_URL=https://api.goodly.app
+export REACT_APP_BACKEND_URL=https://api.searchgoodly.com
 # Build
 npm run build
 # Deploy to Firebase Hosting or Cloud Run
@@ -120,9 +120,9 @@ firebase deploy --only hosting
 
 ## Post-Deployment Checklist
 
-- [ ] Health check: `curl https://api.goodly.app/api/health`
-- [ ] Register test user: `curl -X POST https://api.goodly.app/api/auth/register ...`
-- [ ] Run SEO audit: `curl -X POST https://api.goodly.app/api/audits ...`
+- [ ] Health check: `curl https://api.searchgoodly.com/api/health`
+- [ ] Register test user: `curl -X POST https://api.searchgoodly.com/api/auth/register ...`
+- [ ] Run SEO audit: `curl -X POST https://api.searchgoodly.com/api/audits ...`
 - [ ] Verify Stripe webhook: Check Stripe Dashboard for successful deliveries
 - [ ] Verify email: Check Resend dashboard for sent emails
 - [ ] Check logs: `gcloud logging read "resource.type=cloud_run_revision"`

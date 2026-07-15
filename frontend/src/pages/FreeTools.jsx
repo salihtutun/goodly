@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Logo } from "@/components/app/Common";
-import { ArrowRight, Search, Gauge, Smartphone, FileText, Shield, Code, BarChart3 } from "lucide-react";
+import JsonLd, { webAppSchema } from "@/components/app/JsonLd";
+import { ArrowRight, Search, Gauge, Smartphone, FileText, Shield, Code, BarChart3, Sparkles } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const TOOLS = [
+  { icon: Sparkles, title: "AI Content Studio", desc: "Generate blog posts, emails, social captions, and website copy in seconds. Free, no signup.", path: "/content-studio", color: "#E07A5F", featured: true },
   { icon: Search, title: "Meta Tag Checker", desc: "See exactly what Google sees — title, description, OG tags, and more.", path: "/tools/meta-tag-checker", color: "#81B29A" },
   { icon: Gauge, title: "Page Speed Test", desc: "Check how fast your site loads and why it matters for rankings.", path: "/tools/page-speed", color: "#E07A5F" },
   { icon: Smartphone, title: "Mobile-Friendly Test", desc: "See if your site works on phones. 60%+ of searches are mobile.", path: "/tools/mobile-friendly", color: "#2D3E32" },
@@ -20,6 +22,7 @@ export default function FreeTools() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
+      <JsonLd data={webAppSchema("Free SEO Tools", "Free SEO tools for small businesses. Check meta tags, page speed, mobile-friendliness, SSL, schema, and keyword density. No signup required.", "/tools")} />
       <header className="border-b border-[#E5E0D8] bg-[#FDFBF7] sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/"><Logo /></Link>

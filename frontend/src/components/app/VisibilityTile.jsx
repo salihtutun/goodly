@@ -37,7 +37,10 @@ export default function VisibilityTile() {
   useEffect(() => {
     api.get("/dashboard/visibility")
       .then(({ data }) => setData(data))
-      .catch(() => { setError(true); })
+      .catch((e) => {
+        if (process.env.NODE_ENV === "development") console.error("VisibilityTile fetch failed:", e);
+        setError(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 

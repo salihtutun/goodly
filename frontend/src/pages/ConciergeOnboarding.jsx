@@ -133,6 +133,30 @@ export default function ConciergeOnboarding() {
           </div>
         )}
 
+        {/* Calendly booking — book a call with your specialist */}
+        <div className="mt-8 bg-white border border-[#E5E0D8] rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-10 w-10 rounded-xl bg-[#E07A5F]/15 flex items-center justify-center">
+              <Sparkles size={20} className="text-[#E07A5F]" />
+            </div>
+            <div>
+              <div className="font-display font-bold text-[#1A201A]">Skip the form — book a call</div>
+              <div className="text-sm text-[#5C685C]">Talk to an SEO specialist. 15 minutes. No pressure.</div>
+            </div>
+          </div>
+          <a
+            href="https://calendly.com/searchgoodly/concierge-intro"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6 py-3 text-sm font-medium transition-colors"
+          >
+            Book a call <ArrowRight size={16} />
+          </a>
+          <p className="mt-3 text-xs text-[#9CA89C]">
+            Or fill out the brief below and we'll reach out within 1 business day.
+          </p>
+        </div>
+
         <form onSubmit={submit} className="mt-10 space-y-8" data-testid="concierge-brief-form">
           {/* Business */}
           <Section title="Business basics">

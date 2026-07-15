@@ -1,4 +1,5 @@
 """On-page SEO analyzer. Fetches a URL, parses it, scores key SEO signals."""
+import asyncio
 import re
 import time
 from typing import Dict, List, Tuple
@@ -6,8 +7,10 @@ from urllib.parse import urlparse, urljoin
 import httpx
 from bs4 import BeautifulSoup
 
+from validators import is_public_url
 
-USER_AGENT = "Mozilla/5.0 (compatible; GoodlyBot/1.0; +https://goodly.app)"
+
+USER_AGENT = "Mozilla/5.0 (compatible; GoodlyBot/1.0)"
 TIMEOUT = 15.0
 
 
@@ -43,12 +46,21 @@ async def analyze_url(raw_url: str) -> Dict:
     url = _normalize_url(raw_url)
     parsed = urlparse(url)
 
-    try:
-        html, status, load_ms, headers = await fetch_page(url)
-    except Exception as e:
+    # SSRF guard: refuse to fetch hosts that resolve to private/internal IPs.
+    # is_public_url does blocking DNS resolution, so run it off the event loop.
+    if not await asyncio.to_thread(is_public_url, url):
         return {
             "url": url,
-            "error": f"Could not fetch URL: {str(e)[:200]}",
+            "error": "This URL cannot be audited. Please provide a public website URL.",
+            "fetch_failed": True,
+        }
+
+    try:
+        html, status, load_ms, headers = await fetch_page(url)
+    except Exception:
+        return {
+            "url": url,
+            "error": "Could not fetch URL. The site may be down or blocking automated checks.",
             "fetch_failed": True,
         }
 

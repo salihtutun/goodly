@@ -4,7 +4,7 @@ Measures prompt quality with automated test cases.
 Run with: python -m evals.runner
 """
 from dataclasses import dataclass, field
-from typing import List, Dict, Callable, Any, Optional
+from typing import List, Dict, Callable, Any
 import json
 import time
 import logging

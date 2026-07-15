@@ -55,4 +55,4 @@ These Terms shall be governed by the laws of the State of Delaware, United State
 
 ## 12. Contact
 
-For questions about these Terms, contact us at **legal@goodly.app**.
+For questions about these Terms, contact us at **legal@searchgoodly.com**.

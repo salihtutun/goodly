@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goodly — Security Overview</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; color: white; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 3rem 2rem; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #fb7185; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.75rem; font-weight: 700; }
+    .subtitle { color: #94a3b8; font-size: 0.85rem; margin-left: 1.75rem; }
+    .back-link { color: #64748b; font-size: 0.75rem; text-decoration: none; margin-bottom: 2rem; display: inline-block; }
+    .back-link:hover { color: #94a3b8; }
+    h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 0.5rem; }
+    .section-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-rose { background: #fb7185; } .dot-amber { background: #fbbf24; } .dot-cyan { background: #22d3ee; }
+    .dot-emerald { background: #34d399; } .dot-violet { background: #a78bfa; }
+    .layer { background: rgba(15, 23, 42, 0.5); border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1rem; }
+    .layer h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .layer p { color: #94a3b8; font-size: 0.8rem; line-height: 1.6; margin-bottom: 0.5rem; }
+    .checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.5rem; }
+    .check-item { display: flex; align-items: center; gap: 0.5rem; padding: 8px 12px; background: rgba(15, 23, 42, 0.3); border-radius: 6px; font-size: 0.8rem; }
+    .check-pass { color: #34d399; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.65rem; font-weight: 600; margin-right: 0.5rem; }
+    .badge-rose { background: rgba(251, 113, 133, 0.15); color: #fb7185; }
+    .badge-amber { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .badge-cyan { background: rgba(34, 211, 238, 0.15); color: #22d3ee; }
+    .badge-emerald { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .footer { text-align: center; margin-top: 3rem; color: #475569; font-size: 0.7rem; }
+    .footer a { color: #64748b; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Back to Documentation</a>
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Security Overview</h1>
+      </div>
+      <p class="subtitle">Defense-in-depth security architecture — 6 layers of protection</p>
+    </div>
+
+    <h2><div class="section-dot dot-rose"></div> Layer 1: Transport Security</h2>
+    <div class="layer">
+      <h3><span class="badge badge-rose">TLS</span> HTTPS Everywhere</h3>
+      <p>• All traffic encrypted with TLS 1.2+ (enforced by Cloud Run and Vercel)</p>
+      <p>• HSTS header: max-age=31536000; includeSubDomains</p>
+      <p>• Automatic HTTP → HTTPS redirect</p>
+      <p>• SSL certificates managed by Google Cloud and Vercel</p>
+    </div>
+
+    <h2><div class="section-dot dot-amber"></div> Layer 2: Authentication</h2>
+    <div class="layer">
+      <h3><span class="badge badge-amber">JWT</span> Token-Based Auth</h3>
+      <p>• JWT tokens stored in HttpOnly, Secure, SameSite=Lax cookies</p>
+      <p>• No localStorage tokens — prevents XSS token theft</p>
+      <p>• Token expiry: configurable (default 30 days)</p>
+      <p>• Password hashing: bcrypt with appropriate work factor</p>
+      <p>• Password reset: time-limited tokens, always returns success (prevents enumeration)</p>
+      <p>• Email verification required before full access</p>
+      <p>• Google OAuth support (optional, requires GOOGLE_CLIENT_ID)</p>
+    </div>
+
+    <h2><div class="section-dot dot-cyan"></div> Layer 3: Authorization</h2>
+    <div class="layer">
+      <h3><span class="badge badge-cyan">RBAC</span> Role-Based Access Control</h3>
+      <p>• Three roles: user, admin, agency</p>
+      <p>• Admin-only routes gated at both frontend (AdminOnly wrapper) and backend</p>
+      <p>• Agency dashboard restricted to paid plans (starter, pro, concierge)</p>
+      <p>• All authenticated endpoints verify JWT before processing</p>
+      <p>• Feature flags per route module — disabled modules return 503</p>
+    </div>
+
+    <h2><div class="section-dot dot-emerald"></div> Layer 4: Input Protection</h2>
+    <div class="layer">
+      <h3><span class="badge badge-emerald">Validation</span> Input Sanitization</h3>
+      <p>• Request body size limit: 5MB (prevents DoS via large payloads)</p>
+      <p>• URL validation: blocks private/internal IPs (SSRF protection via is_public_url)</p>
+      <p>• Email validation: format + domain checks</p>
+      <p>• Domain validation: rejects invalid/malicious domains</p>
+      <p>• HTML sanitization: all user-generated content sanitized</p>
+      <p>• Name sanitization: strips control characters and XSS vectors</p>
+      <p>• Social handle validation: rejects path traversal and control characters</p>
+      <p>• Pydantic models enforce type safety on all request bodies</p>
+    </div>
+
+    <h2><div class="section-dot dot-violet"></div> Layer 5: Rate Limiting</h2>
+    <div class="layer">
+      <h3><span class="badge badge-violet">SlowAPI</span> Per-Endpoint Rate Limits</h3>
+      <p>• All 83 endpoints have rate limits via SlowAPI</p>
+      <p>• Auth endpoints: 5-10 requests/minute</p>
+      <p>• Dashboard/read endpoints: 30 requests/minute</p>
+      <p>• Audit creation: 10 requests/minute</p>
+      <p>• Rate limit headers included in responses (X-RateLimit-*)</p>
+      <p>• Rate limit exceeded → 429 with Retry-After header</p>
+    </div>
+
+    <h2><div class="section-dot dot-rose"></div> Layer 6: Security Headers</h2>
+    <div class="layer">
+      <h3><span class="badge badge-rose">Headers</span> Defense in Depth</h3>
+      <p>• Content-Security-Policy: restricts script sources, blocks inline scripts</p>
+      <p>• X-Frame-Options: DENY (prevents clickjacking)</p>
+      <p>• X-Content-Type-Options: nosniff (prevents MIME sniffing)</p>
+      <p>• Referrer-Policy: strict-origin-when-cross-origin</p>
+      <p>• X-API-Version: 1.9.0 (version tracking)</p>
+      <p>• CORS: whitelist-only origins (no wildcard in production)</p>
+      <p>• CSP enforced in: firebase.json, index.html, nginx.conf, csp-config.cjs</p>
+    </div>
+
+    <h2>Security Checklist</h2>
+    <div class="checklist">
+      <div class="check-item"><span class="check-pass">✓</span> HTTPS enforced (TLS 1.2+)</div>
+      <div class="check-item"><span class="check-pass">✓</span> HSTS header configured</div>
+      <div class="check-item"><span class="check-pass">✓</span> JWT in HttpOnly cookies</div>
+      <div class="check-item"><span class="check-pass">✓</span> No localStorage tokens</div>
+      <div class="check-item"><span class="check-pass">✓</span> Passwords hashed with bcrypt</div>
+      <div class="check-item"><span class="check-pass">✓</span> RBAC (user, admin, agency)</div>
+      <div class="check-item"><span class="check-pass">✓</span> Feature flags per module</div>
+      <div class="check-item"><span class="check-pass">✓</span> Body size limit (5MB)</div>
+      <div class="check-item"><span class="check-pass">✓</span> SSRF protection (URL validation)</div>
+      <div class="check-item"><span class="check-pass">✓</span> Input sanitization (HTML, names, handles)</div>
+      <div class="check-item"><span class="check-pass">✓</span> Rate limiting (all 83 endpoints)</div>
+      <div class="check-item"><span class="check-pass">✓</span> CSP header configured</div>
+      <div class="check-item"><span class="check-pass">✓</span> X-Frame-Options: DENY</div>
+      <div class="check-item"><span class="check-pass">✓</span> X-Content-Type-Options: nosniff</div>
+      <div class="check-item"><span class="check-pass">✓</span> CORS whitelist (no wildcard)</div>
+      <div class="check-item"><span class="check-pass">✓</span> No error leaks in responses</div>
+      <div class="check-item"><span class="check-pass">✓</span> No hardcoded secrets</div>
+      <div class="check-item"><span class="check-pass">✓</span> No eval() or new Function()</div>
+      <div class="check-item"><span class="check-pass">✓</span> dangerouslySetInnerHTML (2 — both safe)</div>
+      <div class="check-item"><span class="check-pass">✓</span> Sentry error tracking (optional)</div>
+    </div>
+
+    <p class="footer">
+      Goodly Security Overview • v1.9.0 • <a href="index.html">Documentation Home</a>
+    </p>
+  </div>
+</body>
+</html>

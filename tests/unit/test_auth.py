@@ -115,7 +115,7 @@ def test_verify_password_handles_empty_strings():
 
 def test_create_access_token_returns_string():
     """create_access_token returns a non-empty JWT string."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         token = create_access_token("user-1", "test@example.com")
         assert isinstance(token, str)
@@ -126,10 +126,10 @@ def test_create_access_token_returns_string():
 
 def test_create_access_token_contains_claims():
     """The token payload contains sub, email, type, and exp claims."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         token = create_access_token("user-1", "test@example.com")
-        payload = jwt.decode(token, "test-secret", algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, "test-secret-key-that-is-32-bytes-long!", algorithms=[JWT_ALGORITHM])
         assert payload["sub"] == "user-1"
         assert payload["email"] == "test@example.com"
         assert payload["type"] == "access"
@@ -140,10 +140,10 @@ def test_create_access_token_contains_claims():
 
 def test_create_access_token_expiry_is_future():
     """The exp claim is set in the future (7 days)."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         token = create_access_token("user-1", "test@example.com")
-        payload = jwt.decode(token, "test-secret", algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, "test-secret-key-that-is-32-bytes-long!", algorithms=[JWT_ALGORITHM])
         now = datetime.now(timezone.utc)
         exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
         assert exp > now
@@ -158,7 +158,7 @@ def test_create_access_token_expiry_is_future():
 
 def test_decode_token_returns_payload():
     """decode_token returns the correct payload dict."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         token = create_access_token("user-1", "test@example.com")
         payload = decode_token(token)
@@ -170,7 +170,7 @@ def test_decode_token_returns_payload():
 
 def test_decode_token_expired_raises():
     """decode_token raises ExpiredSignatureError for an expired token."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         payload = {
             "sub": "user-1",
@@ -178,7 +178,7 @@ def test_decode_token_expired_raises():
             "exp": datetime.now(timezone.utc) - timedelta(hours=1),
             "type": "access",
         }
-        token = jwt.encode(payload, "test-secret", algorithm=JWT_ALGORITHM)
+        token = jwt.encode(payload, "test-secret-key-that-is-32-bytes-long!", algorithm=JWT_ALGORITHM)
         with pytest.raises(jwt.ExpiredSignatureError):
             decode_token(token)
     finally:
@@ -187,7 +187,7 @@ def test_decode_token_expired_raises():
 
 def test_decode_token_invalid_raises():
     """decode_token raises InvalidTokenError for a malformed token."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         with pytest.raises(jwt.InvalidTokenError):
             decode_token("not.a.valid.token")
@@ -197,7 +197,7 @@ def test_decode_token_invalid_raises():
 
 def test_decode_token_wrong_secret_raises():
     """decode_token raises an error when the secret doesn't match."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         token = jwt.encode({"sub": "x"}, "wrong-secret", algorithm=JWT_ALGORITHM)
         with pytest.raises(jwt.InvalidSignatureError):
@@ -257,7 +257,7 @@ def test_extract_token_header_no_bearer():
 @pytest.mark.asyncio
 async def test_get_current_user_id_returns_sub():
     """get_current_user_id returns the user id from a valid token."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         token = create_access_token("user-99", "u@test.com")
         req = FakeRequest(cookies={"access_token": token})
@@ -281,7 +281,7 @@ async def test_get_current_user_id_no_token_raises_401():
 @pytest.mark.asyncio
 async def test_get_current_user_id_expired_token_raises_401():
     """Raises 401 with 'Token expired' for an expired token."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         payload = {
             "sub": "user-1",
@@ -289,7 +289,7 @@ async def test_get_current_user_id_expired_token_raises_401():
             "exp": datetime.now(timezone.utc) - timedelta(hours=1),
             "type": "access",
         }
-        token = jwt.encode(payload, "test-secret", algorithm=JWT_ALGORITHM)
+        token = jwt.encode(payload, "test-secret-key-that-is-32-bytes-long!", algorithm=JWT_ALGORITHM)
         req = FakeRequest(cookies={"access_token": token})
         from fastapi import HTTPException
         with pytest.raises(HTTPException) as exc:
@@ -303,7 +303,7 @@ async def test_get_current_user_id_expired_token_raises_401():
 @pytest.mark.asyncio
 async def test_get_current_user_id_invalid_token_raises_401():
     """Raises 401 with 'Invalid token' for a malformed token."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         req = FakeRequest(cookies={"access_token": "garbage"})
         from fastapi import HTTPException
@@ -318,7 +318,7 @@ async def test_get_current_user_id_invalid_token_raises_401():
 @pytest.mark.asyncio
 async def test_get_current_user_id_wrong_token_type_raises_401():
     """Raises 401 when token type is not 'access'."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         payload = {
             "sub": "user-1",
@@ -326,7 +326,7 @@ async def test_get_current_user_id_wrong_token_type_raises_401():
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
             "type": "refresh",
         }
-        token = jwt.encode(payload, "test-secret", algorithm=JWT_ALGORITHM)
+        token = jwt.encode(payload, "test-secret-key-that-is-32-bytes-long!", algorithm=JWT_ALGORITHM)
         req = FakeRequest(cookies={"access_token": token})
         from fastapi import HTTPException
         with pytest.raises(HTTPException) as exc:
@@ -340,14 +340,14 @@ async def test_get_current_user_id_wrong_token_type_raises_401():
 @pytest.mark.asyncio
 async def test_get_current_user_id_missing_sub_raises_401():
     """Raises 401 when the token payload has no 'sub' claim."""
-    _set_env(JWT_SECRET="test-secret")
+    _set_env(JWT_SECRET="test-secret-key-that-is-32-bytes-long!")
     try:
         payload = {
             "email": "test@example.com",
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
             "type": "access",
         }
-        token = jwt.encode(payload, "test-secret", algorithm=JWT_ALGORITHM)
+        token = jwt.encode(payload, "test-secret-key-that-is-32-bytes-long!", algorithm=JWT_ALGORITHM)
         req = FakeRequest(cookies={"access_token": token})
         from fastapi import HTTPException
         with pytest.raises(HTTPException) as exc:

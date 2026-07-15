@@ -3,11 +3,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Logo, Eyebrow } from "@/components/app/Common";
 import QuickAuditWidget from "@/components/app/QuickAuditWidget";
-import CaseStudies from "@/components/app/CaseStudies";
+import ContentGraderWidget from "@/components/app/ContentGraderWidget";
 import IndustrySelector from "@/components/app/IndustrySelector";
-import TrustBadges from "@/components/app/TrustBadges";
-import MediaMentions from "@/components/app/MediaMentions";
 import FAQ from "@/components/app/FAQ";
+import JsonLd, { organizationSchema, softwareAppSchema, faqSchema } from "@/components/app/JsonLd";
 import { ArrowRight, Search, MapPin, Share2, Bot, ShieldCheck, Star, Quote, TrendingUp, Users, Clock, Phone, ArrowUp } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -22,6 +21,18 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
+      <JsonLd data={organizationSchema()} />
+      <JsonLd data={softwareAppSchema()} />
+      <JsonLd data={faqSchema([
+        { question: "What is an SEO audit?", answer: "An SEO audit scans your website for 50+ signals Google cares about — meta tags, headings, mobile-friendliness, page speed, content quality, and more. You get a score and a plain-English list of exactly what to fix." },
+        { question: "How long does it take to see results?", answer: "Most businesses see meaningful improvement in 3-6 months. But many see their Google Maps ranking improve within 2-4 weeks after fixing the basics like completing their Google Business Profile and fixing meta tags." },
+        { question: "Do I need to know SEO to use Goodly?", answer: "No. Goodly is built for business owners, not SEO experts. Every issue comes with a plain-English explanation and step-by-step fix. If you can use Facebook, you can use Goodly." },
+        { question: "Is there really a free plan?", answer: "Yes. The Free plan gives you 5 audits per month, 2 saved projects, and an AI action plan — forever. No credit card needed." },
+        { question: "What's the difference between Starter and Pro?", answer: "Starter ($49/mo) includes 10 audits, 5 keyword trackers, weekly re-audits, and PDF reports. Pro ($149/mo) adds unlimited audits, 25 keyword trackers, daily re-audits, competitor analysis, and all social platforms." },
+        { question: "What is the Concierge plan?", answer: "Concierge ($1,000/mo) is done-for-you SEO. A dedicated specialist does all the work — audits, content writing, Google Maps optimization, backlink outreach — with a page-one in 90 days guarantee." },
+        { question: "Can I cancel anytime?", answer: "Yes. All paid plans are month-to-month with no long-term contracts. Cancel anytime from your Billing page. Your data is yours — export it anytime." },
+        { question: "Does Goodly work for local businesses?", answer: "Absolutely. Goodly is built specifically for local businesses — restaurants, plumbers, dentists, salons, retail shops, lawyers, home services, real estate agents, and auto shops. We audit Google Maps, local SEO, and social media presence." },
+      ])} />
       {/* Nav */}
       <header className="border-b border-[#E5E0D8] bg-[#FDFBF7] sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 py-5 flex items-center justify-between">
@@ -29,7 +40,8 @@ export default function Landing() {
           <nav className="hidden md:flex items-center gap-8 text-sm text-[#5C685C]">
             <a href="#how" className="hover:text-[#1A201A] transition-colors">How it works</a>
             <a href="#features" className="hover:text-[#1A201A] transition-colors">What you get</a>
-            <a href="#pricing" className="hover:text-[#1A201A] transition-colors">Pricing</a>
+            <Link to="/pricing" className="hover:text-[#1A201A] transition-colors">Pricing</Link>
+            <Link to="/content-studio" className="hover:text-[#1A201A] transition-colors">Content Studio</Link>
             <a href="#stories" className="hover:text-[#1A201A] transition-colors">Stories</a>
           </nav>
           <div className="flex items-center gap-3">
@@ -63,24 +75,18 @@ export default function Landing() {
 
             {/* Quick Audit Widget — the #1 conversion tool */}
             <div className="mt-10">
-              <QuickAuditWidget />
+              <QuickAuditWidget submitTestId="hero-cta-primary" />
             </div>
 
             {/* Trust signals */}
             <div className="mt-10 flex flex-wrap items-center justify-center gap-8 text-sm text-[#5C685C]">
               <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-[#81B29A]"/> Free forever plan</div>
               <div className="flex items-center gap-2"><Clock size={16} className="text-[#81B29A]"/> Results in 30 seconds</div>
-              <div className="flex items-center gap-2"><Star size={16} className="text-[#81B29A]"/> 4.9/5 from small business owners</div>
+              <div className="flex items-center gap-2"><Star size={16} className="text-[#81B29A]"/> No credit card required</div>
             </div>
           </div>
         </div>
       </section>
-
-      {/* Trust Badges — Social proof counters */}
-      <TrustBadges />
-
-      {/* Media Mentions — As seen on */}
-      <MediaMentions />
 
       {/* How it works — 3 simple steps */}
       <section id="how" className="bg-[#F3F0E9] py-20 lg:py-28">
@@ -95,7 +101,7 @@ export default function Landing() {
             {[
               { n: "01", icon: Search, t: "Paste your website", d: "Enter your URL. We scan everything Google looks at — meta tags, speed, mobile-friendliness, and more. Takes 30 seconds." },
               { n: "02", icon: TrendingUp, t: "See what's holding you back", d: "Get a clear score and a plain-English list of exactly what to fix. No technical jargon. Just 'do this, get more customers.'" },
-              { n: "03", icon: Phone, t: "Watch the phone ring", d: "Fix the issues, re-audit anytime. Track your progress. Our customers see 40-200% more traffic in 90 days." },
+              { n: "03", icon: Phone, t: "Watch the phone ring", d: "Fix the issues, re-audit anytime, and track your progress as your visibility improves." },
             ].map((s) => (
               <div key={s.n} className="bg-white border border-[#E5E0D8] rounded-2xl p-8 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <div className="h-12 w-12 rounded-xl bg-[#81B29A]/15 flex items-center justify-center text-[#81B29A]">
@@ -106,6 +112,13 @@ export default function Landing() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Content Grader — lead gen magnet */}
+      <section className="py-20 lg:py-28">
+        <div className="max-w-3xl mx-auto px-6 lg:px-10">
+          <ContentGraderWidget />
         </div>
       </section>
 
@@ -155,7 +168,7 @@ export default function Landing() {
               accent="#E07A5F"
               title="Track your progress"
               body="Run audits anytime. Watch your score climb. See exactly which fixes moved the needle. Get weekly email updates so you never have to remember to check."
-              stat="Customers who audit monthly see 3x faster improvement"
+              stat="Automated re-audits keep your score up to date"
             />
             <OutcomeCard
               icon={Users}
@@ -171,59 +184,25 @@ export default function Landing() {
       {/* Industry Selector — Choose your business type */}
       <IndustrySelector selected={selectedIndustry} onSelect={setSelectedIndustry} />
 
-      {/* Case Studies — Industry-specific results */}
-      <CaseStudies filter={selectedIndustry} />
-
-      {/* Testimonials — Real stories */}
+      {/* Fabricated testimonials/case studies were removed — re-add this
+          section once real customer stories (with permission) exist. */}
       <section id="stories" className="bg-[#2D3E32] py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <Eyebrow className="mb-4 text-[#81B29A]">Real results</Eyebrow>
-          <h2 className="font-display font-bold text-[#FDFBF7] text-3xl sm:text-4xl lg:text-5xl tracking-tight max-w-3xl">
-            Small businesses like yours are getting found
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 text-center">
+          <Eyebrow className="mb-4 text-[#81B29A] justify-center">Built for you</Eyebrow>
+          <h2 className="font-display font-bold text-[#FDFBF7] text-3xl sm:text-4xl lg:text-5xl tracking-tight max-w-3xl mx-auto">
+            Your business could be the next success story
           </h2>
-          <div className="mt-14 grid md:grid-cols-3 gap-6">
-            {[
-              {
-                quote: "I run a tiny pottery studio. Goodly showed me my Google listing was invisible. Three months later I'm #1 in my city and my phone won't stop ringing.",
-                name: "Maya R.",
-                role: "Owner, Clay & Kiln Studio",
-                result: "#1 on Google in 83 days",
-                img: "https://images.unsplash.com/photo-1507914464562-6ff4ac29692f?crop=entropy&cs=srgb&fm=jpg&q=85&w=200",
-              },
-              {
-                quote: "I had no idea my website was missing basic meta tags. Goodly's audit found 12 critical issues in 30 seconds. Fixed them in an afternoon. Traffic doubled in 6 weeks.",
-                name: "James K.",
-                role: "Owner, Blue Line Plumbing",
-                result: "2x website traffic in 6 weeks",
-                img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=srgb&fm=jpg&q=85&w=200",
-              },
-              {
-                quote: "As a salon owner, Instagram is everything. Goodly audited my profile and suggested better hashtags and bio. My bookings from Instagram went up 40% the next month.",
-                name: "Sarah L.",
-                role: "Owner, The Velvet Chair Salon",
-                result: "40% more Instagram bookings",
-                img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=srgb&fm=jpg&q=85&w=200",
-              },
-            ].map((t, i) => (
-              <div key={i} className="bg-[#3A4F3F] rounded-2xl p-8 flex flex-col">
-                <Quote className="text-[#81B29A]/40" size={28} />
-                <p className="mt-4 text-[#FDFBF7]/90 leading-relaxed flex-1">
-                  &ldquo;{t.quote}&rdquo;
-                </p>
-                <div className="mt-6 pt-6 border-t border-[#FDFBF7]/10">
-                  <div className="flex items-center gap-3">
-                    <img src={t.img} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
-                    <div>
-                      <div className="text-[#FDFBF7] font-medium text-sm">{t.name}</div>
-                      <div className="text-[#FDFBF7]/60 text-xs">{t.role}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 inline-flex items-center gap-1.5 bg-[#81B29A]/20 text-[#81B29A] text-xs font-medium px-2.5 py-1 rounded-full">
-                    <TrendingUp size={12} /> {t.result}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <p className="mt-5 text-[#FDFBF7]/70 text-lg max-w-2xl mx-auto leading-relaxed">
+            Run a free audit, follow the plain-English action plan, and watch your visibility grow.
+            We're just getting started — and so are you.
+          </p>
+          <div className="mt-8">
+            <Button
+              onClick={() => navigate("/audit")}
+              className="bg-[#81B29A] hover:bg-[#6FA189] text-[#1A201A] rounded-full px-8 py-6 text-base font-medium"
+            >
+              Get your free audit <ArrowRight size={18} className="ml-2" />
+            </Button>
           </div>
         </div>
       </section>
@@ -260,8 +239,8 @@ export default function Landing() {
               annual={annual}
               tag="Get started"
               features={[
-                "3 audits per month",
-                "1 saved project",
+                "5 audits per month",
+                "2 saved projects",
                 "AI action plan",
                 "No credit card needed",
               ]}
@@ -359,7 +338,7 @@ export default function Landing() {
               <div className="font-display font-bold text-sm text-[#1A201A] mb-3">Product</div>
               <div className="space-y-2 text-sm text-[#5C685C]">
                 <div><a href="#features" className="hover:text-[#1A201A]">Features</a></div>
-                <div><a href="#pricing" className="hover:text-[#1A201A]">Pricing</a></div>
+                <div><Link to="/pricing" className="hover:text-[#1A201A]">Pricing</Link></div>
                 <div><Link to="/audit" className="hover:text-[#1A201A]">Free Audit</Link></div>
                 <div><Link to="/register" className="hover:text-[#1A201A]">Sign Up</Link></div>
               </div>
@@ -367,6 +346,7 @@ export default function Landing() {
             <div>
               <div className="font-display font-bold text-sm text-[#1A201A] mb-3">Free Tools</div>
               <div className="space-y-2 text-sm text-[#5C685C]">
+                <div><Link to="/content-studio" className="hover:text-[#1A201A]">Content Studio</Link></div>
                 <div><Link to="/tools/meta-tag-checker" className="hover:text-[#1A201A]">Meta Tag Checker</Link></div>
                 <div><Link to="/tools/page-speed" className="hover:text-[#1A201A]">Page Speed Test</Link></div>
                 <div><Link to="/tools/mobile-friendly" className="hover:text-[#1A201A]">Mobile-Friendly Test</Link></div>
@@ -377,7 +357,7 @@ export default function Landing() {
               <div className="font-display font-bold text-sm text-[#1A201A] mb-3">Resources</div>
               <div className="space-y-2 text-sm text-[#5C685C]">
                 <div><Link to="/blog" className="hover:text-[#1A201A]">Blog</Link></div>
-                <div><a href="mailto:hello@goodly.app" className="hover:text-[#1A201A]">Contact</a></div>
+                <div><a href="mailto:hello@searchgoodly.com" className="hover:text-[#1A201A]">Contact</a></div>
               </div>
             </div>
             <div>

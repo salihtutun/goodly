@@ -111,7 +111,7 @@ GEMINI_API_KEY=...
 STRIPE_API_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 RESEND_API_KEY=re_...
-SENDER_EMAIL=hello@goodly.app
+SENDER_EMAIL=hello@searchgoodly.com
 
 # Stripe Price IDs (create in Stripe dashboard)
 STRIPE_PRICE_ID_STARTER=price_...
@@ -120,9 +120,9 @@ STRIPE_PRICE_ID_CONCIERGE=price_...
 
 # Optional
 ENVIRONMENT=production
-CORS_ORIGINS=https://goodly.app
-FRONTEND_URL=https://goodly.app
-ADMIN_EMAIL=admin@goodly.app
+CORS_ORIGINS=https://searchgoodly.com
+FRONTEND_URL=https://searchgoodly.com
+ADMIN_EMAIL=admin@searchgoodly.com
 ADMIN_PASSWORD=<secure password>
 DB_NAME=goodly
 SCHEDULER_ENABLED=true
@@ -133,8 +133,8 @@ SCHEDULER_ENABLED=true
 ## Testing
 
 ```bash
-# All tests with coverage
-make test                    # 475 tests, 98% coverage
+# All backend tests with coverage
+make test                    # 475+ tests, 98% coverage
 
 # Unit tests only
 make test-unit
@@ -143,7 +143,16 @@ make test-unit
 make test-integration
 
 # Frontend tests
-cd frontend && npm test      # 34 tests, 6/6 suites
+cd frontend && npm test      # 47 tests, 6/6 suites
+
+# E2E tests (against production)
+FRONTEND_URL=https://searchgoodly.com npx playwright test --config=tests/e2e/playwright.config.js tests/e2e/smoke-tests.spec.js      # 123 tests
+FRONTEND_URL=https://searchgoodly.com npx playwright test --config=tests/e2e/playwright.config.js tests/e2e/comprehensive.spec.js   # 192 tests
+FRONTEND_URL=https://searchgoodly.com npx playwright test --config=tests/e2e/playwright.config.js tests/e2e/full-coverage.spec.js    # 236 tests
+FRONTEND_URL=https://searchgoodly.com npx playwright test --config=tests/e2e/playwright.config.js tests/e2e/authenticated.spec.js    # 21 tests
+
+# Shell smoke test
+FRONTEND_URL=https://searchgoodly.com BACKEND_URL=https://api.searchgoodly.com bash scripts/smoke-test.sh  # 55 tests
 ```
 
 ---

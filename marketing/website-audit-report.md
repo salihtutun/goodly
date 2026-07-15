@@ -1,5 +1,5 @@
 # Goodly — Comprehensive Website Audit Report
-> Live site audit: `https://frontend-beta-weld-93.vercel.app` + `https://goodly-api-1407225707.us-central1.run.app`
+> Live site audit: `https://searchgoodly.com` + `https://api.searchgoodly.com`
 > **Date:** July 2025 | **Auditor:** Automated + Manual | **Pages Audited:** 12
 
 ---
@@ -57,9 +57,9 @@
 **Impact:** Poor social sharing previews. When someone shares the blog on Twitter/LinkedIn, the preview says "Goodly — Visibility OS for Small Businesses" instead of the article title.
 **Fix:** Set unique `og:title` and `og:description` per page. The `usePageMeta` hook exists but may not be setting OG tags correctly on all pages.
 
-### Issue #2 — 🔴 CRITICAL: Canonical URL is hardcoded to `goodly.app`
+### Issue #2 — 🔴 CRITICAL: Canonical URL is hardcoded to `searchgoodly.com`
 **Location:** Every page
-**Problem:** `<link rel="canonical" href="https://goodly.app/">` is the same on every page. The blog post page should have `https://goodly.app/blog/seo-mistakes-small-businesses-make` as its canonical.
+**Problem:** `<link rel="canonical" href="https://searchgoodly.com/">` is the same on every page. The blog post page should have `https://searchgoodly.com/blog/seo-mistakes-small-businesses-make` as its canonical.
 **Impact:** Google may index the wrong URL or treat all pages as duplicates. This is a major SEO issue.
 **Fix:** Make canonical URL dynamic per page route.
 
@@ -257,9 +257,9 @@
 
 ### Issue #31 — 🔴 CRITICAL: No CORS configuration for production domain
 **Location:** Backend CORS middleware
-**Problem:** CORS is configured with `CORS_ORIGINS` env var. If not set, it defaults to `http://localhost:3000`. The production frontend at `frontend-beta-weld-93.vercel.app` may be blocked.
+**Problem:** CORS is configured with `CORS_ORIGINS` env var. If not set, it defaults to `http://localhost:3000`. The production frontend at `searchgoodly.com` may be blocked.
 **Impact:** Frontend API calls may fail with CORS errors.
-**Fix:** Set `CORS_ORIGINS=https://frontend-beta-weld-93.vercel.app,https://goodly.app` in Cloud Run env vars.
+**Fix:** Set `CORS_ORIGINS=https://searchgoodly.com,https://searchgoodly.com` in Cloud Run env vars.
 
 ### Issue #32 — 🟡 MEDIUM: Health endpoint shows "degraded" status
 **Location:** `/api/health`
@@ -287,7 +287,7 @@
 **Location:** Root
 **Problem:** The `frontend/public/sitemap.xml` exists in the repo but may not be accessible at `/sitemap.xml` on the live site. Need to verify.
 **Impact:** Google can't discover all pages. Critical for SEO.
-**Fix:** Verify `https://frontend-beta-weld-93.vercel.app/sitemap.xml` returns the sitemap. If not, check Vercel routing.
+**Fix:** Verify `https://searchgoodly.com/sitemap.xml` returns the sitemap. If not, check Vercel routing.
 
 ### Issue #36 — 🟡 MEDIUM: Support widget appears on every page including auth
 **Location:** All pages

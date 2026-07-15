@@ -1,5 +1,5 @@
 # Goodly CI Pipeline
-# Runs on every PR and push to main: tests, lint, build
+# Runs on every PR and push to main: tests, lint, build, e2e
 
 name: CI
 
@@ -21,17 +21,15 @@ jobs:
       - run: pip install -r backend/requirements.txt
       - run: pip install pytest pytest-cov pytest-asyncio pytest-mock mongomock
       - run: |
-          cd /home/runner/work/goodly/goodly
           python -m pytest tests/unit/ tests/integration/ -v --tb=short --cov=backend --cov-report=xml --cov-report=term
         env:
           MONGO_URL: mongodb://localhost:27017
           JWT_SECRET: test-secret-for-ci-32bytes-long!!
           GEMINI_API_KEY: test-key
-          STRIPE_API_KEY: test-key
-          STRIPE_WEBHOOK_SECRET: test-secret
-          RESEND_API_KEY: test-key
+          STRIPE_API_KEY: sk_test_placeholder
+          RESEND_API_KEY: re_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_test_placeholder
           ENVIRONMENT: test
-          SCHEDULER_ENABLED: false
       - uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
@@ -49,6 +47,32 @@ jobs:
       - run: cd frontend && npm ci --legacy-peer-deps
       - run: cd frontend && npm test -- --watchAll=false --passWithNoTests
       - run: cd frontend && npm run build
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install @playwright/test
+      - run: npx playwright install chromium --with-deps
+      - run: |
+          FRONTEND_URL=https://searchgoodly.com \
+          npx playwright test --config=tests/e2e/playwright.config.js \
+            tests/e2e/smoke-tests.spec.js \
+            tests/e2e/authenticated.spec.js \
+            tests/e2e/full-coverage.spec.js \
+            --reporter=html
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+        continue-on-error: true
 
   lint:
     runs-on: ubuntu-latest

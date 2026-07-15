@@ -16,7 +16,7 @@ const FAQS = [
   },
   {
     q: "Is there really a free plan?",
-    a: "Yes! The free plan gives you 3 audits per month, 1 saved project, and AI-generated action plans. No credit card needed. Upgrade to Starter ($49/mo) for 10 audits, SERP tracking, PDF reports, and weekly automated re-audits."
+    a: "Yes! The free plan gives you 5 audits per month, 2 saved projects, and AI-generated action plans. No credit card needed. Upgrade to Starter ($49/mo) for 10 audits, SERP tracking, PDF reports, and weekly automated re-audits."
   },
   {
     q: "What's the difference between Starter and Pro?",

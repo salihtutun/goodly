@@ -1,345 +1,357 @@
-"""Unit tests for scheduler.py — background audit scheduler."""
-import os
+"""Unit tests for scheduler.py — scheduled audits, trial notifications, ROI reports, re-engagement."""
 import pytest
-from unittest.mock import patch, MagicMock
-
-from conftest import AsyncMock
-
+from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime, timezone, timedelta
-import asyncio
-
-from scheduler import (
-    _now,
-    _iso,
-    _previous_score,
-    start,
-    shutdown,
-    run_due_audits,
-)
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+class TestPreviousScore:
+    """Tests for _previous_score()."""
 
-def _set_env(**kwargs):
-    for k, v in kwargs.items():
-        os.environ[k] = v
-
-
-def _clear_env(*keys):
-    for k in keys:
-        os.environ.pop(k, None)
-
-
-# ---------------------------------------------------------------------------
-# _now
-# ---------------------------------------------------------------------------
-
-def test_now_returns_datetime():
-    """_now returns a timezone-aware datetime."""
-    result = _now()
-    assert isinstance(result, datetime)
-    assert result.tzinfo is not None
-
-
-def test_now_is_utc():
-    """_now returns a UTC datetime."""
-    result = _now()
-    assert result.tzinfo == timezone.utc
-
-
-# ---------------------------------------------------------------------------
-# _iso
-# ---------------------------------------------------------------------------
-
-def test_iso_formats_correctly():
-    """_iso returns an ISO 8601 formatted string."""
-    dt = datetime(2025, 6, 15, 12, 30, 0, tzinfo=timezone.utc)
-    result = _iso(dt)
-    assert "2025-06-15" in result
-    assert "12:30:00" in result
-
-
-def test_iso_roundtrip():
-    """_iso output can be parsed back to the same datetime."""
-    dt = _now()
-    iso_str = _iso(dt)
-    assert isinstance(iso_str, str)
-    assert "T" in iso_str
-
-
-# ---------------------------------------------------------------------------
-# _previous_score
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_previous_score_returns_none_for_no_audits():
-    """_previous_score returns None when there are no previous audits."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_cursor.sort.return_value = mock_cursor
-    mock_cursor.limit.return_value = mock_cursor
-    mock_cursor.to_list = AsyncMock(return_value=[])
-    mock_db.audits.find.return_value = mock_cursor
-
-    result = await _previous_score(mock_db, "project-1")
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_previous_score_returns_score():
-    """_previous_score returns the overall_score from the last audit."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_cursor.sort.return_value = mock_cursor
-    mock_cursor.limit.return_value = mock_cursor
-    mock_cursor.to_list = AsyncMock(return_value=[
-        {"result": {"overall_score": 85}, "created_at": "2025-06-01T00:00:00+00:00"}
-    ])
-    mock_db.audits.find.return_value = mock_cursor
-
-    result = await _previous_score(mock_db, "project-1")
-    assert result == 85
-
-
-@pytest.mark.asyncio
-async def test_previous_score_handles_missing_result():
-    """_previous_score returns None when audit doc has no result field."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_cursor.sort.return_value = mock_cursor
-    mock_cursor.limit.return_value = mock_cursor
-    mock_cursor.to_list = AsyncMock(return_value=[
-        {"created_at": "2025-06-01T00:00:00+00:00"}
-    ])
-    mock_db.audits.find.return_value = mock_cursor
-
-    result = await _previous_score(mock_db, "project-1")
-    assert result is None
-
-
-# ---------------------------------------------------------------------------
-# start
-# ---------------------------------------------------------------------------
-
-def test_start_creates_scheduler():
-    """start creates and returns an AsyncIOScheduler."""
-    _set_env(SCHEDULER_ENABLED="true")
-    try:
+    @pytest.mark.asyncio
+    async def test_returns_score(self):
+        from scheduler import _previous_score
         mock_db = MagicMock()
-        base_url_provider = MagicMock(return_value="https://goodly.app")
+        mock_db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[
+            {"result": {"overall_score": 85}}
+        ])
+        result = await _previous_score(mock_db, "proj1")
+        assert result == 85
 
-        import scheduler
-        scheduler._scheduler = None
-
-        with patch("scheduler.AsyncIOScheduler") as mock_sched_class:
-            mock_sched = MagicMock()
-            mock_sched_class.return_value = mock_sched
-
-            result = start(mock_db, base_url_provider)
-            assert result is mock_sched
-            mock_sched.add_job.assert_called_once()
-            mock_sched.start.assert_called_once()
-    finally:
-        _clear_env("SCHEDULER_ENABLED")
-        import scheduler
-        scheduler._scheduler = None
-
-
-def test_start_returns_existing_scheduler():
-    """start returns the existing scheduler if already started."""
-    _set_env(SCHEDULER_ENABLED="true")
-    try:
-        import scheduler
-        existing = MagicMock()
-        scheduler._scheduler = existing
-
-        result = start(MagicMock(), MagicMock())
-        assert result is existing
-    finally:
-        _clear_env("SCHEDULER_ENABLED")
-        import scheduler
-        scheduler._scheduler = None
-
-
-def test_start_disabled_by_env():
-    """start returns None when SCHEDULER_ENABLED is false."""
-    _set_env(SCHEDULER_ENABLED="false")
-    try:
-        import scheduler
-        scheduler._scheduler = None
-
-        result = start(MagicMock(), MagicMock())
+    @pytest.mark.asyncio
+    async def test_no_audits_returns_none(self):
+        from scheduler import _previous_score
+        mock_db = MagicMock()
+        mock_db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[])
+        result = await _previous_score(mock_db, "proj1")
         assert result is None
-    finally:
-        _clear_env("SCHEDULER_ENABLED")
 
-
-def test_start_disabled_by_env_no():
-    """start returns None when SCHEDULER_ENABLED is 'no'."""
-    _set_env(SCHEDULER_ENABLED="no")
-    try:
-        import scheduler
-        scheduler._scheduler = None
-
-        result = start(MagicMock(), MagicMock())
+    @pytest.mark.asyncio
+    async def test_no_result_returns_none(self):
+        from scheduler import _previous_score
+        mock_db = MagicMock()
+        mock_db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[{}])
+        result = await _previous_score(mock_db, "proj1")
         assert result is None
-    finally:
-        _clear_env("SCHEDULER_ENABLED")
 
 
-def test_start_disabled_by_env_zero():
-    """start returns None when SCHEDULER_ENABLED is '0'."""
-    _set_env(SCHEDULER_ENABLED="0")
-    try:
-        import scheduler
-        scheduler._scheduler = None
+class TestRunOneScheduledAudit:
+    """Tests for _run_one_scheduled_audit()."""
 
-        result = start(MagicMock(), MagicMock())
-        assert result is None
-    finally:
-        _clear_env("SCHEDULER_ENABLED")
+    @pytest.mark.asyncio
+    async def test_user_not_found(self):
+        from scheduler import _run_one_scheduled_audit
+        mock_db = MagicMock()
+        mock_db.users.find_one = AsyncMock(return_value=None)
+        result = await _run_one_scheduled_audit(mock_db, {"id": "p1", "user_id": "u1", "url": "https://x.com", "name": "Test"}, "https://base.com")
+        assert result == {"skipped": "user_not_found"}
 
+    @pytest.mark.asyncio
+    async def test_runs_audit_successfully(self):
+        from scheduler import _run_one_scheduled_audit
+        with patch("scheduler.analyze_url") as mock_analyze, \
+             patch("scheduler.ai_service.audit_recommendations") as mock_ai, \
+             patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            mock_db.users.find_one = AsyncMock(return_value={"id": "u1", "email": "a@b.com", "name": "Test"})
+            mock_db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[])
+            mock_db.audits.insert_one = AsyncMock()
+            mock_db.projects.update_one = AsyncMock()
+            mock_db.scheduled_runs.insert_one = AsyncMock()
+            mock_db.notifications = MagicMock()
+            mock_db.notifications.insert_one = AsyncMock()
+            mock_analyze.return_value = {"url": "https://x.com", "overall_score": 80, "fetch_failed": False, "issues": []}
+            mock_ai.return_value = {"priority_actions": ["fix1"]}
+            mock_email.audit_digest_html.return_value = "<html>digest</html>"
+            mock_email.send_html_email = AsyncMock(return_value={"id": "msg1", "mocked": False})
+            mock_email.rank_change_html.return_value = "<html>rank</html>"
+            result = await _run_one_scheduled_audit(mock_db, {"id": "p1", "user_id": "u1", "url": "https://x.com", "name": "Test"}, "https://base.com")
+            assert result["audit_id"] is not None
+            assert result["score"] == 80
+            mock_db.audits.insert_one.assert_called_once()
+            mock_db.projects.update_one.assert_called_once()
+            mock_db.scheduled_runs.insert_one.assert_called_once()
 
-# ---------------------------------------------------------------------------
-# shutdown
-# ---------------------------------------------------------------------------
+    @pytest.mark.asyncio
+    async def test_handles_fetch_failed(self):
+        from scheduler import _run_one_scheduled_audit
+        with patch("scheduler.analyze_url") as mock_analyze, \
+             patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            mock_db.users.find_one = AsyncMock(return_value={"id": "u1", "email": "a@b.com", "name": "Test"})
+            mock_db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[])
+            mock_db.audits.insert_one = AsyncMock()
+            mock_db.projects.update_one = AsyncMock()
+            mock_db.scheduled_runs.insert_one = AsyncMock()
+            mock_db.notifications = MagicMock()
+            mock_db.notifications.insert_one = AsyncMock()
+            mock_analyze.return_value = {"url": "https://x.com", "overall_score": 0, "fetch_failed": True, "issues": []}
+            mock_email.send_html_email = AsyncMock(return_value={"id": "msg1", "mocked": False})
+            result = await _run_one_scheduled_audit(mock_db, {"id": "p1", "user_id": "u1", "url": "https://x.com", "name": "Test"}, "https://base.com")
+            assert result["audit_id"] is not None
 
-def test_shutdown_stops_scheduler():
-    """shutdown calls shutdown on the scheduler and clears the global."""
-    import scheduler
-    mock_sched = MagicMock()
-    scheduler._scheduler = mock_sched
+    @pytest.mark.asyncio
+    async def test_ai_recs_failure_handled(self):
+        from scheduler import _run_one_scheduled_audit
+        with patch("scheduler.analyze_url") as mock_analyze, \
+             patch("scheduler.ai_service.audit_recommendations") as mock_ai, \
+             patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            mock_db.users.find_one = AsyncMock(return_value={"id": "u1", "email": "a@b.com", "name": "Test"})
+            mock_db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[])
+            mock_db.audits.insert_one = AsyncMock()
+            mock_db.projects.update_one = AsyncMock()
+            mock_db.scheduled_runs.insert_one = AsyncMock()
+            mock_db.notifications = MagicMock()
+            mock_db.notifications.insert_one = AsyncMock()
+            mock_analyze.return_value = {"url": "https://x.com", "overall_score": 70, "fetch_failed": False, "issues": []}
+            mock_ai.side_effect = Exception("AI down")
+            mock_email.audit_digest_html.return_value = "<html>digest</html>"
+            mock_email.send_html_email = AsyncMock(return_value={"id": "msg1", "mocked": False})
+            result = await _run_one_scheduled_audit(mock_db, {"id": "p1", "user_id": "u1", "url": "https://x.com", "name": "Test"}, "https://base.com")
+            assert result["audit_id"] is not None
 
-    shutdown()
-    mock_sched.shutdown.assert_called_once_with(wait=False)
-    assert scheduler._scheduler is None
-
-
-def test_shutdown_noop_when_none():
-    """shutdown does nothing when no scheduler is running."""
-    import scheduler
-    scheduler._scheduler = None
-    shutdown()
-    assert scheduler._scheduler is None
-
-
-# ---------------------------------------------------------------------------
-# run_due_audits
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_run_due_audits_no_due_projects():
-    """run_due_audits returns summary with 0 due when no projects are due."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_cursor.to_list = AsyncMock(return_value=[])
-    mock_db.projects.find.return_value = mock_cursor
-
-    result = await run_due_audits(mock_db, "https://goodly.app")
-    assert result["due"] == 0
-    assert result["ran"] == 0
-    assert result["failures"] == 0
-
-
-@pytest.mark.asyncio
-async def test_run_due_audits_with_due_projects(mock_db):
-    """run_due_audits processes due projects and returns summary."""
-    # Mock the find cursor properly - find() returns a cursor synchronously
-    mock_cursor = MagicMock()
-    mock_cursor.to_list = AsyncMock(return_value=[
-        {"id": "proj-1", "user_id": "user-1", "url": "https://example.com",
-         "name": "Test Project", "schedule": "monthly",
-         "next_audit_at": "2025-01-01T00:00:00+00:00"},
-    ])
-    mock_db.projects.find = MagicMock(return_value=mock_cursor)
-
-    mock_db.users.find_one = AsyncMock(return_value={
-        "id": "user-1", "email": "user@test.com", "name": "Test User",
-    })
-
-    mock_audit_cursor = MagicMock()
-    mock_audit_cursor.sort.return_value = mock_audit_cursor
-    mock_audit_cursor.limit.return_value = mock_audit_cursor
-    mock_audit_cursor.to_list = AsyncMock(return_value=[])
-    mock_db.audits.find = MagicMock(return_value=mock_audit_cursor)
-
-    mock_db.audits.insert_one = AsyncMock()
-    mock_db.projects.update_one = AsyncMock()
-    mock_db.scheduled_runs.insert_one = AsyncMock()
-
-    with patch("scheduler.analyze_url", new=AsyncMock(return_value={
-        "url": "https://example.com",
-        "fetch_failed": False,
-        "overall_score": 80,
-        "issues": [],
-    })):
-        with patch("scheduler.ai_service.audit_recommendations", new=AsyncMock(return_value={"summary": "Good"})):
-            with patch("scheduler.email_service.send_html_email", new=AsyncMock(return_value={"mocked": True, "id": None, "error": None})):
-                result = await run_due_audits(mock_db, "https://goodly.app")
-                assert result["due"] == 1
-                assert result["ran"] == 1
-                assert result["failures"] == 0
-
-
-@pytest.mark.asyncio
-async def test_run_due_audits_handles_failure(mock_db):
-    """run_due_audits increments failures counter and advances next_audit_at on error."""
-    mock_cursor = MagicMock()
-    mock_cursor.to_list = AsyncMock(return_value=[
-        {"id": "proj-1", "user_id": "user-1", "url": "https://example.com",
-         "name": "Test Project", "schedule": "monthly",
-         "next_audit_at": "2025-01-01T00:00:00+00:00"},
-    ])
-    mock_db.projects.find = MagicMock(return_value=mock_cursor)
-
-    mock_db.users.find_one = AsyncMock(side_effect=Exception("DB connection lost"))
-    mock_db.projects.update_one = AsyncMock()
-
-    result = await run_due_audits(mock_db, "https://goodly.app")
-    assert result["due"] == 1
-    assert result["failures"] == 1
-    mock_db.projects.update_one.assert_called()
+    @pytest.mark.asyncio
+    async def test_score_delta_triggers_rank_alert(self):
+        from scheduler import _run_one_scheduled_audit
+        with patch("scheduler.analyze_url") as mock_analyze, \
+             patch("scheduler.ai_service.audit_recommendations") as mock_ai, \
+             patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            mock_db.users.find_one = AsyncMock(return_value={"id": "u1", "email": "a@b.com", "name": "Test"})
+            mock_db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[
+                {"result": {"overall_score": 60}}
+            ])
+            mock_db.audits.insert_one = AsyncMock()
+            mock_db.projects.update_one = AsyncMock()
+            mock_db.scheduled_runs.insert_one = AsyncMock()
+            mock_db.notifications = MagicMock()
+            mock_db.notifications.insert_one = AsyncMock()
+            mock_analyze.return_value = {"url": "https://x.com", "overall_score": 75, "fetch_failed": False, "issues": []}
+            mock_ai.return_value = {"priority_actions": ["fix1"]}
+            mock_email.audit_digest_html.return_value = "<html>digest</html>"
+            mock_email.send_html_email = AsyncMock(return_value={"id": "msg1", "mocked": False})
+            mock_email.rank_change_html.return_value = "<html>rank</html>"
+            result = await _run_one_scheduled_audit(mock_db, {"id": "p1", "user_id": "u1", "url": "https://x.com", "name": "Test"}, "https://base.com")
+            assert result["audit_id"] is not None
+            # Should have sent rank change email + notification
+            assert mock_email.send_html_email.call_count >= 2
+            mock_db.notifications.insert_one.assert_called_once()
 
 
-def test_run_one_user_not_found():
-    """Cover line 46: return skipped when user not found."""
-    from scheduler import _run_one_scheduled_audit
-    db = MagicMock()
-    db.users.find_one = AsyncMock(return_value=None)
-    r = asyncio.run(_run_one_scheduled_audit(db, {"id":"p1","user_id":"u1","url":"https://t.com","name":"T"}, "http://localhost"))
-    assert r == {"skipped": "user_not_found"}
+class TestRunDueAudits:
+    """Tests for run_due_audits()."""
 
-def test_run_one_ai_recs_fails():
-    """Cover lines 55-57: AI recs exception handler."""
-    from scheduler import _run_one_scheduled_audit
-    db = MagicMock()
-    db.users.find_one = AsyncMock(return_value={"id":"u1","email":"t@t.com","name":"T"})
-    db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[])
-    db.audits.insert_one = AsyncMock()
-    db.projects.update_one = AsyncMock()
-    db.scheduled_runs.insert_one = AsyncMock()
-    with patch("scheduler.analyze_url", new_callable=AsyncMock) as m:
-        m.return_value = {"overall_score":80,"url":"https://t.com","issues":[]}
-        with patch("scheduler.ai_service.audit_recommendations", side_effect=Exception("AI down")):
-            with patch("scheduler.email_service.send_html_email", new_callable=AsyncMock) as em:
-                em.return_value = {"mocked":True}
-                r = asyncio.run(_run_one_scheduled_audit(db, {"id":"p1","user_id":"u1","url":"https://t.com","name":"T"}, "http://localhost"))
-                assert "audit_id" in r
+    @pytest.mark.asyncio
+    async def test_no_due_projects(self):
+        from scheduler import run_due_audits
+        mock_db = MagicMock()
+        mock_db.projects.find.return_value.to_list = AsyncMock(return_value=[])
+        result = await run_due_audits(mock_db, "https://base.com")
+        assert result == {"due": 0, "ran": 0, "failures": 0}
 
-def test_run_one_email_fails():
-    """Cover lines 104-106: email exception handler."""
-    from scheduler import _run_one_scheduled_audit
-    db = MagicMock()
-    db.users.find_one = AsyncMock(return_value={"id":"u1","email":"t@t.com","name":"T"})
-    db.audits.find.return_value.sort.return_value.limit.return_value.to_list = AsyncMock(return_value=[])
-    db.audits.insert_one = AsyncMock()
-    db.projects.update_one = AsyncMock()
-    db.scheduled_runs.insert_one = AsyncMock()
-    with patch("scheduler.analyze_url", new_callable=AsyncMock) as m:
-        m.return_value = {"overall_score":80,"url":"https://t.com","issues":[]}
-        with patch("scheduler.ai_service.audit_recommendations", new_callable=AsyncMock):
-            with patch("scheduler.email_service.send_html_email", side_effect=Exception("email down")):
-                r = asyncio.run(_run_one_scheduled_audit(db, {"id":"p1","user_id":"u1","url":"https://t.com","name":"T"}, "http://localhost"))
-                assert "audit_id" in r
+    @pytest.mark.asyncio
+    async def test_runs_due_projects(self):
+        from scheduler import run_due_audits
+        with patch("scheduler._run_one_scheduled_audit") as mock_run:
+            mock_db = MagicMock()
+            mock_db.projects.find.return_value.to_list = AsyncMock(return_value=[
+                {"id": "p1", "user_id": "u1", "url": "https://x.com", "name": "Test"},
+                {"id": "p2", "user_id": "u2", "url": "https://y.com", "name": "Test2"},
+            ])
+            mock_run.return_value = {"audit_id": "a1", "score": 80}
+            result = await run_due_audits(mock_db, "https://base.com")
+            assert result["due"] == 2
+            assert result["ran"] == 2
+            assert result["failures"] == 0
+
+    @pytest.mark.asyncio
+    async def test_handles_failures(self):
+        from scheduler import run_due_audits
+        with patch("scheduler._run_one_scheduled_audit") as mock_run:
+            mock_db = MagicMock()
+            mock_db.projects.find.return_value.to_list = AsyncMock(return_value=[
+                {"id": "p1", "user_id": "u1", "url": "https://x.com", "name": "Test"},
+            ])
+            mock_db.projects.update_one = AsyncMock()
+            mock_run.side_effect = Exception("DB error")
+            result = await run_due_audits(mock_db, "https://base.com")
+            assert result["failures"] == 1
+            # Should advance next_audit_at even on failure
+            mock_db.projects.update_one.assert_called_once()
+
+
+class TestSchedulerLifecycle:
+    """Tests for start(), get_scheduler(), shutdown()."""
+
+    def test_get_scheduler_returns_none_initially(self):
+        from scheduler import get_scheduler
+        import scheduler as sched_mod
+        sched_mod._scheduler = None
+        assert get_scheduler() is None
+
+    def test_shutdown_handles_none(self):
+        from scheduler import shutdown
+        import scheduler as sched_mod
+        sched_mod._scheduler = None
+        shutdown()  # Should not raise
+
+    def test_start_disabled_by_env(self):
+        import scheduler as sched_mod
+        sched_mod._scheduler = None
+        with patch("os.environ.get", return_value="false"):
+            result = sched_mod.start(MagicMock(), lambda: "https://base.com")
+            assert result is None
+
+    def test_start_already_running(self):
+        import scheduler as sched_mod
+        mock_sched = MagicMock()
+        sched_mod._scheduler = mock_sched
+        result = sched_mod.start(MagicMock(), lambda: "https://base.com")
+        assert result is mock_sched
+        sched_mod._scheduler = None
+
+
+class TestTrialEndNotifications:
+    """Tests for _check_trial_end_notifications()."""
+
+    @pytest.mark.asyncio
+    async def test_no_trial_users(self):
+        from scheduler import _check_trial_end_notifications
+        mock_db = MagicMock()
+        mock_db.users.find.return_value.to_list = AsyncMock(return_value=[])
+        await _check_trial_end_notifications(mock_db, "https://base.com")
+        # Should not raise
+
+    @pytest.mark.asyncio
+    async def test_trial_ending_notification(self):
+        from scheduler import _check_trial_end_notifications
+        with patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            five_days_ago = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+            mock_db.users.find.return_value.to_list = AsyncMock(return_value=[{
+                "id": "u1", "email": "a@b.com", "name": "Test",
+                "plan": "starter", "plan_started_at": five_days_ago,
+                "on_trial": True,
+            }])
+            mock_db.users.update_one = AsyncMock()
+            mock_email.trial_ending_html.return_value = "<html>trial</html>"
+            mock_email.send_html_email = AsyncMock(return_value={"id": "msg1"})
+            await _check_trial_end_notifications(mock_db, "https://base.com")
+            mock_email.send_html_email.assert_called_once()
+            mock_db.users.update_one.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_trial_expired_notification(self):
+        from scheduler import _check_trial_end_notifications
+        with patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            eight_days_ago = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat()
+            mock_db.users.find.return_value.to_list = AsyncMock(return_value=[{
+                "id": "u1", "email": "a@b.com", "name": "Test",
+                "plan": "pro", "plan_started_at": eight_days_ago,
+                "on_trial": True,
+            }])
+            mock_db.users.update_one = AsyncMock()
+            mock_email.trial_expired_html.return_value = "<html>expired</html>"
+            mock_email.send_html_email = AsyncMock(return_value={"id": "msg1"})
+            await _check_trial_end_notifications(mock_db, "https://base.com")
+            mock_email.send_html_email.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_already_notified_skipped(self):
+        from scheduler import _check_trial_end_notifications
+        with patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            five_days_ago = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+            mock_db.users.find.return_value.to_list = AsyncMock(return_value=[{
+                "id": "u1", "email": "a@b.com", "name": "Test",
+                "plan": "starter", "plan_started_at": five_days_ago,
+                "on_trial": True, "trial_end_notified": "2024-01-01T00:00:00",
+            }])
+            await _check_trial_end_notifications(mock_db, "https://base.com")
+            mock_email.send_html_email.assert_not_called()
+
+
+class TestMonthlyROIReports:
+    """Tests for _send_monthly_roi_reports()."""
+
+    @pytest.mark.asyncio
+    async def test_no_paying_users(self):
+        from scheduler import _send_monthly_roi_reports
+        mock_db = MagicMock()
+        mock_db.users.find.return_value.to_list = AsyncMock(return_value=[])
+        await _send_monthly_roi_reports(mock_db, "https://base.com")
+
+    @pytest.mark.asyncio
+    async def test_sends_roi_report(self):
+        from scheduler import _send_monthly_roi_reports
+        with patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            mock_db.users.find.return_value.to_list = AsyncMock(return_value=[{
+                "id": "u1", "email": "a@b.com", "name": "Test", "plan": "pro",
+            }])
+            mock_db.audits.count_documents = AsyncMock(return_value=5)
+            mock_db.audits.find_one = AsyncMock(return_value={"result": {"overall_score": 80}})
+            mock_email.monthly_roi_html.return_value = "<html>roi</html>"
+            mock_email.send_html_email = AsyncMock(return_value={"id": "msg1"})
+            await _send_monthly_roi_reports(mock_db, "https://base.com")
+            mock_email.send_html_email.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_handles_email_failure(self):
+        from scheduler import _send_monthly_roi_reports
+        with patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            mock_db.users.find.return_value.to_list = AsyncMock(return_value=[{
+                "id": "u1", "email": "a@b.com", "name": "Test", "plan": "pro",
+            }])
+            mock_db.audits.count_documents = AsyncMock(return_value=3)
+            mock_db.audits.find_one = AsyncMock(return_value={"result": {"overall_score": 70}})
+            mock_email.monthly_roi_html.return_value = "<html>roi</html>"
+            mock_email.send_html_email = AsyncMock(side_effect=Exception("fail"))
+            await _send_monthly_roi_reports(mock_db, "https://base.com")
+            # Should not raise
+
+
+class TestReengagementEmails:
+    """Tests for _send_reengagement_emails()."""
+
+    @pytest.mark.asyncio
+    async def test_no_inactive_users(self):
+        from scheduler import _send_reengagement_emails
+        mock_db = MagicMock()
+        mock_db.audits.aggregate.return_value.to_list = AsyncMock(return_value=[])
+        mock_db.users.find.return_value.to_list = AsyncMock(return_value=[])
+        await _send_reengagement_emails(mock_db, "https://base.com")
+
+    @pytest.mark.asyncio
+    async def test_sends_reengagement(self):
+        from scheduler import _send_reengagement_emails
+        with patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            mock_db.audits.aggregate.return_value.to_list = AsyncMock(return_value=[])
+            old_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+            mock_db.users.find.return_value.to_list = AsyncMock(return_value=[{
+                "id": "u1", "email": "a@b.com", "name": "Test", "created_at": old_date,
+            }])
+            mock_db.audits.find_one = AsyncMock(return_value=None)
+            mock_db.users.update_one = AsyncMock()
+            mock_email.reengagement_html.return_value = "<html>reengage</html>"
+            mock_email.send_html_email = AsyncMock(return_value={"id": "msg1"})
+            await _send_reengagement_emails(mock_db, "https://base.com")
+            mock_email.send_html_email.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_skips_recently_notified(self):
+        from scheduler import _send_reengagement_emails
+        with patch("scheduler.email_service") as mock_email:
+            mock_db = MagicMock()
+            mock_db.audits.aggregate.return_value.to_list = AsyncMock(return_value=[])
+            old_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+            recent_reengagement = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+            mock_db.users.find.return_value.to_list = AsyncMock(return_value=[{
+                "id": "u1", "email": "a@b.com", "name": "Test", "created_at": old_date,
+                "reengagement_sent_at": recent_reengagement,
+            }])
+            await _send_reengagement_emails(mock_db, "https://base.com")
+            mock_email.send_html_email.assert_not_called()

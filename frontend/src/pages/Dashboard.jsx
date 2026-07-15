@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/app/AppLayout";
 import { Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, FolderKanban, Gauge, Mail, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, CreditCard, FolderKanban, Gauge, Mail, Sparkles, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import VisibilityTile from "@/components/app/VisibilityTile";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
@@ -32,7 +32,7 @@ export default function Dashboard() {
           setAchievements(a.data);
         } catch { /* achievements may not be available */ }
       } catch (e) {
-        console.error(formatApiError(e));
+        if (process.env.NODE_ENV === "development") console.error(formatApiError(e));
       } finally {
         setLoading(false);
       }
@@ -77,7 +77,7 @@ export default function Dashboard() {
             <div className="flex-1">
               <div className="font-display font-bold text-[#1A201A]">You're on the free plan</div>
               <div className="text-sm text-[#5C685C] mt-1">
-                Upgrade to Starter for $49/mo and get 10 audits, SERP tracking, PDF reports, and weekly automated re-audits.
+                Upgrade to Starter for $49/mo and get 10 audits, SERP tracking, PDF reports, and weekly automated re-audits. 7-day free trial.
               </div>
             </div>
             <Button onClick={() => navigate("/app/billing")}
@@ -143,6 +143,45 @@ export default function Dashboard() {
           />
         </div>
 
+        {/* Score History Trend */}
+        {summary?.score_history && summary.score_history.length >= 2 && (
+          <div className="mt-8 bg-white border border-[#E5E0D8] rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <Eyebrow>Score trend</Eyebrow>
+                <h2 className="mt-1 font-display font-bold text-xl text-[#1A201A]">Your progress over time</h2>
+              </div>
+              <ScoreTrendBadge history={summary.score_history} />
+            </div>
+            <div className="flex items-end gap-2 h-32">
+              {summary.score_history.slice(-12).map((point, i) => {
+                const maxScore = 100;
+                const heightPct = Math.max(8, (point.score / maxScore) * 100);
+                const isLatest = i === summary.score_history.slice(-12).length - 1;
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                    <span className={`text-xs font-display font-bold ${isLatest ? "text-[#2D3E32]" : "text-[#9CA89C]"}`}>
+                      {point.score}
+                    </span>
+                    <div className="w-full flex-1 flex items-end">
+                      <div
+                        className={`w-full rounded-t-md transition-all duration-500 ${
+                          isLatest ? "bg-[#2D3E32]" : "bg-[#81B29A]/40"
+                        }`}
+                        style={{ height: `${heightPct}%`, minHeight: 4 }}
+                        title={`${point.date}: ${point.score}/100`}
+                      />
+                    </div>
+                    <span className="text-[9px] text-[#9CA89C] truncate w-full text-center">
+                      {new Date(point.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Unified Visibility Score */}
         <div className="mt-8">
           <VisibilityTile/>
@@ -203,7 +242,20 @@ export default function Dashboard() {
           </div>
 
           {loading ? (
-            <div className="text-[#5C685C]">Loading…</div>
+            <div className="grid gap-3">
+              {[1,2,3].map(i => (
+                <div key={i} className="bg-white border border-[#E5E0D8] rounded-2xl px-5 py-4 animate-pulse">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-[#F3F0E9]" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-[#F3F0E9] rounded w-2/3" />
+                      <div className="h-3 bg-[#F3F0E9] rounded w-1/3" />
+                    </div>
+                    <div className="h-8 w-16 bg-[#F3F0E9] rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : !summary?.recent_audits?.length ? (
             <EmptyState
               title="No audits yet"
@@ -310,5 +362,28 @@ function EmptyState({ title, body, cta, onClick }) {
         {cta}
       </Button>
     </div>
+  );
+}
+
+function ScoreTrendBadge({ history }) {
+  if (!history || history.length < 2) return null;
+  const first = history[0].score;
+  const last = history[history.length - 1].score;
+  const delta = last - first;
+  if (delta === 0) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-[#F3F0E9] text-[#5C685C]">
+        <Minus size={12} /> No change
+      </span>
+    );
+  }
+  const isUp = delta > 0;
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
+      isUp ? "bg-[#81B29A]/15 text-[#2D3E32]" : "bg-[#E07A5F]/15 text-[#E07A5F]"
+    }`}>
+      {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+      {isUp ? "+" : ""}{delta} points
+    </span>
   );
 }

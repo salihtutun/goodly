@@ -15,6 +15,7 @@ from llm_client import (
     PRO_MODEL,
     MAX_RETRIES,
 )
+from ai_errors import AIServiceError
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +220,7 @@ async def test_ask_json_retries_on_failure():
 
 @pytest.mark.asyncio
 async def test_ask_json_exhausts_retries():
-    """ask_json raises RuntimeError after MAX_RETRIES failures."""
+    """ask_json raises AIServiceError after MAX_RETRIES failures."""
     _set_env(GEMINI_API_KEY="test-key")
     try:
         mock_client = MagicMock()
@@ -227,7 +228,7 @@ async def test_ask_json_exhausts_retries():
 
         with patch("llm_client.get_client", return_value=mock_client):
             with patch("asyncio.sleep", new=AsyncMock()):
-                with pytest.raises(RuntimeError, match="Gemini API error"):
+                with pytest.raises(AIServiceError, match="Persistent error"):
                     await ask_json("prompt")
                 assert mock_client.models.generate_content.call_count == MAX_RETRIES
     finally:

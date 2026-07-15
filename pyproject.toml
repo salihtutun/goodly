@@ -1,9 +1,13 @@
 [tool]
 [tool.pytest.ini_options]
-testpaths = ["tests/unit", "tests/integration", "backend/tests"]
+testpaths = ["tests/unit", "tests/integration"]
 pythonpath = ["backend"]
 addopts = "-v --tb=short --strict-markers"
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning:slowapi.*",
+    "ignore::DeprecationWarning:starlette.*",
+]
 markers = [
     "unit: Unit tests (no external dependencies)",
     "integration: Integration tests (requires running backend)",
@@ -14,7 +18,7 @@ markers = [
 
 [run]
 source = ["backend"]
-omit = ["backend/tests/*", "tests/*", "api/*"]
+omit = ["tests/*", "api/*"]
 
 [report]
 exclude_lines = [

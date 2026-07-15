@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goodly — Deployment Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; color: white; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 3rem 2rem; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #fbbf24; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.75rem; font-weight: 700; }
+    .subtitle { color: #94a3b8; font-size: 0.85rem; margin-left: 1.75rem; }
+    .back-link { color: #64748b; font-size: 0.75rem; text-decoration: none; margin-bottom: 2rem; display: inline-block; }
+    .back-link:hover { color: #94a3b8; }
+    h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 0.5rem; }
+    .step-num { background: #fbbf24; color: #020617; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; }
+    .step { background: rgba(15, 23, 42, 0.5); border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1rem; }
+    .step h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; color: #fbbf24; }
+    .step p { color: #94a3b8; font-size: 0.8rem; line-height: 1.6; margin-bottom: 0.5rem; }
+    .code-block { background: rgba(0,0,0,0.4); border: 1px solid #1e293b; border-radius: 6px; padding: 12px 16px; margin: 0.75rem 0; font-size: 0.75rem; color: #34d399; overflow-x: auto; white-space: pre; }
+    .code-block .comment { color: #64748b; }
+    .code-block .key { color: #a78bfa; }
+    .code-block .val { color: #fb923c; }
+    .env-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin: 0.75rem 0; }
+    .env-table th { text-align: left; padding: 6px 10px; color: #94a3b8; font-weight: 500; font-size: 0.65rem; text-transform: uppercase; border-bottom: 1px solid #1e293b; }
+    .env-table td { padding: 6px 10px; border-bottom: 1px solid rgba(30, 41, 59, 0.5); }
+    .env-table .required { color: #fb7185; font-size: 0.6rem; }
+    .checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.5rem; }
+    .check-item { display: flex; align-items: center; gap: 0.5rem; padding: 6px 10px; background: rgba(15, 23, 42, 0.3); border-radius: 4px; font-size: 0.8rem; }
+    .check-pass { color: #34d399; }
+    .check-pending { color: #fbbf24; }
+    .footer { text-align: center; margin-top: 3rem; color: #475569; font-size: 0.7rem; }
+    .footer a { color: #64748b; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Back to Documentation</a>
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Production Deployment Guide</h1>
+      </div>
+      <p class="subtitle">Step-by-step guide to deploy Goodly to production</p>
+    </div>
+
+    <h2><span class="step-num">1</span> Prerequisites</h2>
+    <div class="step">
+      <h3>Accounts & Tools Needed</h3>
+      <p>• Google Cloud account (Cloud Run + Cloud Build)</p>
+      <p>• Vercel account (frontend hosting)</p>
+      <p>• MongoDB Atlas account (database)</p>
+      <p>• Stripe account (payments)</p>
+      <p>• Resend account (email)</p>
+      <p>• Google AI Studio account (Gemini API key)</p>
+      <p>• Domain: searchgoodly.com (or your custom domain)</p>
+      <p>• gcloud CLI installed locally</p>
+    </div>
+
+    <h2><span class="step-num">2</span> Environment Variables</h2>
+    <div class="step">
+      <h3>Backend (.env / Cloud Run env vars)</h3>
+      <table class="env-table">
+        <tr><th>Variable</th><th>Description</th><th>Required</th></tr>
+        <tr><td>MONGO_URL</td><td>MongoDB Atlas connection string</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>JWT_SECRET</td><td>Random 64+ char secret for JWT signing</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>GEMINI_API_KEY</td><td>Google Gemini API key</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>STRIPE_API_KEY</td><td>Stripe secret key (sk_live_...)</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>STRIPE_WEBHOOK_SECRET</td><td>Stripe webhook signing secret</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>RESEND_API_KEY</td><td>Resend API key</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>SENDER_EMAIL</td><td>Verified sender (hello@searchgoodly.com)</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>FRONTEND_URL</td><td>https://searchgoodly.com</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>CORS_ORIGINS</td><td>Comma-separated allowed origins</td><td><span class="required">REQUIRED</span></td></tr>
+        <tr><td>ENVIRONMENT</td><td>production</td><td>Recommended</td></tr>
+        <tr><td>SERPAPI_KEY</td><td>SerpAPI key (optional, falls back to DDG)</td><td>Optional</td></tr>
+        <tr><td>SENTRY_DSN</td><td>Sentry DSN for error tracking</td><td>Optional</td></tr>
+        <tr><td>ADMIN_PASSWORD</td><td>Admin seed password</td><td>Optional</td></tr>
+        <tr><td>SUPPORT_EMAIL</td><td>hello@searchgoodly.com</td><td>Optional</td></tr>
+        <tr><td>ADMIN_EMAIL</td><td>admin@searchgoodly.com</td><td>Optional</td></tr>
+        <tr><td>SCHEDULER_ENABLED</td><td>true/false (default: true)</td><td>Optional</td></tr>
+      </table>
+    </div>
+
+    <h2><span class="step-num">3</span> Deploy Backend (Cloud Run)</h2>
+    <div class="step">
+      <h3>Using Cloud Build</h3>
+      <p>The project includes cloudbuild.yaml for automated deployment:</p>
+      <div class="code-block"><span class="comment"># Submit build</span>
+gcloud builds submit --config cloudbuild.yaml
+
+<span class="comment"># Or deploy manually</span>
+gcloud run deploy goodly-api \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars="MONGO_URL=...,JWT_SECRET=...,..."</div>
+      <p>After deployment, note the Cloud Run URL (e.g., your-service-uc.a.run.app).</p>
+    </div>
+
+    <h2><span class="step-num">4</span> Deploy Frontend (Vercel)</h2>
+    <div class="step">
+      <h3>Vercel Deployment</h3>
+      <div class="code-block"><span class="comment"># Set environment variable in Vercel</span>
+REACT_APP_BACKEND_URL=https://your-service-uc.a.run.app
+
+<span class="comment"># Deploy</span>
+cd frontend
+vercel --prod</div>
+      <p>The vercel.json rewrites /api/* to the Cloud Run backend. Vercel handles SSL automatically.</p>
+    </div>
+
+    <h2><span class="step-num">5</span> Configure DNS</h2>
+    <div class="step">
+      <h3>Domain Setup</h3>
+      <p>• Point searchgoodly.com to Vercel (CNAME cname.vercel-dns.com)</p>
+      <p>• Point www.searchgoodly.com to Vercel (CNAME)</p>
+      <p>• Point api.searchgoodly.com to Cloud Run (via Google Cloud Load Balancer or custom domain mapping)</p>
+      <p>• Wait for DNS propagation (up to 48 hours)</p>
+    </div>
+
+    <h2><span class="step-num">6</span> Configure Stripe Webhooks</h2>
+    <div class="step">
+      <h3>Stripe Dashboard Setup</h3>
+      <p>• Go to Stripe Dashboard → Webhooks</p>
+      <p>• Add endpoint: https://api.searchgoodly.com/api/billing/webhook</p>
+      <p>• Select events: checkout.session.completed, customer.subscription.updated, customer.subscription.deleted</p>
+      <p>• Copy the webhook signing secret → set as STRIPE_WEBHOOK_SECRET</p>
+    </div>
+
+    <h2><span class="step-num">7</span> Verify Deployment</h2>
+    <div class="step">
+      <h3>Health Checks</h3>
+      <div class="code-block"><span class="comment"># Backend health</span>
+curl https://api.searchgoodly.com/api/health
+
+<span class="comment"># Frontend</span>
+curl -I https://searchgoodly.com
+
+<span class="comment"># Status page</span>
+open https://searchgoodly.com/status</div>
+    </div>
+
+    <h2>Production Readiness Checklist</h2>
+    <div class="checklist">
+      <div class="check-item"><span class="check-pending">○</span> MongoDB Atlas cluster provisioned</div>
+      <div class="check-item"><span class="check-pending">○</span> All env vars set in Cloud Run</div>
+      <div class="check-item"><span class="check-pending">○</span> Stripe webhooks configured</div>
+      <div class="check-item"><span class="check-pending">○</span> Resend domain verified</div>
+      <div class="check-item"><span class="check-pending">○</span> DNS records configured</div>
+      <div class="check-item"><span class="check-pending">○</span> SSL certificates active</div>
+      <div class="check-item"><span class="check-pending">○</span> Sentry DSN configured</div>
+      <div class="check-item"><span class="check-pending">○</span> Google Analytics ID set</div>
+      <div class="check-item"><span class="check-pending">○</span> Health endpoint returns 200</div>
+      <div class="check-item"><span class="check-pending">○</span> Status page shows all green</div>
+      <div class="check-item"><span class="check-pending">○</span> Stripe test payment successful</div>
+      <div class="check-item"><span class="check-pending">○</span> Email delivery verified</div>
+    </div>
+
+    <p class="footer">
+      Goodly Deployment Guide • v1.9.0 • <a href="index.html">Documentation Home</a>
+    </p>
+  </div>
+</body>
+</html>

@@ -9,7 +9,8 @@ import json
 import re
 import asyncio
 import logging
-from typing import Optional
+
+from ai_errors import classify_ai_error, AIServiceError
 
 logger = logging.getLogger("llm_client")
 
@@ -70,10 +71,11 @@ async def ask_json(
     model: str = DEFAULT_MODEL,
     temperature: float = 0.3,
     max_output_tokens: int = 4096,
-):  # -> dict | list (Python 3.10+ syntax)
+):
     """Send a prompt to Gemini and parse the response as JSON.
 
     Includes exponential backoff retry for transient failures.
+    Raises AIServiceError subclasses for granular error handling.
 
     Args:
         prompt: The user prompt to send.
@@ -84,6 +86,14 @@ async def ask_json(
 
     Returns:
         Parsed JSON dict or list.
+
+    Raises:
+        AIServiceUnavailable: Gemini API is down.
+        AIRateLimited: Gemini rate limit hit.
+        AITimeout: Gemini took too long.
+        AIInputInvalid: Input rejected by safety filters.
+        AIResponseInvalid: Response couldn't be parsed as JSON.
+        AIServiceError: Other AI failures.
     """
     client = get_client()
 
@@ -93,15 +103,25 @@ async def ask_json(
     last_error = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = client.models.generate_content(
-                model=model,
-                contents=full_prompt,
-                config={
-                    "temperature": temperature,
-                    "max_output_tokens": max_output_tokens,
-                },
+            # generate_content is synchronous — run it off the event loop and
+            # enforce the per-request timeout (otherwise a slow Gemini call
+            # blocks every other request on this worker).
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.models.generate_content,
+                    model=model,
+                    contents=full_prompt,
+                    config={
+                        "temperature": temperature,
+                        "max_output_tokens": max_output_tokens,
+                    },
+                ),
+                timeout=TIMEOUT_SECONDS,
             )
             text = response.text
+            if text is None:
+                # Safety-blocked or empty responses have no text
+                raise ValueError("Gemini returned an empty response (possibly safety-blocked)")
 
             # Log token usage
             if hasattr(response, 'usage_metadata'):
@@ -115,16 +135,22 @@ async def ask_json(
 
             return extract_json(text)
 
+        except AIServiceError:
+            raise  # Don't retry on classified errors
+
         except Exception as e:
             last_error = e
+            # Classify the error for better logging
+            classified = classify_ai_error(e)
             if attempt < MAX_RETRIES - 1:
                 delay = BASE_DELAY * (2 ** attempt)
                 logger.warning(
-                    "Gemini API attempt %d/%d failed: %s. Retrying in %.1fs...",
-                    attempt + 1, MAX_RETRIES, e, delay,
+                    "Gemini API attempt %d/%d failed: %s (%s). Retrying in %.1fs...",
+                    attempt + 1, MAX_RETRIES, classified.__class__.__name__, e, delay,
                 )
                 await asyncio.sleep(delay)
             else:
                 logger.exception("Gemini API failed after %d attempts", MAX_RETRIES)
 
-    raise RuntimeError(f"Gemini API error after {MAX_RETRIES} attempts: {last_error}") from last_error
+    # After all retries exhausted, raise the classified error
+    raise classify_ai_error(last_error) if last_error else AIServiceError("Unknown AI error")

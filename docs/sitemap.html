@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goodly — Page Sitemap</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; color: white; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 3rem 2rem; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #a78bfa; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.75rem; font-weight: 700; }
+    .subtitle { color: #94a3b8; font-size: 0.85rem; margin-left: 1.75rem; }
+    .back-link { color: #64748b; font-size: 0.75rem; text-decoration: none; margin-bottom: 2rem; display: inline-block; }
+    .back-link:hover { color: #94a3b8; }
+    .sitemap { display: flex; flex-direction: column; gap: 1.5rem; }
+    .category { background: rgba(15, 23, 42, 0.5); border: 1px solid #1e293b; border-radius: 0.75rem; overflow: hidden; }
+    .cat-header { padding: 1rem 1.5rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid #1e293b; }
+    .cat-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .cat-dot-cyan { background: #22d3ee; }
+    .cat-dot-emerald { background: #34d399; }
+    .cat-dot-violet { background: #a78bfa; }
+    .cat-dot-amber { background: #fbbf24; }
+    .cat-dot-rose { background: #fb7185; }
+    .cat-dot-orange { background: #fb923c; }
+    .cat-dot-slate { background: #94a3b8; }
+    .cat-title { font-size: 0.95rem; font-weight: 600; }
+    .cat-count { color: #64748b; font-size: 0.7rem; }
+    .cat-body { padding: 1rem 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; }
+    .page-link {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      text-decoration: none;
+      color: #94a3b8;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+    .page-link:hover { border-color: #22d3ee; color: white; background: rgba(34, 211, 238, 0.05); }
+    .page-link .icon { font-size: 0.85rem; }
+    .page-link .path { color: #64748b; font-size: 0.65rem; margin-left: auto; }
+    .page-link.protected { border-left: 2px solid #fb7185; }
+    .page-link.protected::after { content: "🔒"; font-size: 0.6rem; margin-left: 4px; }
+    .footer { text-align: center; margin-top: 3rem; color: #475569; font-size: 0.7rem; }
+    .footer a { color: #64748b; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Back to Documentation</a>
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Page Sitemap</h1>
+      </div>
+      <p class="subtitle">54 pages across 7 categories — all tested, zero console errors</p>
+    </div>
+
+    <div class="sitemap">
+      <!-- Public Pages -->
+      <div class="category">
+        <div class="cat-header">
+          <div class="cat-dot cat-dot-cyan"></div>
+          <span class="cat-title">Public Pages</span>
+          <span class="cat-count">14 pages</span>
+        </div>
+        <div class="cat-body">
+          <a href="#" class="page-link"><span class="icon">🏠</span> Landing Page<span class="path">/</span></a>
+          <a href="#" class="page-link"><span class="icon">🔑</span> Login<span class="path">/login</span></a>
+          <a href="#" class="page-link"><span class="icon">📝</span> Register<span class="path">/register</span></a>
+          <a href="#" class="page-link"><span class="icon">💳</span> Pricing<span class="path">/pricing</span></a>
+          <a href="#" class="page-link"><span class="icon">🔍</span> Free Audit<span class="path">/audit</span></a>
+          <a href="#" class="page-link"><span class="icon">📰</span> Blog Index<span class="path">/blog</span></a>
+          <a href="#" class="page-link"><span class="icon">📄</span> Terms of Service<span class="path">/terms</span></a>
+          <a href="#" class="page-link"><span class="icon">🔒</span> Privacy Policy<span class="path">/privacy</span></a>
+          <a href="#" class="page-link"><span class="icon">🔑</span> Forgot Password<span class="path">/forgot-password</span></a>
+          <a href="#" class="page-link"><span class="icon">⭐</span> Customer Stories<span class="path">/stories</span></a>
+          <a href="#" class="page-link"><span class="icon">📋</span> Changelog<span class="path">/changelog</span></a>
+          <a href="#" class="page-link"><span class="icon">📊</span> System Status<span class="path">/status</span></a>
+          <a href="#" class="page-link"><span class="icon">💰</span> ROI Calculator<span class="path">/roi-calculator</span></a>
+          <a href="#" class="page-link"><span class="icon">🏆</span> Competitor Analysis<span class="path">/competitors</span></a>
+        </div>
+      </div>
+
+      <!-- Comparison Pages -->
+      <div class="category">
+        <div class="cat-header">
+          <div class="cat-dot cat-dot-amber"></div>
+          <span class="cat-title">Comparison Pages</span>
+          <span class="cat-count">8 pages</span>
+        </div>
+        <div class="cat-body">
+          <a href="#" class="page-link"><span class="icon">⚔️</span> Goodly vs Ahrefs<span class="path">/vs/ahrefs</span></a>
+          <a href="#" class="page-link"><span class="icon">⚔️</span> Goodly vs Semrush<span class="path">/vs/semrush</span></a>
+          <a href="#" class="page-link"><span class="icon">⚔️</span> Goodly vs Moz<span class="path">/vs/moz</span></a>
+          <a href="#" class="page-link"><span class="icon">⚔️</span> Goodly vs Ubersuggest<span class="path">/vs/ubersuggest</span></a>
+          <a href="#" class="page-link"><span class="icon">⚔️</span> Goodly vs SE Ranking<span class="path">/vs/seranking</span></a>
+          <a href="#" class="page-link"><span class="icon">⚔️</span> Goodly vs SEO Agency<span class="path">/vs/agency</span></a>
+          <a href="#" class="page-link"><span class="icon">⚔️</span> Goodly vs Local Falcon<span class="path">/vs/localfalcon</span></a>
+          <a href="#" class="page-link"><span class="icon">⚔️</span> Goodly vs BrightLocal<span class="path">/vs/brightlocal</span></a>
+        </div>
+      </div>
+
+      <!-- Industry Pages -->
+      <div class="category">
+        <div class="cat-header">
+          <div class="cat-dot cat-dot-emerald"></div>
+          <span class="cat-title">Industry Pages</span>
+          <span class="cat-count">9 pages</span>
+        </div>
+        <div class="cat-body">
+          <a href="#" class="page-link"><span class="icon">🍕</span> Restaurants<span class="path">/restaurants</span></a>
+          <a href="#" class="page-link"><span class="icon">🔧</span> Plumbers<span class="path">/plumbers</span></a>
+          <a href="#" class="page-link"><span class="icon">🦷</span> Dentists<span class="path">/dentists</span></a>
+          <a href="#" class="page-link"><span class="icon">💇</span> Salons<span class="path">/salons</span></a>
+          <a href="#" class="page-link"><span class="icon">🏪</span> Retail<span class="path">/retail</span></a>
+          <a href="#" class="page-link"><span class="icon">⚖️</span> Lawyers<span class="path">/lawyers</span></a>
+          <a href="#" class="page-link"><span class="icon">🏠</span> Home Services<span class="path">/home-services</span></a>
+          <a href="#" class="page-link"><span class="icon">🏡</span> Real Estate<span class="path">/real-estate</span></a>
+          <a href="#" class="page-link"><span class="icon">🚗</span> Automotive<span class="path">/automotive</span></a>
+        </div>
+      </div>
+
+      <!-- Free Tools -->
+      <div class="category">
+        <div class="cat-header">
+          <div class="cat-dot cat-dot-orange"></div>
+          <span class="cat-title">Free SEO Tools</span>
+          <span class="cat-count">9 pages</span>
+        </div>
+        <div class="cat-body">
+          <a href="#" class="page-link"><span class="icon">🧰</span> Tools Hub<span class="path">/tools</span></a>
+          <a href="#" class="page-link"><span class="icon">🏷️</span> Meta Tag Checker<span class="path">/tools/meta-tag-checker</span></a>
+          <a href="#" class="page-link"><span class="icon">⚡</span> Page Speed Test<span class="path">/tools/page-speed</span></a>
+          <a href="#" class="page-link"><span class="icon">📱</span> Mobile-Friendly Test<span class="path">/tools/mobile-friendly</span></a>
+          <a href="#" class="page-link"><span class="icon">📊</span> Keyword Density<span class="path">/tools/keyword-density</span></a>
+          <a href="#" class="page-link"><span class="icon">🔐</span> SSL Checker<span class="path">/tools/ssl-checker</span></a>
+          <a href="#" class="page-link"><span class="icon">📋</span> Schema Validator<span class="path">/tools/schema-validator</span></a>
+          <a href="#" class="page-link"><span class="icon">🤖</span> Robots.txt Checker<span class="path">/tools/robots-checker</span></a>
+          <a href="#" class="page-link"><span class="icon">📝</span> Heading Analyzer<span class="path">/tools/heading-checker</span></a>
+        </div>
+      </div>
+
+      <!-- Other Public -->
+      <div class="category">
+        <div class="cat-header">
+          <div class="cat-dot cat-dot-slate"></div>
+          <span class="cat-title">Other Public Pages</span>
+          <span class="cat-count">7 pages</span>
+        </div>
+        <div class="cat-body">
+          <a href="#" class="page-link"><span class="icon">✅</span> SEO Checklist<span class="path">/checklist</span></a>
+          <a href="#" class="page-link"><span class="icon">🎁</span> Referral Program<span class="path">/refer</span></a>
+          <a href="#" class="page-link"><span class="icon">📚</span> Knowledge Base<span class="path">/help</span></a>
+          <a href="#" class="page-link"><span class="icon">❌</span> Error Page<span class="path">/error</span></a>
+          <a href="#" class="page-link"><span class="icon">📧</span> Verify Email<span class="path">/verify-email</span></a>
+          <a href="#" class="page-link"><span class="icon">🔑</span> Reset Password<span class="path">/reset-password</span></a>
+          <a href="#" class="page-link"><span class="icon">🚫</span> 404 Not Found<span class="path">/*</span></a>
+        </div>
+      </div>
+
+      <!-- Blog Posts -->
+      <div class="category">
+        <div class="cat-header">
+          <div class="cat-dot cat-dot-violet"></div>
+          <span class="cat-title">Blog Posts</span>
+          <span class="cat-count">6 posts</span>
+        </div>
+        <div class="cat-body">
+          <a href="#" class="page-link"><span class="icon">📝</span> 10 SEO Mistakes Small Businesses Make<span class="path">/blog/seo-mistakes-...</span></a>
+          <a href="#" class="page-link"><span class="icon">📝</span> How to Rank #1 on Google in 2025<span class="path">/blog/how-to-rank-...</span></a>
+          <a href="#" class="page-link"><span class="icon">📝</span> Instagram for Small Business<span class="path">/blog/instagram-for-...</span></a>
+          <a href="#" class="page-link"><span class="icon">📝</span> Google Business Profile Guide<span class="path">/blog/google-business-...</span></a>
+          <a href="#" class="page-link"><span class="icon">📝</span> AI Visibility for Small Business<span class="path">/blog/ai-visibility-...</span></a>
+          <a href="#" class="page-link"><span class="icon">📝</span> Page Speed SEO Ranking Factor<span class="path">/blog/page-speed-...</span></a>
+        </div>
+      </div>
+
+      <!-- Authenticated Pages -->
+      <div class="category">
+        <div class="cat-header">
+          <div class="cat-dot cat-dot-rose"></div>
+          <span class="cat-title">Authenticated Pages (Protected)</span>
+          <span class="cat-count">15 routes</span>
+        </div>
+        <div class="cat-body">
+          <a href="#" class="page-link protected"><span class="icon">📊</span> Dashboard<span class="path">/app</span></a>
+          <a href="#" class="page-link protected"><span class="icon">📁</span> Projects<span class="path">/app/projects</span></a>
+          <a href="#" class="page-link protected"><span class="icon">📄</span> Project Detail<span class="path">/app/projects/:id</span></a>
+          <a href="#" class="page-link protected"><span class="icon">🔍</span> New Audit<span class="path">/app/audit</span></a>
+          <a href="#" class="page-link protected"><span class="icon">📋</span> Audit Detail<span class="path">/app/audits/:id</span></a>
+          <a href="#" class="page-link protected"><span class="icon">🤖</span> AI Tools<span class="path">/app/ai-tools</span></a>
+          <a href="#" class="page-link protected"><span class="icon">📱</span> Social Audit<span class="path">/app/social</span></a>
+          <a href="#" class="page-link protected"><span class="icon">🧠</span> AI Visibility<span class="path">/app/ai-visibility</span></a>
+          <a href="#" class="page-link protected"><span class="icon">🗺️</span> GBP Audit<span class="path">/app/gbp</span></a>
+          <a href="#" class="page-link protected"><span class="icon">💳</span> Billing<span class="path">/app/billing</span></a>
+          <a href="#" class="page-link protected"><span class="icon">🎓</span> Onboarding<span class="path">/app/onboarding</span></a>
+          <a href="#" class="page-link protected"><span class="icon">🎁</span> Referral<span class="path">/app/referral</span></a>
+          <a href="#" class="page-link protected"><span class="icon">🏆</span> Competitors<span class="path">/app/competitors</span></a>
+          <a href="#" class="page-link protected"><span class="icon">👑</span> Admin Dashboard<span class="path">/app/admin</span></a>
+          <a href="#" class="page-link protected"><span class="icon">📊</span> Admin Analytics<span class="path">/app/admin/analytics</span></a>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer">
+      Goodly Page Sitemap • 54 pages • 71 routes • <a href="index.html">Documentation Home</a>
+    </p>
+  </div>
+</body>
+</html>

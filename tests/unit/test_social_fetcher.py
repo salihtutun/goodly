@@ -137,7 +137,7 @@ async def test_fetch_profile_signals_network_error():
     with patch("httpx.AsyncClient", return_value=AsyncCtxMock(mock_client)):
         result = await fetch_profile_signals("instagram", "user")
         assert result["fetched"] is False
-        assert "Network error" in result["reason"]
+        assert "Profile not reachable" in result["reason"]
 
 
 @pytest.mark.asyncio

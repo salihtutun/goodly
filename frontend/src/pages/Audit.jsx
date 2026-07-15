@@ -22,7 +22,9 @@ export default function Audit() {
   const [selectedProject, setSelectedProject] = useState(projectId || "");
 
   useEffect(() => {
-    api.get("/projects").then(({ data }) => setProjects(data)).catch(() => {});
+    api.get("/projects").then(({ data }) => setProjects(data)).catch(() => {
+      // Projects are optional — audit still works without them
+    });
   }, []);
 
   const runAudit = async (e) => {

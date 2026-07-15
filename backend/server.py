@@ -9,14 +9,13 @@ import uuid
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, Request, BackgroundTasks
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import asyncio
 
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -40,16 +39,27 @@ import ai_visibility
 import gbp_service
 import email_service
 from sanitize import sanitize_html, sanitize_name
-from validators import validate_url, validate_email, validate_domain
+from validators import validate_url, validate_email
 from logging_config import setup_logging
 from metrics import MetricsMiddleware
 from security_headers import SecurityHeadersMiddleware
 from version_header import VersionHeaderMiddleware
+from sentry_integration import init_sentry
+from cache import dashboard_cache
+from features import is_enabled
+from revenue_impact import estimate_total_revenue_impact
+import agency_service
 import achievements
 import competitor_analysis
+import ai_content
+import ai_remediation
+import ai_strategy
 
 # Structured JSON logging for Cloud Logging
 setup_logging()
+
+# Error tracking (no-op unless SENTRY_DSN is set and sentry-sdk is installed)
+init_sentry()
 
 
 # --- Mongo setup (lazy for serverless) ---
@@ -64,6 +74,9 @@ def _get_db():
             raise RuntimeError("MONGO_URL not configured")
         _client = AsyncIOMotorClient(mongo_url)
         _db = _client[os.environ.get("DB_NAME", "goodly")]
+        # Share connection with database.py so all routes use the same client
+        import database as _db_mod
+        _db_mod._init_connection(_client, _db)
     return _db
 
 # Proxy object that lazily resolves to db
@@ -75,16 +88,15 @@ class _LazyDB:
 
 db = _LazyDB()
 
-app = FastAPI(title="Goodly API", version="1.8.0")
+from version import VERSION
+
+app = FastAPI(title="Goodly API", version=VERSION)
 api = APIRouter(prefix="/api")
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["200/minute"],
-    headers_enabled=True,  # Send X-RateLimit-* headers
-)
+# Single shared limiter instance (also used by routes/* modules) so SlowAPI
+# middleware enforcement and test overrides apply everywhere.
+from limiter import limiter
 
 logger = logging.getLogger("seo_framework")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 
 
 # ---------------------------------------------------------------
@@ -104,6 +116,7 @@ def public_user(doc: dict) -> dict:
         "onboarded": doc.get("onboarded", False),
         "email_verified": doc.get("email_verified", False),
         "created_at": doc.get("created_at"),
+        "brand_voice": doc.get("brand_voice"),
     }
 
 
@@ -127,6 +140,105 @@ async def usage_for(user_id: str) -> dict:
     return {"month": mk, "audits_this_month": audits_this_month, "projects_count": projects_count}
 
 
+async def _send_email_background(to: str, subject: str, html: str) -> None:
+    """Send an email in the background, logging but never raising on failure."""
+    try:
+        await email_service.send_html_email(to=to, subject=subject, html=html)
+    except Exception as e:
+        logger.warning("Background email to %s failed: %s", to, e)
+
+
+def _invalidate_dashboard_cache(user_id: str) -> None:
+    """Clear cached dashboard data for a user after mutations."""
+    dashboard_cache.delete(f"summary:{user_id}")
+    dashboard_cache.delete(f"achievements:{user_id}")
+    dashboard_cache.delete(f"visibility:{user_id}")
+    dashboard_cache.delete(f"notifications:{user_id}")
+
+
+async def _seed_demo_experience(user_id: str) -> None:
+    """Create a sample project with a pre-built audit so new users see a populated dashboard."""
+    # Check if user already has any projects (don't double-seed)
+    existing = await db.projects.count_documents({"user_id": user_id})
+    if existing > 0:
+        return
+
+    # Don't seed for free plan users — preserve their limited slots
+    user = await db.users.find_one({"id": user_id})
+    plan = get_plan(user.get("plan")) if user else get_plan("free")
+    if plan.get("id") == "free":
+        return
+
+    sample_project = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "name": "My Business Website",
+        "url": "https://example.com",
+        "created_at": now_iso(),
+        "last_audit_at": now_iso(),
+        "last_score": 62,
+    }
+    await db.projects.insert_one(sample_project)
+
+    # Pre-built sample audit with realistic issues
+    sample_audit = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "project_id": sample_project["id"],
+        "url": "https://example.com",
+        "created_at": now_iso(),
+        "month_key": month_key(),
+        "result": {
+            "url": "https://example.com",
+            "overall_score": 62,
+            "categories": {
+                "meta": {"score": 45, "label": "Meta Tags"},
+                "headings": {"score": 60, "label": "Headings"},
+                "content": {"score": 55, "label": "Content"},
+                "technical": {"score": 70, "label": "Technical"},
+                "images": {"score": 50, "label": "Images"},
+                "links": {"score": 80, "label": "Links"},
+            },
+            "issues": [
+                {"title": "Missing meta description", "severity": "high", "category": "meta", "message": "Your page has no meta description. This is what shows up in Google search results. Add a compelling 150-160 character description that includes your main keyword."},
+                {"title": "Page title is too short", "severity": "medium", "category": "meta", "message": "Your title tag is only 20 characters. Aim for 50-60 characters with your primary keyword near the beginning."},
+                {"title": "Missing H1 heading", "severity": "high", "category": "headings", "message": "Your page has no H1 tag. Every page needs one clear H1 that tells Google what the page is about."},
+                {"title": "Slow page speed", "severity": "high", "category": "technical", "message": "Your page loads in 4.2 seconds. Google recommends under 2.5 seconds. Compress images and enable caching."},
+                {"title": "Missing alt text on 8 images", "severity": "medium", "category": "images", "message": "8 images on your page have no alt text. Add descriptive alt text to help Google understand your images and improve accessibility."},
+                {"title": "Thin content — only 180 words", "severity": "medium", "category": "content", "message": "Your page has very little content. Aim for at least 300-500 words of useful, keyword-rich content."},
+            ],
+        },
+        "ai_recommendations": {
+            "summary": "Your website has solid foundations but several critical issues are holding you back from ranking on Google. The good news: most of these are quick fixes you can do today.",
+            "priority_actions": [
+                {"action": "Add a meta description", "impact": "high", "effort": "5 minutes", "detail": "Write a 150-160 character description that includes your main service and location. Example: 'Professional plumbing services in Austin, TX. 24/7 emergency repairs, licensed & insured. Call (512) 555-0100 for a free estimate.'"},
+                {"action": "Add an H1 heading", "impact": "high", "effort": "2 minutes", "detail": "Add a clear H1 tag at the top of your page. Make it descriptive: 'Austin Plumbing Services — 24/7 Emergency Repairs'"},
+                {"action": "Compress your images", "impact": "high", "effort": "15 minutes", "detail": "Use a tool like TinyPNG to compress your images. This alone could cut your load time in half."},
+            ],
+            "wins": [
+                "Your SSL certificate is properly configured — Google loves secure sites.",
+                "Your internal linking structure is clean and easy to crawl.",
+                "No broken links detected — all your pages are accessible.",
+            ],
+            "next_30_days": "Fix the 3 priority actions above, then re-audit. Most businesses see a 10-15 point score improvement after these fixes. Then focus on adding more content to your pages.",
+        },
+        "revenue_impact": {
+            "total_estimated_monthly_revenue_loss": 3200,
+            "total_estimated_annual_revenue_loss": 38400,
+            "total_estimated_additional_clicks": 255,
+            "total_estimated_additional_conversions": 6.4,
+            "top_quick_wins": [
+                {"title": "Slow page speed", "monthly_impact": 1200, "explanation": "Fixing page speed could bring ~95 additional clicks and ~2.4 new customers/month worth ~$1,200/month."},
+                {"title": "Missing meta description", "monthly_impact": 800, "explanation": "Adding a meta description could bring ~65 additional clicks and ~1.6 new customers/month worth ~$800/month."},
+                {"title": "Missing H1 heading", "monthly_impact": 650, "explanation": "Adding an H1 could bring ~50 additional clicks and ~1.3 new customers/month worth ~$650/month."},
+            ],
+            "summary": "Fixing all 6 issues could bring approximately 255 additional clicks and 6.4 new customers per month, worth an estimated $3,200/month ($38,400/year).",
+            "disclaimer": "Estimates are directional and based on industry averages. Actual results depend on your market, competition, and implementation quality.",
+        },
+    }
+    await db.audits.insert_one(sample_audit)
+
+
 # ---------------------------------------------------------------
 # Auth models / endpoints
 # ---------------------------------------------------------------
@@ -134,6 +246,7 @@ class RegisterIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     name: Optional[str] = None
+    website: Optional[str] = None
 
     @field_validator("password")
     @classmethod
@@ -164,16 +277,19 @@ class GoogleAuthIn(BaseModel):
 class AuthOut(BaseModel):
     user: dict
     token: str
+    # Present when registration includes a website and auto-audit succeeds.
+    audit: Optional[dict] = None
 
 
 def _set_auth_cookie(response: Response, token: str):
     is_production = os.environ.get("ENVIRONMENT", "development") == "production"
+    # SameSite=None required when frontend (searchgoodly.com) calls API on another host (Cloud Run).
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         secure=is_production,
-        samesite="lax",
+        samesite="none" if is_production else "lax",
         max_age=60 * 60 * 24 * 7,
         path="/",
     )
@@ -181,7 +297,7 @@ def _set_auth_cookie(response: Response, token: str):
 
 @api.post("/auth/register", response_model=AuthOut)
 @limiter.limit("3/minute")
-async def register(request: Request, body: RegisterIn, response: Response):
+async def register(request: Request, body: RegisterIn, response: Response, bg: BackgroundTasks):
     email = body.email.lower().strip()
     if not validate_email(email):
         raise HTTPException(status_code=400, detail="Invalid email address.")
@@ -202,20 +318,41 @@ async def register(request: Request, body: RegisterIn, response: Response):
     }
     await db.users.insert_one(user_doc)
 
-    # Send verification email (best-effort, don't block registration)
+    # Track signup event
     try:
-        verify_link = f"{_store_base_url(request)}/api/auth/verify/{user_doc['verification_token']}"
-        await email_service.send_html_email(
-            to=email,
-            subject="Verify your email — Goodly",
-            html=email_service.verify_email_html(name=user_doc["name"], verify_link=verify_link),
-        )
-    except Exception as e:
-        logger.warning("Verification email failed: %s", e)
+        from product_analytics import track_event
+        await track_event(db, event="signup", user_id=user_doc["id"], properties={"plan": "free"})
+    except Exception:
+        pass  # Analytics tracking is non-critical
+
+    # Send verification email in background (non-blocking)
+    verify_link = f"{_store_base_url(request)}/api/auth/verify/{user_doc['verification_token']}"
+    bg.add_task(
+        _send_email_background,
+        to=email,
+        subject="Verify your email — Goodly",
+        html=email_service.verify_email_html(name=user_doc["name"], verify_link=verify_link),
+    )
 
     token = create_access_token(user_doc["id"], email)
     _set_auth_cookie(response, token)
-    return {"user": public_user(user_doc), "token": token}
+
+    # Auto-run audit if website provided during registration
+    audit_result = None
+    if body.website and validate_url(body.website):
+        try:
+            from services import run_audit as _run_audit
+            audit_result = await _run_audit(url=body.website, user_id=user_doc["id"])
+        except Exception as e:
+            logger.warning("Auto-audit on registration failed: %s", e)
+
+    # Seed demo project + sample audit so new users see a populated dashboard
+    try:
+        await _seed_demo_experience(user_doc["id"])
+    except Exception as e:
+        logger.warning("Demo seed failed: %s", e)
+
+    return {"user": public_user(user_doc), "token": token, "audit": audit_result}
 
 
 @api.post("/auth/login", response_model=AuthOut)
@@ -233,6 +370,8 @@ async def login(request: Request, body: LoginIn, response: Response):
 @api.post("/auth/google", response_model=AuthOut)
 @limiter.limit("10/minute")
 async def google_auth(request: Request, body: GoogleAuthIn, response: Response):
+    if not is_enabled("google_auth"):
+        raise HTTPException(status_code=503, detail="Google Sign-In is temporarily unavailable")
     """Sign in with Google. Verifies the ID token and creates/returns a user."""
     try:
         import google.auth.transport.requests
@@ -288,18 +427,24 @@ async def google_auth(request: Request, body: GoogleAuthIn, response: Response):
         _set_auth_cookie(response, token)
         return {"user": public_user(user), "token": token}
 
-    except ValueError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid Google credential: {e}")
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Google auth failed")
-        raise HTTPException(status_code=502, detail=f"Google auth failed: {e}")
+        raise HTTPException(status_code=502, detail="Google Sign-In failed. Please try again.")
 
 
 @api.post("/auth/logout")
 async def logout(response: Response):
-    response.delete_cookie("access_token", path="/")
+    is_production = os.environ.get("ENVIRONMENT", "development") == "production"
+    response.delete_cookie(
+        "access_token",
+        path="/",
+        secure=is_production,
+        samesite="none" if is_production else "lax",
+    )
     return {"ok": True}
 
 
@@ -309,6 +454,29 @@ async def me(user_id: str = Depends(get_current_user_id)):
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return public_user(user)
+
+
+class BrandVoiceIn(BaseModel):
+    tone: str = Field(default="friendly and professional", max_length=200)
+    target_audience: str = Field(default="local customers", max_length=200)
+    business_name: str = Field(default="", max_length=200)
+    industry: str = Field(default="", max_length=200)
+    location: str = Field(default="", max_length=200)
+
+
+@api.put("/auth/brand-voice")
+async def save_brand_voice(body: BrandVoiceIn, user_id: str = Depends(get_current_user_id)):
+    """Save brand voice preferences so AI content generation uses them automatically."""
+    brand_voice = {
+        "tone": body.tone,
+        "target_audience": body.target_audience,
+        "business_name": body.business_name,
+        "industry": body.industry,
+        "location": body.location,
+        "updated_at": now_iso(),
+    }
+    await db.users.update_one({"id": user_id}, {"$set": {"brand_voice": brand_voice}})
+    return {"ok": True, "brand_voice": brand_voice}
 
 
 @api.get("/auth/verify/{token}")
@@ -326,26 +494,24 @@ async def verify_email(token: str):
 
 @api.post("/auth/resend-verification")
 @limiter.limit("3/minute")
-async def resend_verification(request: Request, user: dict = Depends(get_current_user_doc)):
+async def resend_verification(request: Request, bg: BackgroundTasks, user: dict = Depends(get_current_user_doc)):
     if user.get("email_verified"):
         return {"ok": True, "message": "Email already verified"}
     token = str(uuid.uuid4())
     await db.users.update_one({"id": user["id"]}, {"$set": {"verification_token": token}})
     verify_link = f"{_store_base_url(request)}/api/auth/verify/{token}"
-    try:
-        await email_service.send_html_email(
-            to=user["email"],
-            subject="Verify your email — Goodly",
-            html=email_service.verify_email_html(name=user.get("name", ""), verify_link=verify_link),
-        )
-    except Exception as e:
-        logger.warning("Resend verification failed: %s", e)
+    bg.add_task(
+        _send_email_background,
+        to=user["email"],
+        subject="Verify your email — Goodly",
+        html=email_service.verify_email_html(name=user.get("name", ""), verify_link=verify_link),
+    )
     return {"ok": True}
 
 
 @api.post("/auth/forgot-password")
 @limiter.limit("3/minute")
-async def forgot_password(body: ForgotPasswordIn, request: Request):
+async def forgot_password(body: ForgotPasswordIn, request: Request, bg: BackgroundTasks):
     email = body.email.lower().strip()
     user = await db.users.find_one({"email": email})
     # Always return success to prevent email enumeration
@@ -360,14 +526,12 @@ async def forgot_password(body: ForgotPasswordIn, request: Request):
     )
 
     reset_link = f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token={token}"
-    try:
-        await email_service.send_html_email(
-            to=email,
-            subject="Reset your password — Goodly",
-            html=email_service.reset_password_html(name=user.get("name", ""), reset_link=reset_link),
-        )
-    except Exception as e:
-        logger.warning("Reset email failed: %s", e)
+    bg.add_task(
+        _send_email_background,
+        to=email,
+        subject="Reset your password — Goodly",
+        html=email_service.reset_password_html(name=user.get("name", ""), reset_link=reset_link),
+    )
 
     return {"ok": True, "message": "If that email exists, we sent a reset link."}
 
@@ -426,7 +590,7 @@ async def create_project(body: ProjectIn, user: dict = Depends(get_current_user_
         "name": sanitize_name(body.name),
         "url": body.url,
         "description": sanitize_html(body.description or ""),
-        "target_keywords": body.target_keywords or "",
+        "target_keywords": sanitize_html(body.target_keywords or ""),
         "schedule": "off",       # 'off' | 'monthly'
         "next_audit_at": None,
         "created_at": now_iso(),
@@ -460,7 +624,7 @@ async def update_project(project_id: str, body: ProjectUpdate, user_id: str = De
     res = await db.projects.update_one({"id": project_id, "user_id": user_id}, {"$set": update})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Project not found")
-    doc = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    doc = await db.projects.find_one({"id": project_id, "user_id": user_id}, {"_id": 0})
     return doc
 
 
@@ -503,6 +667,20 @@ async def run_audit(body: AuditIn, user: dict = Depends(get_current_user_doc)):
             logger.warning("AI recs failed: %s", e)
             ai_recs = {"summary": "AI recommendations are temporarily unavailable.", "priority_actions": [], "wins": [], "next_30_days": []}
 
+    # Calculate revenue impact if feature enabled
+    revenue = None
+    if is_enabled("revenue_impact") and not result.get("fetch_failed"):
+        try:
+            issues = result.get("issues") or []
+            if issues:
+                revenue = estimate_total_revenue_impact(
+                    issues,
+                    monthly_traffic=1000,
+                    industry=None,
+                )
+        except Exception as e:
+            logger.warning("Revenue impact calculation failed: %s", e)
+
     audit_doc = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
@@ -512,6 +690,7 @@ async def run_audit(body: AuditIn, user: dict = Depends(get_current_user_doc)):
         "month_key": month_key(),
         "result": result,
         "ai_recommendations": ai_recs,
+        "revenue_impact": revenue,
     }
     await db.audits.insert_one(audit_doc)
 
@@ -528,21 +707,94 @@ async def run_audit(body: AuditIn, user: dict = Depends(get_current_user_doc)):
 # Public audit — no auth required, no DB save, no AI recs (just the raw score)
 class PublicAuditIn(BaseModel):
     url: str
+    email: Optional[EmailStr] = None  # Optional email for nurture sequence
 
 
 @api.post("/public/audit")
-@limiter.limit("10/minute")
-async def public_audit(request: Request, body: PublicAuditIn, response: Response):
+@limiter.limit("30/minute")
+async def public_audit(request: Request, body: PublicAuditIn, response: Response, bg: BackgroundTasks):
+    if not is_enabled("public_audit"):
+        raise HTTPException(status_code=503, detail="Public audit is temporarily unavailable")
     """Run a free SEO audit without authentication. Returns score + top issues only."""
     if not validate_url(body.url):
         raise HTTPException(status_code=400, detail="Invalid URL. Please provide a valid website URL (e.g., https://example.com).")
     result = await analyze_url(body.url)
+    # Calculate revenue impact for public audit
+    revenue = None
+    if not result.get("fetch_failed"):
+        try:
+            issues = result.get("issues") or []
+            if issues:
+                from revenue_impact import estimate_total_revenue_impact
+                revenue = estimate_total_revenue_impact(issues, monthly_traffic=5000)
+        except Exception as e:
+            logger.warning("Public audit revenue impact failed: %s", e)
+
+    # Generate lightweight AI summary for public audit (no auth, fast model)
+    ai_summary = None
+    schema_markup = None
+    if not result.get("fetch_failed"):
+        try:
+            from ai_service import audit_recommendations
+            ai_recs = await audit_recommendations(result)
+            ai_summary = {
+                "summary": ai_recs.get("summary", ""),
+                "top_action": (ai_recs.get("priority_actions") or [{}])[0] if ai_recs.get("priority_actions") else None,
+                "wins": ai_recs.get("wins", []),
+            }
+        except Exception as e:
+            logger.warning("Public audit AI summary failed: %s", e)
+
+        # Generate schema markup if missing
+        try:
+            metadata = result.get("metadata") or {}
+            if not metadata.get("has_schema"):
+                from ai_remediation import generate_fixes
+                domain = body.url.split("//")[-1].split("/")[0].replace("www.", "")
+                biz_name = metadata.get("title") or domain
+                fixes = await generate_fixes(
+                    business_name=biz_name,
+                    website_url=body.url,
+                    audit_issues=[{"message": "Missing schema markup (JSON-LD)", "category": "schema", "severity": "high"}],
+                    industry="",
+                    location="",
+                )
+                schema_markup = fixes.get("complete_schema_markup") or fixes.get("schema_markup")
+        except Exception as e:
+            logger.warning("Public audit schema generation failed: %s", e)
+
+    # Track audit event
+    try:
+        from product_analytics import track_event
+        await track_event(db, event="audit_run", properties={"url": body.url, "public": True, "score": result.get("overall_score")})
+    except Exception:
+        pass  # Analytics tracking is non-critical
+
+    # Start nurture sequence if email provided
+    if body.email and not result.get("fetch_failed"):
+        try:
+            from nurture_service import schedule_nurture_sequence
+            issues = result.get("issues") or []
+            # seo_analyzer issues carry "message", not "title"
+            top_issue = (issues[0].get("message") or "SEO issues detected") if issues else "SEO issues detected"
+            await schedule_nurture_sequence(
+                email=body.email,
+                score=result.get("overall_score", 0),
+                issues_count=len(issues),
+                top_issue=top_issue,
+                issues=issues,
+            )
+        except Exception as e:
+            logger.warning("Nurture sequence scheduling failed: %s", e)
+
     return {
         "url": result.get("url", body.url),
         "overall_score": result.get("overall_score"),
         "categories": result.get("categories"),
         "issues": result.get("issues", []),
-        "revenue_impact": result.get("revenue_impact"),
+        "revenue_impact": revenue,
+        "ai_summary": ai_summary,
+        "schema_markup": schema_markup,
         "fetch_failed": result.get("fetch_failed", False),
         "error": result.get("error"),
     }
@@ -575,6 +827,40 @@ async def get_audit(audit_id: str, user_id: str = Depends(get_current_user_id)):
     if not doc:
         raise HTTPException(status_code=404, detail="Audit not found")
     return doc
+
+
+@api.post("/audits/{audit_id}/share")
+async def share_audit(audit_id: str, user_id: str = Depends(get_current_user_id)):
+    """Generate a shareable public link for an audit."""
+    doc = await db.audits.find_one({"id": audit_id, "user_id": user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Audit not found")
+
+    share_token = doc.get("share_token")
+    if not share_token:
+        share_token = str(uuid.uuid4())
+        await db.audits.update_one({"id": audit_id}, {"$set": {"share_token": share_token}})
+
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+    return {"share_url": f"{frontend_url}/shared/{share_token}", "share_token": share_token}
+
+
+@api.get("/shared/{share_token}")
+async def get_shared_audit(share_token: str):
+    """View a shared audit — no auth required."""
+    doc = await db.audits.find_one({"share_token": share_token}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Shared audit not found or link expired")
+    # Return a sanitized version (no user_id, no internal fields)
+    return {
+        "url": (doc.get("result") or {}).get("url") or doc.get("url"),
+        "overall_score": (doc.get("result") or {}).get("overall_score") or doc.get("overall_score"),
+        "categories": (doc.get("result") or {}).get("categories"),
+        "issues": (doc.get("result") or {}).get("issues", []),
+        "ai_recommendations": doc.get("ai_recommendations"),
+        "revenue_impact": doc.get("revenue_impact"),
+        "created_at": doc.get("created_at"),
+    }
 
 
 @api.delete("/audits/{audit_id}")
@@ -630,6 +916,26 @@ async def get_audit_improvement(audit_id: str, user_id: str = Depends(get_curren
     # Estimated traffic impact
     traffic_change_pct = int(score_delta * 1.5) if score_delta > 0 else 0
 
+    # Generate AI-optimized meta tags for before/after comparison
+    optimized_meta = None
+    try:
+        current_meta = (current.get("result") or {}).get("metadata") or {}
+        if current_meta.get("title") or current_meta.get("description"):
+            from ai_service import generate_meta_tags
+            biz_name = (current.get("result") or {}).get("url") or url
+            desc = current_meta.get("description") or current_meta.get("title") or ""
+            optimized = await generate_meta_tags(
+                business_name=biz_name.split("//")[-1].split("/")[0].replace("www.", ""),
+                description=desc,
+                target_keywords="",
+            )
+            optimized_meta = {
+                "title": optimized.get("title_options", [optimized.get("title", "")])[0] if optimized.get("title_options") else optimized.get("title", ""),
+                "description": optimized.get("description_options", [optimized.get("description", "")])[0] if optimized.get("description_options") else optimized.get("description", ""),
+            }
+    except Exception:
+        logger.warning("Failed to generate optimized meta tags for comparison", exc_info=True)
+
     return {
         "has_previous": True,
         "current_score": current_score,
@@ -641,6 +947,8 @@ async def get_audit_improvement(audit_id: str, user_id: str = Depends(get_curren
         "previous_issue_count": prev_total,
         "current_issue_count": current_total,
         "estimated_traffic_increase_pct": traffic_change_pct,
+        "current_meta": (current.get("result") or {}).get("metadata"),
+        "optimized_meta": optimized_meta,
         "message": (
             f"Your score went from {prev_score} → {current_score} (+{score_delta} points). "
             f"You fixed {issues_fixed} issues including {critical_fixed} critical ones. "
@@ -685,9 +993,9 @@ async def ai_meta_tags(request: Request, body: MetaTagsIn, user_id: str = Depend
             "input": body.model_dump(), "result": result, "created_at": now_iso(),
         })
         return result
-    except Exception as e:
+    except Exception:
         logger.exception("meta tags failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
 
 
 @api.post("/ai/keywords")
@@ -700,9 +1008,9 @@ async def ai_keywords(request: Request, body: KeywordsIn, user_id: str = Depends
             "input": body.model_dump(), "result": result, "created_at": now_iso(),
         })
         return result
-    except Exception as e:
+    except Exception:
         logger.exception("keywords failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
 
 
 @api.post("/ai/competitors")
@@ -716,9 +1024,9 @@ async def ai_competitors(request: Request, body: CompetitorsIn, user_id: str = D
             "input": body.model_dump(), "result": result, "created_at": now_iso(),
         })
         return result
-    except Exception as e:
+    except Exception:
         logger.exception("competitors failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
 
 
 class CompareCompetitorsIn(BaseModel):
@@ -729,6 +1037,8 @@ class CompareCompetitorsIn(BaseModel):
 @api.post("/competitors/compare")
 @limiter.limit("10/minute")
 async def compare_competitors_endpoint(request: Request, body: CompareCompetitorsIn, user_id: str = Depends(get_current_user_id)):
+    if not is_enabled("competitor_comparison"):
+        raise HTTPException(status_code=503, detail="Competitor comparison is temporarily unavailable")
     """Compare your site against competitors on key SEO metrics. Returns head-to-head comparison with insights and recommendations."""
     if not body.competitor_urls:
         raise HTTPException(status_code=400, detail="At least one competitor URL is required")
@@ -741,16 +1051,464 @@ async def compare_competitors_endpoint(request: Request, body: CompareCompetitor
     try:
         result = await competitor_analysis.compare_competitors(body.target_url, body.competitor_urls)
         return result
-    except Exception as e:
+    except Exception:
         logger.exception("competitor comparison failed")
-        raise HTTPException(status_code=502, detail=f"Comparison failed: {e}")
+        raise HTTPException(status_code=502, detail="Competitor comparison is temporarily unavailable. Please try again.")
+
+
+# ---------------------------------------------------------------
+# AI Content Generation — done-for-you content for small businesses
+# ---------------------------------------------------------------
+
+class BlogPostIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    topic: str = Field(min_length=1, max_length=500)
+    keywords: str = ""
+    tone: str = "friendly and helpful"
+    target_audience: str = "small business customers"
+
+
+class ReviewResponseIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    reviewer_name: str = Field(min_length=1, max_length=200)
+    rating: int = Field(ge=1, le=5)
+    review_text: str = Field(min_length=1, max_length=2000)
+    tone: str = "professional and warm"
+
+
+class FAQIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    category: str = Field(min_length=1, max_length=200)
+    location: str = ""
+    services: str = ""
+
+
+class WebsiteCopyIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    description: str = Field(min_length=1, max_length=1000)
+    page_type: str = Field(default="homepage", pattern="^(homepage|about|services|contact|landing)$")
+    keywords: str = ""
+    location: str = ""
+    tone: str = "warm and professional"
+
+
+@api.post("/ai/blog-post")
+@limiter.limit("5/minute")
+async def ai_blog_post(request: Request, body: BlogPostIn, user_id: str = Depends(get_current_user_id)):
+    """Generate a complete, SEO-optimized blog post ready to publish."""
+    try:
+        result = await ai_content.generate_blog_post(
+            business_name=body.business_name,
+            topic=body.topic,
+            keywords=body.keywords,
+            tone=body.tone,
+            target_audience=body.target_audience,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "blog_post",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("blog post generation failed")
+        raise HTTPException(status_code=502, detail="AI content generation is temporarily unavailable. Please try again.")
+
+
+@api.post("/ai/review-response")
+@limiter.limit("10/minute")
+async def ai_review_response(request: Request, body: ReviewResponseIn, user_id: str = Depends(get_current_user_id)):
+    """Generate a professional response to a customer review."""
+    try:
+        result = await ai_content.generate_review_response(
+            business_name=body.business_name,
+            reviewer_name=body.reviewer_name,
+            rating=body.rating,
+            review_text=body.review_text,
+            tone=body.tone,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "review_response",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("review response generation failed")
+        raise HTTPException(status_code=502, detail="AI content generation is temporarily unavailable. Please try again.")
+
+
+@api.post("/ai/faq")
+@limiter.limit("5/minute")
+async def ai_faq(request: Request, body: FAQIn, user_id: str = Depends(get_current_user_id)):
+    """Generate FAQ content with JSON-LD schema markup for rich results."""
+    try:
+        result = await ai_content.generate_faq(
+            business_name=body.business_name,
+            category=body.category,
+            location=body.location,
+            services=body.services,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "faq",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("faq generation failed")
+        raise HTTPException(status_code=502, detail="AI content generation is temporarily unavailable. Please try again.")
+
+
+@api.post("/ai/website-copy")
+@limiter.limit("5/minute")
+async def ai_website_copy(request: Request, body: WebsiteCopyIn, user_id: str = Depends(get_current_user_id)):
+    """Generate website copy for homepage, about, services, contact, or landing pages."""
+    try:
+        result = await ai_content.generate_website_copy(
+            business_name=body.business_name,
+            description=body.description,
+            page_type=body.page_type,
+            keywords=body.keywords,
+            location=body.location,
+            tone=body.tone,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "website_copy",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("website copy generation failed")
+        raise HTTPException(status_code=502, detail="AI content generation is temporarily unavailable. Please try again.")
+
+
+class EmailIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    email_type: str = Field(default="promo", pattern="^(welcome|promo|follow_up|newsletter|abandoned_cart)$")
+    topic: str = ""
+    tone: str = "warm and professional"
+    target_audience: str = "customers"
+
+
+class SocialCaptionsIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    platform: str = Field(default="instagram", pattern="^(instagram|facebook|linkedin|tiktok)$")
+    topic: str = Field(min_length=1, max_length=500)
+    tone: str = "friendly and engaging"
+    goal: str = "engagement"
+
+
+@api.post("/ai/email")
+@limiter.limit("5/minute")
+async def ai_email(request: Request, body: EmailIn, user_id: str = Depends(get_current_user_id)):
+    """Generate marketing email copy — welcome, promo, follow-up, newsletter, or abandoned cart."""
+    try:
+        result = await ai_content.generate_email(
+            business_name=body.business_name,
+            email_type=body.email_type,
+            topic=body.topic,
+            tone=body.tone,
+            target_audience=body.target_audience,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "email",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("email generation failed")
+        raise HTTPException(status_code=502, detail="AI content generation is temporarily unavailable. Please try again.")
+
+
+@api.post("/ai/social-captions")
+@limiter.limit("10/minute")
+async def ai_social_captions(request: Request, body: SocialCaptionsIn, user_id: str = Depends(get_current_user_id)):
+    """Generate social media captions with hashtags for Instagram, Facebook, LinkedIn, or TikTok."""
+    try:
+        result = await ai_content.generate_social_captions(
+            business_name=body.business_name,
+            platform=body.platform,
+            topic=body.topic,
+            tone=body.tone,
+            goal=body.goal,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "social_captions",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("social captions generation failed")
+        raise HTTPException(status_code=502, detail="AI content generation is temporarily unavailable. Please try again.")
+
+
+# ---------------------------------------------------------------
+# AI Remediation — Fix My Website (audit → ready-to-paste fixes)
+# ---------------------------------------------------------------
+
+class FixMySiteIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    website_url: str = Field(min_length=1, max_length=500)
+    audit_issues: list = Field(default_factory=list, max_length=50)
+    current_meta: dict | None = None
+    industry: str = ""
+    location: str = ""
+
+
+class SingleFixIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    website_url: str = Field(min_length=1, max_length=500)
+    issue_title: str = Field(min_length=1, max_length=500)
+    issue_description: str = Field(min_length=1, max_length=2000)
+    issue_category: str = "general"
+    current_value: str = ""
+
+
+class ContentGraderIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    page_url: str = Field(min_length=1, max_length=500)
+    page_content: str = Field(min_length=1, max_length=10000)
+    target_keywords: str = ""
+
+
+@api.post("/ai/fix-my-site")
+@limiter.limit("5/minute")
+async def ai_fix_my_site(request: Request, body: FixMySiteIn, user_id: str = Depends(get_current_user_id)):
+    """Generate ready-to-paste fixes for every issue found in an audit."""
+    try:
+        result = await ai_remediation.generate_fixes(
+            business_name=body.business_name,
+            website_url=body.website_url,
+            audit_issues=body.audit_issues,
+            current_meta=body.current_meta,
+            industry=body.industry,
+            location=body.location,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "fix_my_site",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("fix my site failed")
+        raise HTTPException(status_code=502, detail="AI remediation is temporarily unavailable. Please try again.")
+
+
+@api.post("/ai/fix-single")
+@limiter.limit("10/minute")
+async def ai_fix_single(request: Request, body: SingleFixIn, user_id: str = Depends(get_current_user_id)):
+    """Generate a fix for a single specific issue."""
+    try:
+        result = await ai_remediation.generate_single_fix(
+            business_name=body.business_name,
+            website_url=body.website_url,
+            issue_title=body.issue_title,
+            issue_description=body.issue_description,
+            issue_category=body.issue_category,
+            current_value=body.current_value,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "fix_single",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("fix single failed")
+        raise HTTPException(status_code=502, detail="AI remediation is temporarily unavailable. Please try again.")
+
+
+@api.post("/ai/content-grader")
+@limiter.limit("5/minute")
+async def ai_content_grader(request: Request, body: ContentGraderIn, user_id: str = Depends(get_current_user_id)):
+    """Grade existing content and provide line-by-line improvement suggestions."""
+    try:
+        result = await ai_remediation.generate_content_grader(
+            business_name=body.business_name,
+            page_url=body.page_url,
+            page_content=body.page_content,
+            target_keywords=body.target_keywords,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "content_grader",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("content grader failed")
+        raise HTTPException(status_code=502, detail="AI content grading is temporarily unavailable. Please try again.")
+
+
+class PublicContentGradeIn(BaseModel):
+    url: str = Field(min_length=1, max_length=500)
+
+
+@api.post("/ai/content-grade")
+@limiter.limit("10/minute")
+async def public_content_grade(request: Request, body: PublicContentGradeIn):
+    """Public content grader — fetches a URL, extracts text, and grades it with AI.
+    No auth required. Lead-generation magnet."""
+    import httpx
+    from bs4 import BeautifulSoup
+
+    url = body.url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    # Fetch the page
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            resp = await client.get(
+                url,
+                headers={"User-Agent": "GoodlyBot/1.0 (SEO audit; hello@searchgoodly.com)"},
+            )
+            resp.raise_for_status()
+            html = resp.text
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=422, detail=f"Could not fetch that URL: {e}")
+    except Exception:
+        raise HTTPException(status_code=422, detail="Could not reach that website. Check the URL and try again.")
+
+    # Extract text content
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(["script", "style", "nav", "footer", "header", "noscript"]):
+        tag.decompose()
+    text = soup.get_text(separator="\n", strip=True)
+    # Truncate to ~3000 chars for the AI
+    text = text[:3000]
+
+    if len(text) < 50:
+        raise HTTPException(status_code=422, detail="Could not extract enough text from that page. It may be mostly images or JavaScript.")
+
+    # Extract domain for business name
+    from urllib.parse import urlparse
+    domain = urlparse(url).netloc.replace("www.", "")
+
+    try:
+        result = await ai_remediation.generate_content_grader(
+            business_name=domain,
+            page_url=url,
+            page_content=text,
+            target_keywords="",
+        )
+        return result
+    except Exception:
+        logger.exception("public content grader failed")
+        raise HTTPException(status_code=502, detail="AI content grading is temporarily unavailable. Please try again.")
+
+
+# ---------------------------------------------------------------
+# AI Content Strategy — plans, repurposing, image prompts
+# ---------------------------------------------------------------
+
+class ContentStrategyIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    industry: str = Field(min_length=1, max_length=200)
+    location: str = ""
+    target_audience: str = "local customers"
+    goals: str = "more customers and better Google ranking"
+    competitors: str = ""
+    existing_content: str = ""
+
+
+class RepurposeIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    source_content: str = Field(min_length=1, max_length=5000)
+    source_type: str = Field(default="blog_post", pattern="^(blog_post|video_script|podcast_transcript|customer_review|case_study)$")
+    target_platforms: list[str] | None = None
+    tone: str = "friendly and professional"
+
+
+class ImagePromptsIn(BaseModel):
+    business_name: str = Field(min_length=1, max_length=200)
+    content_type: str = Field(default="blog_header", pattern="^(blog_header|social_post|email_hero|product|team|storefront|abstract)$")
+    content_description: str = Field(min_length=1, max_length=1000)
+    brand_colors: str = ""
+    style: str = "professional and warm"
+    platform: str = "website"
+    count: int = Field(default=3, ge=1, le=5)
+
+
+@api.post("/ai/content-strategy")
+@limiter.limit("3/minute")
+async def ai_content_strategy(request: Request, body: ContentStrategyIn, user_id: str = Depends(get_current_user_id)):
+    """Generate a 90-day content strategy with topic clusters, calendar, and publishing schedule."""
+    try:
+        result = await ai_strategy.generate_content_strategy(
+            business_name=body.business_name,
+            industry=body.industry,
+            location=body.location,
+            target_audience=body.target_audience,
+            goals=body.goals,
+            competitors=body.competitors,
+            existing_content=body.existing_content,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "content_strategy",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("content strategy failed")
+        raise HTTPException(status_code=502, detail="AI content strategy is temporarily unavailable. Please try again.")
+
+
+@api.post("/ai/repurpose")
+@limiter.limit("5/minute")
+async def ai_repurpose(request: Request, body: RepurposeIn, user_id: str = Depends(get_current_user_id)):
+    """Repurpose one piece of content into multiple platform-specific versions."""
+    try:
+        result = await ai_strategy.repurpose_content(
+            business_name=body.business_name,
+            source_content=body.source_content,
+            source_type=body.source_type,
+            target_platforms=body.target_platforms,
+            tone=body.tone,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "repurpose",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("repurpose failed")
+        raise HTTPException(status_code=502, detail="AI content repurposing is temporarily unavailable. Please try again.")
+
+
+@api.post("/ai/image-prompts")
+@limiter.limit("10/minute")
+async def ai_image_prompts(request: Request, body: ImagePromptsIn, user_id: str = Depends(get_current_user_id)):
+    """Generate ready-to-use image prompts for Midjourney, DALL-E, and Canva AI."""
+    try:
+        result = await ai_strategy.generate_image_prompts(
+            business_name=body.business_name,
+            content_type=body.content_type,
+            content_description=body.content_description,
+            brand_colors=body.brand_colors,
+            style=body.style,
+            platform=body.platform,
+            count=body.count,
+        )
+        await db.ai_history.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user_id, "kind": "image_prompts",
+            "input": body.model_dump(), "created_at": now_iso(),
+        })
+        return result
+    except Exception:
+        logger.exception("image prompts failed")
+        raise HTTPException(status_code=502, detail="AI image prompt generation is temporarily unavailable. Please try again.")
+
+
+@api.get("/ai/industry-pack")
+async def ai_industry_pack(industry: str = "restaurant"):
+    """Get pre-built content templates for a specific industry. No auth required."""
+    return await ai_strategy.get_industry_pack(industry)
 
 
 # ---------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------
 _startup_time = datetime.now(timezone.utc)
-__version__ = "1.9.0"
+from version import VERSION
+
+__version__ = VERSION
 
 
 @api.get("/")
@@ -796,11 +1554,31 @@ async def dashboard_summary(user_id: str = Depends(get_current_user_id)):
     recent_audits = await recent_audits_cursor.to_list(5)
     for a in recent_audits:
         a["overall_score"] = (a.pop("result", {}) or {}).get("overall_score")
+
+    # Score history for trend chart (last 12 audits)
+    score_history = []
+    try:
+        history_cursor = db.audits.find(
+            {"user_id": user_id},
+            {"_id": 0, "created_at": 1, "result.overall_score": 1},
+        ).sort("created_at", 1).limit(50)
+        history_audits = await history_cursor.to_list(50)
+        for a in history_audits:
+            score = (a.get("result") or {}).get("overall_score")
+            if score is not None:
+                score_history.append({
+                    "date": a["created_at"][:10],
+                    "score": score,
+                })
+    except Exception:
+        pass  # Analytics tracking is non-critical
+
     return {
         "projects_count": projects_count,
         "audits_count": audits_count,
         "average_score": avg_score,
         "recent_audits": recent_audits,
+        "score_history": score_history,
     }
 
 
@@ -824,6 +1602,8 @@ async def get_achievements(user_id: str = Depends(get_current_user_id)):
 
 @api.post("/dashboard/check-achievements")
 async def check_new_achievements(user_id: str = Depends(get_current_user_id)):
+    if not is_enabled("achievements"):
+        return {"new_achievements": [], "count": 0}
     """Check for newly earned achievements (called after audits, SERP checks, etc.)."""
     new_achievements = await achievements.check_achievements(db, user_id)
     return {
@@ -907,9 +1687,9 @@ async def billing_checkout(body: CheckoutIn, request: Request, user: dict = Depe
             user_email=user["email"],
             origin_url=body.origin_url,
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Stripe checkout creation failed")
-        raise HTTPException(status_code=502, detail=f"Could not create checkout session: {e}")
+        raise HTTPException(status_code=502, detail="Could not create checkout session. Please try again.")
 
     tx = {
         "id": str(uuid.uuid4()),
@@ -947,9 +1727,9 @@ async def billing_status(session_id: str, request: Request, user: dict = Depends
                 self.amount_total = s.get("amount_total") if isinstance(s, dict) else getattr(s, "amount_total", None)
                 self.currency = s.get("currency") if isinstance(s, dict) else getattr(s, "currency", None)
         status = _Status(session_obj)
-    except Exception as e:
+    except Exception:
         logger.exception("Stripe status fetch failed")
-        raise HTTPException(status_code=502, detail=f"Could not check status: {e}")
+        raise HTTPException(status_code=502, detail="Could not check payment status. Please try again.")
 
     update = {
         "status": status.status,
@@ -1019,9 +1799,9 @@ async def billing_portal(body: PortalIn, user: dict = Depends(get_current_user_d
             return_url=body.return_url,
         )
         return {"url": portal.url}
-    except Exception as e:
+    except Exception:
         logger.exception("Stripe portal session failed")
-        raise HTTPException(status_code=502, detail=f"Portal session error: {e}")
+        raise HTTPException(status_code=502, detail="Could not open the billing portal. Please try again.")
 
 
 @app.post("/api/webhook/stripe")
@@ -1034,28 +1814,67 @@ async def stripe_webhook(request: Request):
         raise HTTPException(status_code=400, detail="Webhook secret not configured")
     try:
         stripe_sdk.api_key = os.environ.get("STRIPE_API_KEY")
-        import stripe as stripe_lib
-        evt = stripe_lib.Webhook.construct_event(
-            body, sig, webhook_secret
-        )
-        data = evt.get("data", {}).get("object", {}) if isinstance(evt, dict) else {}
-        payment_status = data.get("payment_status", "") if isinstance(data, dict) else ""
-        session_id = data.get("id", "") if isinstance(data, dict) else ""
+        evt = stripe_sdk.Webhook.construct_event(body, sig, webhook_secret)
     except Exception as e:
-        logger.warning("webhook handle failed: %s", e)
-        return {"received": False}
+        # Invalid signature/payload must be a 4xx so Stripe surfaces the failure.
+        logger.warning("Stripe webhook signature verification failed: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
-    if payment_status == "paid" and session_id:
-        tx = await db.payment_transactions.find_one({"session_id": session_id})
-        if tx and not tx.get("applied"):
+    # construct_event returns a StripeObject (dict-like); index access works on
+    # both dicts and StripeObjects — never use isinstance(evt, dict) guards.
+    event_type = evt["type"] if "type" in evt else ""
+    data = (evt["data"]["object"] if "data" in evt else {}) or {}
+
+    def _get(obj, key, default=None):
+        try:
+            return obj.get(key, default)
+        except AttributeError:
+            return default
+
+    if event_type == "checkout.session.completed":
+        session_id = _get(data, "id", "")
+        payment_status = _get(data, "payment_status", "")
+        if payment_status == "paid" and session_id:
+            tx = await db.payment_transactions.find_one({"session_id": session_id})
+            if tx and not tx.get("applied"):
+                user_update = {"plan": tx["plan_id"], "plan_started_at": now_iso()}
+                customer_id = _get(data, "customer")
+                subscription_id = _get(data, "subscription")
+                if customer_id:
+                    user_update["stripe_customer_id"] = customer_id
+                if subscription_id:
+                    user_update["stripe_subscription_id"] = subscription_id
+                await db.users.update_one({"id": tx["user_id"]}, {"$set": user_update})
+                await db.payment_transactions.update_one(
+                    {"session_id": session_id},
+                    {"$set": {"applied": True, "payment_status": "paid", "status": "complete",
+                              "stripe_customer_id": customer_id, "updated_at": now_iso()}},
+                )
+                logger.info("Plan '%s' applied to user %s via webhook", tx["plan_id"], tx["user_id"])
+
+    elif event_type == "customer.subscription.deleted":
+        # Subscription cancelled/ended — downgrade the user to free.
+        customer_id = _get(data, "customer")
+        if customer_id:
+            res = await db.users.update_one(
+                {"stripe_customer_id": customer_id},
+                {"$set": {"plan": "free", "plan_cancelled_at": now_iso()}},
+            )
+            if res.matched_count:
+                logger.info("Subscription deleted — downgraded customer %s to free", customer_id)
+            else:
+                logger.warning("subscription.deleted for unknown customer %s", customer_id)
+
+    elif event_type == "invoice.payment_failed":
+        # Flag the account; Stripe retries billing before cancelling.
+        customer_id = _get(data, "customer")
+        if customer_id:
             await db.users.update_one(
-                {"id": tx["user_id"]},
-                {"$set": {"plan": tx["plan_id"], "plan_started_at": now_iso()}},
+                {"stripe_customer_id": customer_id},
+                {"$set": {"payment_failed_at": now_iso()}},
             )
-            await db.payment_transactions.update_one(
-                {"session_id": session_id},
-                {"$set": {"applied": True, "payment_status": "paid", "status": "complete", "updated_at": now_iso()}},
-            )
+            logger.warning("Invoice payment failed for customer %s", customer_id)
+
     return {"received": True}
 
 
@@ -1065,6 +1884,8 @@ async def stripe_webhook(request: Request):
 @api.get("/audits/{audit_id}/pdf")
 async def audit_pdf(audit_id: str, user: dict = Depends(get_current_user_doc)):
     plan = get_plan(user.get("plan"))
+    if not is_enabled("pdf_export"):
+        raise HTTPException(status_code=503, detail="PDF export is temporarily unavailable")
     if not plan["perks"].get("pdf_export"):
         raise HTTPException(status_code=402, detail="PDF export is a Pro feature. Upgrade to download reports.")
     audit = await db.audits.find_one({"id": audit_id, "user_id": user["id"]}, {"_id": 0})
@@ -1096,6 +1917,8 @@ class SerpIn(BaseModel):
 @api.post("/serp/check")
 async def serp_check(body: SerpIn, user: dict = Depends(get_current_user_doc)):
     plan = get_plan(user.get("plan"))
+    if not is_enabled("serp_tracking"):
+        raise HTTPException(status_code=503, detail="SERP tracking is temporarily unavailable")
     if not plan["perks"].get("serp_tracking"):
         raise HTTPException(status_code=402, detail="SERP rank tracking is a Pro feature. Upgrade to use it.")
     result = await check_rank(body.keyword.strip(), body.domain.strip())
@@ -1204,11 +2027,13 @@ class GBPCompetitorsIn(BaseModel):
 @api.post("/gbp/audit")
 @limiter.limit("10/minute")
 async def gbp_audit(request: Request, body: GBPAuditIn, user: dict = Depends(get_current_user_doc)):
+    if not is_enabled("gbp_audit"):
+        raise HTTPException(status_code=503, detail="GBP audit is temporarily unavailable")
     try:
         result = await gbp_service.audit_listing(**{k: v for k, v in body.model_dump().items() if k != "project_id"})
     except Exception as e:
         logger.exception("gbp audit failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     doc = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
@@ -1223,12 +2048,13 @@ async def gbp_audit(request: Request, body: GBPAuditIn, user: dict = Depends(get
 
 
 @api.post("/gbp/suggestions")
-async def gbp_suggestions(body: GBPSuggestionsIn, user: dict = Depends(get_current_user_doc)):
+@limiter.limit("10/minute")
+async def gbp_suggestions(request: Request, body: GBPSuggestionsIn, user: dict = Depends(get_current_user_doc)):
     try:
         result = await gbp_service.suggestions(**body.model_dump())
     except Exception as e:
         logger.exception("gbp suggestions failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     await db.ai_history.insert_one({
         "id": str(uuid.uuid4()), "user_id": user["id"], "kind": "gbp_suggestions",
         "input": body.model_dump(), "result": result, "created_at": now_iso(),
@@ -1237,12 +2063,13 @@ async def gbp_suggestions(body: GBPSuggestionsIn, user: dict = Depends(get_curre
 
 
 @api.post("/gbp/competitors")
-async def gbp_competitors(body: GBPCompetitorsIn, user: dict = Depends(get_current_user_doc)):
+@limiter.limit("10/minute")
+async def gbp_competitors(request: Request, body: GBPCompetitorsIn, user: dict = Depends(get_current_user_doc)):
     try:
         result = await gbp_service.compare_competitors(**body.model_dump())
     except Exception as e:
         logger.exception("gbp competitors failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     return result
 
 
@@ -1269,6 +2096,8 @@ class AIVisibilityIn(BaseModel):
 @api.post("/ai-visibility/check")
 @limiter.limit("5/minute")
 async def ai_visibility_check(request: Request, body: AIVisibilityIn, user: dict = Depends(get_current_user_doc)):
+    if not is_enabled("ai_visibility"):
+        raise HTTPException(status_code=503, detail="AI visibility check is temporarily unavailable")
     try:
         result = await ai_visibility.check_ai_visibility(
             business_name=body.business_name,
@@ -1279,7 +2108,7 @@ async def ai_visibility_check(request: Request, body: AIVisibilityIn, user: dict
         )
     except Exception as e:
         logger.exception("ai-visibility check failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
 
     doc = {
         "id": str(uuid.uuid4()),
@@ -1400,6 +2229,8 @@ def _check_platform(p: str):
 @api.post("/social/audit")
 @limiter.limit("10/minute")
 async def social_audit(request: Request, body: SocialAuditIn, user: dict = Depends(get_current_user_doc)):
+    if not is_enabled("social_audit"):
+        raise HTTPException(status_code=503, detail="Social audit is temporarily unavailable")
     _check_platform(body.platform)
     fetched = await social_fetcher.fetch_profile_signals(body.platform, body.handle)
     try:
@@ -1416,7 +2247,7 @@ async def social_audit(request: Request, body: SocialAuditIn, user: dict = Depen
         )
     except Exception as e:
         logger.exception("social audit failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
 
     doc = {
         "id": str(uuid.uuid4()),
@@ -1435,7 +2266,8 @@ async def social_audit(request: Request, body: SocialAuditIn, user: dict = Depen
 
 
 @api.post("/social/suggestions")
-async def social_suggestions(body: SocialSuggestionsIn, user: dict = Depends(get_current_user_doc)):
+@limiter.limit("10/minute")
+async def social_suggestions(request: Request, body: SocialSuggestionsIn, user: dict = Depends(get_current_user_doc)):
     _check_platform(body.platform)
     try:
         result = await social_service.suggestions(
@@ -1448,7 +2280,7 @@ async def social_suggestions(body: SocialSuggestionsIn, user: dict = Depends(get
         )
     except Exception as e:
         logger.exception("social suggestions failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     await db.ai_history.insert_one({
         "id": str(uuid.uuid4()), "user_id": user["id"], "kind": f"social_suggestions_{body.platform}",
         "input": body.model_dump(), "result": result, "created_at": now_iso(),
@@ -1457,7 +2289,8 @@ async def social_suggestions(body: SocialSuggestionsIn, user: dict = Depends(get
 
 
 @api.post("/social/competitors")
-async def social_competitors(body: SocialCompetitorIn, user: dict = Depends(get_current_user_doc)):
+@limiter.limit("10/minute")
+async def social_competitors(request: Request, body: SocialCompetitorIn, user: dict = Depends(get_current_user_doc)):
     _check_platform(body.platform)
     try:
         result = await social_service.compare_competitors(
@@ -1468,7 +2301,7 @@ async def social_competitors(body: SocialCompetitorIn, user: dict = Depends(get_
         )
     except Exception as e:
         logger.exception("social competitors failed")
-        raise HTTPException(status_code=502, detail=f"AI service error: {e}")
+        raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     return result
 
 
@@ -1504,6 +2337,8 @@ class ConciergeBriefIn(BaseModel):
 @limiter.limit("10/minute")
 async def upsert_concierge_brief(request: Request, body: ConciergeBriefIn, user: dict = Depends(get_current_user_doc)):
     plan = get_plan(user.get("plan"))
+    if not is_enabled("concierge"):
+        raise HTTPException(status_code=503, detail="Concierge service is temporarily unavailable")
     if not plan["perks"].get("done_for_you"):
         raise HTTPException(
             status_code=402,
@@ -1552,20 +2387,19 @@ class ReferralInviteIn(BaseModel):
 
 @api.post("/referrals/invite")
 @limiter.limit("5/minute")
-async def referral_invite(request: Request, body: ReferralInviteIn, user: dict = Depends(get_current_user_doc)):
-    """Send a referral invite email to a friend."""
-    referral_link = f"{_store_base_url(request)}audit?ref={user['id']}"
-    try:
-        await email_service.send_html_email(
-            to=body.email,
-            subject=f"{user.get('name', 'A friend')} invited you to try Goodly",
-            html=email_service.referral_invite_html(
-                referrer_name=user.get("name", "A friend"),
-                referral_link=referral_link,
-            ),
-        )
-    except Exception as e:
-        logger.warning("Referral invite email failed: %s", e)
+async def referral_invite(request: Request, body: ReferralInviteIn, bg: BackgroundTasks, user: dict = Depends(get_current_user_doc)):
+    if not is_enabled("referrals"):
+        raise HTTPException(status_code=503, detail="Referral program is temporarily unavailable")
+    referral_link = f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/audit?ref={user['id']}"
+    bg.add_task(
+        _send_email_background,
+        to=body.email,
+        subject=f"{user.get('name', 'A friend')} invited you to try Goodly",
+        html=email_service.referral_invite_html(
+            referrer_name=user.get("name", "A friend"),
+            referral_link=referral_link,
+        ),
+    )
     return {"ok": True, "message": f"Invite sent to {body.email}"}
 
 
@@ -1601,8 +2435,9 @@ class SupportContactIn(BaseModel):
 
 @api.post("/support/contact")
 @limiter.limit("3/minute")
-async def support_contact(request: Request, body: SupportContactIn, response: Response):
-    """Accept a support message from the in-app widget. Stores in DB and sends email."""
+async def support_contact(request: Request, body: SupportContactIn, response: Response, bg: BackgroundTasks):
+    if not is_enabled("support_widget"):
+        raise HTTPException(status_code=503, detail="Support is temporarily unavailable")
     doc = {
         "id": str(uuid.uuid4()),
         "name": sanitize_name(body.name),
@@ -1613,38 +2448,122 @@ async def support_contact(request: Request, body: SupportContactIn, response: Re
     }
     try:
         await db.support_messages.insert_one(doc)
-    except Exception:
-        pass  # Non-critical — still try to send email
+    except Exception as e:
+        logger.warning("Support message DB insert failed: %s", e)
 
     # Send notification email to support
-    try:
-        await email_service.send_html_email(
-            to=os.environ.get("SUPPORT_EMAIL", "hello@goodly.app"),
-            subject=f"Support: {body.name} — {body.message[:60]}",
-            html=email_service.support_notification_html(
-                name=body.name,
-                email=body.email,
-                message=body.message,
-                page=body.page,
-            ),
-        )
-    except Exception as e:
-        logger.warning("Support email failed: %s", e)
+    bg.add_task(
+        _send_email_background,
+        to=os.environ.get("SUPPORT_EMAIL", "hello@searchgoodly.com"),
+        subject=f"Support: {body.name} — {body.message[:60]}",
+        html=email_service.support_notification_html(
+            name=body.name,
+            email=body.email,
+            message=body.message,
+            page=body.page,
+        ),
+    )
 
     return {"ok": True, "message": "Message received. We'll reply within 2 hours."}
 
 
 # ---------------------------------------------------------------
+# Agency routes
+# ---------------------------------------------------------------
+class CreateClientIn(BaseModel):
+    email: EmailStr
+    name: str = Field(min_length=1, max_length=120)
+    website: str
+    plan: str = "free"
+
+
+@api.post("/agency/clients")
+async def agency_create_client(body: CreateClientIn, user: dict = Depends(get_current_user_doc)):
+    """Create a client account under the current agency user."""
+    try:
+        result = await agency_service.create_client(
+            agency_user_id=user["id"],
+            email=body.email,
+            name=body.name,
+            website=body.website,
+            plan=body.plan,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@api.get("/agency/clients")
+async def agency_list_clients(user: dict = Depends(get_current_user_doc)):
+    """List all clients under the current agency user."""
+    return await agency_service.list_clients(user["id"])
+
+
+@api.get("/agency/clients/{client_id}")
+async def agency_get_client(client_id: str, user: dict = Depends(get_current_user_doc)):
+    """Get a single client's details."""
+    client = await agency_service.get_client(user["id"], client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return client
+
+
+class AgencyAuditIn(BaseModel):
+    client_id: str
+    url: str
+    project_id: Optional[str] = None
+
+
+@api.post("/agency/audits")
+async def agency_run_client_audit(body: AgencyAuditIn, user: dict = Depends(get_current_user_doc)):
+    """Run an audit on behalf of a client."""
+    try:
+        return await agency_service.run_client_audit(
+            agency_user_id=user["id"],
+            client_id=body.client_id,
+            url=body.url,
+            project_id=body.project_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@api.get("/agency/dashboard")
+async def agency_dashboard(user: dict = Depends(get_current_user_doc)):
+    """Get agency-wide dashboard with all client metrics."""
+    return await agency_service.get_agency_dashboard(user["id"])
+
+
+# NOTE: The unauthenticated /setup/stripe-products and /setup/seed-blog-post
+# endpoints were removed. Admin-protected equivalents live at
+# /api/admin/setup-stripe-products (routes/admin.py) and POST /api/blog/posts
+# (routes/blog.py, admin-only).
+
+
+# ---------------------------------------------------------------
 # Mount + middleware
 # ---------------------------------------------------------------
+# The legacy inline routes on `api` (/api/*) are the production surface.
+# The duplicate /api/v1/* mounting was removed: it exposed diverged handlers
+# (no login rate limit, missing feature flags) alongside the live ones.
+# Only route modules WITHOUT a legacy equivalent are mounted here — the
+# frontend depends on them at /api/*.
+from routes.admin import router as admin_router        # /admin/users, /admin/stats, /admin/analytics/*
+from routes.blog import router as blog_router          # /blog/posts, /blog/categories
+from routes.gsc import router as gsc_router            # /gsc/analytics, /gsc/trend
+
+api.include_router(admin_router)
+api.include_router(blog_router)
+api.include_router(gsc_router)
+
 app.include_router(api)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-cors_origins_raw = os.environ.get("CORS_ORIGINS", "http://localhost:3000,https://frontend-beta-weld-93.vercel.app")
+cors_origins_raw = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
 if cors_origins_raw == "*" and os.environ.get("ENVIRONMENT") == "production":
-    cors_origins_raw = os.environ.get("PRODUCTION_DOMAIN", "https://goodly.app")
+    cors_origins_raw = os.environ.get("PRODUCTION_DOMAIN", "http://localhost:3000")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -1654,6 +2573,21 @@ app.add_middleware(
 )
 
 app.add_middleware(SlowAPIMiddleware)
+
+# Request body size limit (prevents DoS via large payloads)
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
+class _BodySizeLimitMiddleware(_BaseHTTPMiddleware):
+    MAX_BODY = 5 * 1024 * 1024  # 5 MB
+    async def dispatch(self, request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > self.MAX_BODY:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=413,
+                content={"detail": "Request body too large. Maximum is 5 MB."},
+            )
+        return await call_next(request)
+app.add_middleware(_BodySizeLimitMiddleware)
 
 # Security headers (HSTS, CSP, X-Frame-Options, etc.)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -1674,9 +2608,12 @@ async def lifespan(app: FastAPI):
     # Validate critical secrets at startup
     if not os.environ.get("JWT_SECRET"):
         if os.environ.get("ENVIRONMENT") == "production":
-            logger.warning("JWT_SECRET not set — using random value for this instance")
-            import secrets as _sec
-            os.environ["JWT_SECRET"] = _sec.token_urlsafe(32)
+            # Fail fast: a per-instance random secret would invalidate sessions
+            # across Cloud Run replicas/restarts and silently break auth.
+            raise RuntimeError("JWT_SECRET must be set in production")
+        logger.warning("JWT_SECRET not set — using a random value (development only)")
+        import secrets as _sec
+        os.environ["JWT_SECRET"] = _sec.token_urlsafe(32)
     if not os.environ.get("GEMINI_API_KEY"):
         logger.warning("GEMINI_API_KEY not set — AI features will fail")
     if not os.environ.get("STRIPE_API_KEY"):
@@ -1706,6 +2643,10 @@ async def lifespan(app: FastAPI):
             await db.ai_history.create_index([("user_id", 1), ("created_at", -1)])
             await db.users.create_index("verification_token", sparse=True)
             await db.users.create_index("reset_token", sparse=True)
+            # Blog posts collection
+            await db.blog_posts.create_index("slug", unique=True)
+            await db.blog_posts.create_index("id", unique=True)
+            await db.blog_posts.create_index([("published", 1), ("created_at", -1)])
             # TTL indexes for automatic cleanup
             try:
                 await db.serp_checks.create_index("created_at", expireAfterSeconds=90 * 24 * 3600)
@@ -1716,18 +2657,29 @@ async def lifespan(app: FastAPI):
             await db.users.update_many({"plan": {"$exists": False}}, {"$set": {"plan": "free"}})
             await db.users.update_many({"onboarded": {"$exists": False}}, {"$set": {"onboarded": False}})
 
-            import secrets as _secrets
+            is_production = os.environ.get("ENVIRONMENT") == "production"
+            seeds = []
+
             admin_password = os.environ.get("ADMIN_PASSWORD")
-            if not admin_password:
-                admin_password = _secrets.token_urlsafe(16)
-                logger.warning("ADMIN_PASSWORD not set — generated random admin password: %s", admin_password)
-            demo_password = os.environ.get("DEMO_PASSWORD", "demo1234")
-            seeds = [
-                {"email": os.environ.get("ADMIN_EMAIL", "admin@goodly.app"),
-                 "password": admin_password,
-                 "name": "Admin", "role": "admin", "plan": "concierge"},
-                {"email": "demo@smallbiz.com", "password": demo_password, "name": "Demo Owner", "role": "user", "plan": "concierge"},
-            ]
+            if admin_password:
+                seeds.append({
+                    "email": os.environ.get("ADMIN_EMAIL", "admin@searchgoodly.com"),
+                    "password": admin_password,
+                    "name": "Admin", "role": "admin", "plan": "concierge",
+                })
+            else:
+                # Never auto-generate (or log) an admin password. Without
+                # ADMIN_PASSWORD the admin account is simply not seeded.
+                logger.warning("ADMIN_PASSWORD not set — skipping admin user seeding")
+
+            demo_password = os.environ.get("DEMO_PASSWORD")
+            if demo_password:
+                seeds.append({"email": "demo@smallbiz.com", "password": demo_password, "name": "Demo Owner", "role": "user", "plan": "concierge"})
+                seeds.append({"email": "hello@searchgoodly.com", "password": demo_password, "name": "Demo Business", "role": "user", "plan": "pro"})
+            elif not is_production:
+                # Weak defaults are acceptable for local development only.
+                seeds.append({"email": "demo@smallbiz.com", "password": "demo1234", "name": "Demo Owner", "role": "user", "plan": "concierge"})
+                seeds.append({"email": "hello@searchgoodly.com", "password": "demo1234", "name": "Demo Business", "role": "user", "plan": "pro"})
             for s in seeds:
                 existing = await db.users.find_one({"email": s["email"]})
                 if not existing:
@@ -1739,17 +2691,35 @@ async def lifespan(app: FastAPI):
                         "role": s["role"],
                         "plan": s["plan"],
                         "onboarded": True,
+                        "email_verified": True,
                         "created_at": now_iso(),
                     })
                 else:
                     await db.users.update_one(
                         {"email": s["email"]},
-                        {"$set": {"plan": existing.get("plan") or s["plan"], "onboarded": True}},
+                        {"$set": {"password_hash": hash_password(s["password"]), "plan": existing.get("plan") or s["plan"], "onboarded": True, "email_verified": True}},
                     )
             logger.info("Startup complete. Seeded users (if missing).")
 
+            # Seed demo account with pre-loaded data
+            try:
+                demo_user = await db.users.find_one({"email": "hello@searchgoodly.com"})
+                if demo_user:
+                    await _seed_demo_experience(demo_user["id"])
+            except Exception as e:
+                logger.warning("Demo account seeding failed: %s", e)
+
+            # Seed blog posts
+            try:
+                from blog_service import seed_default_posts
+                seeded = await seed_default_posts(db)
+                if seeded:
+                    logger.info("Seeded %d blog posts", seeded)
+            except Exception as e:
+                logger.warning("Blog seeding failed: %s", e)
+
             if os.environ.get("SCHEDULER_ENABLED", "true").lower() in ("1", "true", "yes"):
-                scheduler_mod.start(db, lambda: _state.get("base_url") or "http://localhost:8001")
+                scheduler_mod.start(db, lambda: os.environ.get("FRONTEND_URL", _state.get("base_url") or "http://localhost:3000"))
         except Exception as e:
             logger.exception("DB initialization failed: %s", e)
     else:
@@ -1761,7 +2731,7 @@ async def lifespan(app: FastAPI):
     try:
         scheduler_mod.shutdown()
     except Exception:
-        pass
+        pass  # Scheduler shutdown is best-effort
     if _client:
         _client.close()
 
@@ -1774,7 +2744,16 @@ _state: dict = {}
 
 
 def _store_base_url(request: Request) -> str:
-    base = str(request.base_url).rstrip("/")
+    """Return the frontend base URL for constructing links (e.g., verification).
+
+    Uses FRONTEND_URL in production to avoid leaking the internal
+    Cloud Run URL. Falls back to request.base_url for dev.
+    """
+    frontend_url = os.environ.get("FRONTEND_URL", "")
+    if frontend_url:
+        base = frontend_url.rstrip("/")
+    else:
+        base = str(request.base_url).rstrip("/")
     _state["base_url"] = base
     return base
 

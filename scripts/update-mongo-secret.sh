@@ -21,4 +21,4 @@ echo "MONGO_URL secret updated."
 gcloud run deploy goodly-api --source . --region="$REGION" --project="$PROJECT" --allow-unauthenticated --quiet
 echo "Cloud Run redeployed."
 
-curl -s "https://goodly-api-1407225707.us-central1.run.app/api/health" | python3 -m json.tool
+curl -s "https://api.searchgoodly.com/api/health" | python3 -m json.tool

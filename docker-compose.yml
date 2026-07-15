@@ -10,33 +10,39 @@ services:
       - mongo_data:/data/db
     environment:
       MONGO_INITDB_DATABASE: goodly
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-      target: backend
     container_name: goodly-backend
     ports:
-      - "8001:8001"
+      - "8001:8080"
     environment:
-      - MONGO_URL=mongodb://mongodb:27017
-      - DB_NAME=goodly
-      - JWT_SECRET=dev-secret-change-in-production-32bytes
+      - MONGO_URL=mongodb://mongodb:27017/goodly
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - STRIPE_API_KEY=${STRIPE_API_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
-      - SENDER_EMAIL=onboarding@resend.dev
+      - SENDER_EMAIL=${SENDER_EMAIL:-onboarding@resend.dev}
       - ENVIRONMENT=development
-      - CORS_ORIGINS=http://localhost:3000
-      - ADMIN_EMAIL=admin@goodly.app
-      - ADMIN_PASSWORD=admin123
-      - DEMO_PASSWORD=demo1234
+      - CORS_ORIGINS=http://localhost:3000,https://searchgoodly.com,https://www.searchgoodly.com
+      - FRONTEND_URL=http://localhost:3000
+      - PRODUCTION_DOMAIN=https://searchgoodly.com
+      - ADMIN_EMAIL=admin@searchgoodly.com
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - DEMO_PASSWORD=${DEMO_PASSWORD:-}
       - SCHEDULER_ENABLED=true
     depends_on:
-      - mongodb
-    command: uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+      mongodb:
+        condition: service_healthy
+    command: uvicorn server:app --host 0.0.0.0 --port 8080 --reload
 
   frontend:
     build:

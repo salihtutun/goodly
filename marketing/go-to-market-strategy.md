@@ -158,7 +158,7 @@ Concierge ($1,000/mo)
 - [ ] Real MongoDB connection (placeholder in place)
 - [ ] Real Stripe Price IDs
 - [ ] Real Resend API key
-- [ ] Custom domain (goodly.app or goodly.com)
+- [ ] Custom domain (searchgoodly.com or searchgoodly.com)
 
 ### Launch Week
 - [ ] Post on Reddit (r/smallbusiness, r/SEO, r/Entrepreneur)

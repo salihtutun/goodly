@@ -1,10 +1,11 @@
 import { useEffect } from "react";
+import { FRONTEND_URL } from "@/lib/env";
 
 const DEFAULTS = {
   title: "Goodly — Visibility OS for Small Businesses",
   description: "Get found on Google, Instagram, TikTok, and YouTube. Free SEO audit in 10 seconds. No signup required.",
-  image: "https://goodly.app/og-image.png",
-  url: "https://goodly.app",
+  image: `${FRONTEND_URL}/og-image.png`,
+  url: FRONTEND_URL,
 };
 
 export function usePageMeta({ title, description, image, url } = {}) {

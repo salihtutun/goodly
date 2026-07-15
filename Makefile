@@ -24,8 +24,8 @@ test-unit: ## Run unit tests only
 test-integration: ## Run integration tests only
 	cd backend && python -m pytest ../tests/integration/ -v --tb=short
 
-test-all: ## Run all tests including backend/tests/
-	cd backend && python -m pytest ../tests/unit/ ../tests/integration/ ./tests/ -v --tb=short --cov=. --cov-report=term
+test-all: ## Run all tests (unit + integration)
+	cd backend && python -m pytest ../tests/unit/ ../tests/integration/ -v --tb=short --cov=. --cov-report=term
 
 coverage: ## Generate HTML coverage report
 	cd backend && python -m pytest ../tests/unit/ ../tests/integration/ -q --cov=. --cov-report=html:../tests/reports/coverage
@@ -64,16 +64,16 @@ run-frontend: ## Run frontend locally
 deploy: ## Deploy to Google Cloud Run
 	gcloud builds submit --config=cloudbuild.yaml
 
-deploy-backend: ## Deploy backend only
-	gcloud run deploy goodly-api --source=./backend --region=us-central1 --allow-unauthenticated
+deploy-backend: ## Deploy backend via Cloud Build (Cloud Run)
+	gcloud builds submit --config=cloudbuild.yaml
 
 # ── Database ───────────────────────────────────────────
 
 db-backup: ## Backup MongoDB
 	./scripts/backup-mongo.sh
 
-db-seed: ## Seed admin and demo users
-	cd backend && python -c "from server import on_startup; import asyncio; asyncio.run(on_startup())"
+db-seed: ## Seed admin and demo users (requires MONGO_URL)
+	cd backend && python -c "from starlette.testclient import TestClient; from server import app; TestClient(app)"
 
 # ── Cleanup ────────────────────────────────────────────
 

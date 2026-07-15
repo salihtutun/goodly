@@ -1,5 +1,5 @@
 # Goodly — Google Cloud Run Deployment Configuration
-# Deploy: gcloud run deploy goodly-api --source . --region us-central1 --allow-unauthenticated
+# Deploy: gcloud builds submit --config=cloudbuild.yaml
 
 steps:
   - name: 'gcr.io/cloud-builders/docker'
@@ -21,13 +21,21 @@ steps:
       - '--min-instances=0'
       - '--max-instances=10'
       - '--timeout=300'
-      - '--set-env-vars=ENVIRONMENT=production'
+      - '--env-vars-file=cloudrun-env.yaml'
+      # Env var name = Secret Manager secret name
       - '--set-secrets=MONGO_URL=MONGO_URL:latest'
       - '--set-secrets=JWT_SECRET=JWT_SECRET:latest'
       - '--set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest'
       - '--set-secrets=STRIPE_API_KEY=STRIPE_API_KEY:latest'
       - '--set-secrets=RESEND_API_KEY=RESEND_API_KEY:latest'
       - '--set-secrets=STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest'
+      - '--set-secrets=STRIPE_PRICE_ID_STARTER=STRIPE_PRICE_ID_STARTER:latest'
+      - '--set-secrets=STRIPE_PRICE_ID_STARTER_ANNUAL=STRIPE_PRICE_ID_STARTER_ANNUAL:latest'
+      - '--set-secrets=STRIPE_PRICE_ID_PRO=STRIPE_PRICE_ID_PRO:latest'
+      - '--set-secrets=STRIPE_PRICE_ID_PRO_ANNUAL=STRIPE_PRICE_ID_PRO_ANNUAL:latest'
+      - '--set-secrets=STRIPE_PRICE_ID_CONCIERGE=STRIPE_PRICE_ID_CONCIERGE:latest'
+      - '--set-secrets=GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest'
+      - '--set-secrets=SENTRY_DSN=SENTRY_DSN:latest'
 
 images:
   - 'gcr.io/$PROJECT_ID/goodly-api'

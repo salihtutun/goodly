@@ -3,6 +3,7 @@
 Adds HSTS, CSP, X-Frame-Options, X-Content-Type-Options, and other
 security headers to every response.
 """
+import os
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
@@ -14,9 +15,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         # HSTS — only in production over HTTPS
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains; preload"
-        )
+        is_production = os.environ.get("ENVIRONMENT", "development") == "production"
+        if is_production:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
 
         # Prevent MIME type sniffing
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -43,7 +46,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https:; "
             "font-src 'self'; "
-            "connect-src 'self' https://api.stripe.com https://*.googleapis.com; "
+            "connect-src 'self' https://api.stripe.com https://*.googleapis.com https://*.a.run.app; "
             "frame-src https://js.stripe.com https://hooks.stripe.com; "
             "object-src 'none'; "
             "base-uri 'self'; "

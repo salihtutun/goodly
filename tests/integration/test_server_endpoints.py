@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"
 def _auth_headers(client):
     """Login as admin and return Authorization header dict."""
     resp = client.post("/api/auth/login", json={
-        "email": "admin@goodly.app", "password": "admin-secret-123",
+        "email": "admin@searchgoodly.com", "password": "admin-secret-123",
     })
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return {"Authorization": f"Bearer {resp.json()['token']}"}
@@ -59,16 +59,16 @@ class TestAuth:
 
     def test_login_success(self, client):
         resp = client.post("/api/auth/login", json={
-            "email": "admin@goodly.app", "password": "admin-secret-123",
+            "email": "admin@searchgoodly.com", "password": "admin-secret-123",
         })
         assert resp.status_code == 200
         data = resp.json()
         assert "token" in data
-        assert data["user"]["email"] == "admin@goodly.app"
+        assert data["user"]["email"] == "admin@searchgoodly.com"
 
     def test_login_wrong_password(self, client):
         resp = client.post("/api/auth/login", json={
-            "email": "admin@goodly.app", "password": "wrong-password",
+            "email": "admin@searchgoodly.com", "password": "wrong-password",
         })
         assert resp.status_code == 401
 
@@ -87,7 +87,7 @@ class TestAuth:
         headers = _auth_headers(client)
         resp = client.get("/api/auth/me", headers=headers)
         assert resp.status_code == 200
-        assert resp.json()["email"] == "admin@goodly.app"
+        assert resp.json()["email"] == "admin@searchgoodly.com"
 
     def test_me_unauthenticated(self, client):
         resp = client.get("/api/auth/me")
@@ -99,7 +99,7 @@ class TestAuth:
 
     def test_forgot_password(self, client):
         resp = client.post("/api/auth/forgot-password", json={
-            "email": "admin@goodly.app",
+            "email": "admin@searchgoodly.com",
         })
         assert resp.status_code == 200
         assert resp.json()["ok"] == True
@@ -354,14 +354,14 @@ class TestBilling:
     def test_checkout_invalid_plan(self, client):
         headers = _auth_headers(client)
         resp = client.post("/api/billing/checkout", json={
-            "plan_id": "nonexistent", "origin_url": "https://goodly.app",
+            "plan_id": "nonexistent", "origin_url": "https://searchgoodly.com",
         }, headers=headers)
         assert resp.status_code == 400
 
     def test_checkout_free_plan(self, client):
         headers = _auth_headers(client)
         resp = client.post("/api/billing/checkout", json={
-            "plan_id": "free", "origin_url": "https://goodly.app",
+            "plan_id": "free", "origin_url": "https://searchgoodly.com",
         }, headers=headers)
         assert resp.status_code == 400
 
@@ -373,7 +373,7 @@ class TestBilling:
     def test_portal_no_customer(self, client):
         headers = _auth_headers(client)
         resp = client.post("/api/billing/portal", json={
-            "return_url": "https://goodly.app",
+            "return_url": "https://searchgoodly.com",
         }, headers=headers)
         assert resp.status_code == 400
 
@@ -382,10 +382,9 @@ class TestBilling:
 
 class TestStripeWebhook:
     def test_webhook_received(self, client):
-        # Webhook secret is configured in test env, so it should process
+        # Invalid/missing signature must return 400 so Stripe surfaces the failure.
         resp = client.post("/api/webhook/stripe", content=b"{}")
-        assert resp.status_code == 200
-        assert resp.json()["received"] == False  # Invalid signature
+        assert resp.status_code == 400
 
 
 # ====== PDF EXPORT ======

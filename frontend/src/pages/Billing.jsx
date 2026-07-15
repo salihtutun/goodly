@@ -27,7 +27,7 @@ export default function Billing() {
         const [p, m, r] = await Promise.all([
           api.get("/billing/plans"),
           api.get("/billing/me"),
-          api.get("/scheduler/runs").catch(() => ({ data: [] })),
+          api.get("/scheduler/runs").catch(() => ({ data: [] })),  // Scheduled runs are optional
         ]);
         setPlans(p.data);
         setBillingMe(m.data);

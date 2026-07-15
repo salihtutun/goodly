@@ -32,11 +32,12 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async (email, password, name) => {
+  const register = async (email, password, name, website) => {
     try {
-      const { data } = await api.post("/auth/register", { email, password, name });
+      const { data } = await api.post("/auth/register", { email, password, name, website });
       setUser(data.user);
-      return { ok: true };
+      // Include auto-audit result when registration provided a website.
+      return { ok: true, audit: data.audit ?? null };
     } catch (e) {
       return { ok: false, error: formatApiError(e) };
     }

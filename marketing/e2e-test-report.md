@@ -76,7 +76,7 @@ Two bugs were discovered and fixed during testing:
 | 3 | Strict-Transport-Security | `max-age=31536000; includeSubDomains; preload` | ✅ |
 | 4 | Content-Security-Policy | Full CSP with Stripe, Google APIs | ✅ |
 | 5 | X-API-Version | `1.9.0` | ✅ |
-| 6 | CORS | `access-control-allow-origin: https://frontend-beta-weld-93.vercel.app` | ✅ |
+| 6 | CORS | `access-control-allow-origin: https://searchgoodly.com` | ✅ |
 
 **All security headers present and correctly configured.**
 
@@ -108,8 +108,8 @@ Two bugs were discovered and fixed during testing:
 
 | Component | URL |
 |-----------|-----|
-| Frontend | `https://frontend-beta-weld-93.vercel.app` |
-| Backend API | `https://goodly-api-1407225707.us-central1.run.app` |
+| Frontend | `https://searchgoodly.com` |
+| Backend API | `https://api.searchgoodly.com` |
 | GitHub | `https://github.com/salihtutun/goodly.git` |
 | Backend Status | `ok` — database connected, AI configured, Stripe configured, email configured, scheduler enabled |
 | API Version | `1.9.0` |

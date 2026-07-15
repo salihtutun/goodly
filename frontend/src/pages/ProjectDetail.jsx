@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Gauge, ExternalLink, Clock, Search, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import SearchPerformance from "@/components/app/SearchPerformance";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -34,7 +35,7 @@ export default function ProjectDetail() {
         const [p, a, s] = await Promise.all([
           api.get(`/projects/${id}`),
           api.get(`/audits?project_id=${id}`),
-          api.get(`/serp/history?project_id=${id}`).catch(() => ({ data: [] })),
+          api.get(`/serp/history?project_id=${id}`).catch(() => ({ data: [] })),  // SERP history is optional
         ]);
         setProject(p.data);
         setAudits(a.data);
@@ -156,6 +157,13 @@ export default function ProjectDetail() {
             </div>
           </div>
         </div>
+
+        {/* Google Search Console Performance */}
+        {isPro && (
+          <div className="mt-8">
+            <SearchPerformance projectUrl={project.url} projectName={project.name} />
+          </div>
+        )}
 
         {/* SERP rank tracker */}
         <div className="mt-12">

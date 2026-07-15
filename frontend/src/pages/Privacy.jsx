@@ -54,7 +54,7 @@ export default function Privacy() {
 
           <div>
             <h2 className="font-display font-bold text-xl mb-3">8. Contact</h2>
-            <p className="text-[#5C685C]">For privacy-related inquiries, contact us at <a href="mailto:privacy@goodly.app" className="text-[#2D3E32] underline">privacy@goodly.app</a>.</p>
+            <p className="text-[#5C685C]">For privacy-related inquiries, contact us at <a href="mailto:privacy@searchgoodly.com" className="text-[#2D3E32] underline">privacy@searchgoodly.com</a>.</p>
           </div>
         </section>
       </main>

@@ -13,7 +13,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Login() {
   usePageMeta({ title: "Sign in", description: "Sign in to your Goodly account to manage your visibility across Google, social media, and AI assistants." });
-  const { login } = useAuth();
+  const { login, refresh } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,9 +37,16 @@ export default function Login() {
 
   const useDemo = async () => {
     setDemoBusy(true);
-    setEmail("demo@smallbiz.com"); setPassword("demo1234");
+    const demoEmail = process.env.REACT_APP_DEMO_EMAIL || "demo@smallbiz.com";
+    const demoPassword = process.env.REACT_APP_DEMO_PASSWORD;
+    if (!demoPassword) {
+      setDemoBusy(false);
+      setError("Demo account is not available right now. Please sign up for free.");
+      return;
+    }
+    setEmail(demoEmail); setPassword(demoPassword);
     setTimeout(async () => {
-      const res = await login("demo@smallbiz.com", "demo1234");
+      const res = await login(demoEmail, demoPassword);
       setDemoBusy(false);
       if (res.ok) {
         toast.success("Welcome! You're using the demo account.");
@@ -53,12 +60,12 @@ export default function Login() {
   const handleGoogleAuth = async (credential) => {
     setBusy(true); setError("");
     try {
-      const { data } = await api.post("/auth/google", { credential });
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        toast.success("Welcome! Signed in with Google.");
-        navigate("/app");
-      }
+      // Auth is cookie-based: the endpoint sets an httpOnly cookie, so we
+      // refresh the auth context instead of stashing tokens in localStorage.
+      await api.post("/auth/google", { credential });
+      await refresh();
+      toast.success("Welcome! Signed in with Google.");
+      navigate("/app");
     } catch (err) {
       setError(formatApiError(err));
     } finally { setBusy(false); }

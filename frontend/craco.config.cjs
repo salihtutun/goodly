@@ -4,10 +4,6 @@ require("dotenv").config();
 
 const isDevServer = process.env.NODE_ENV !== "production";
 
-const config = {
-  enableHealthCheck: process.env.ENABLE_HEALTH_CHECK === "true",
-};
-
 function makeDevServerV5Compatible(devServerConfig) {
   const {
     https,
@@ -53,16 +49,6 @@ function makeDevServerV5Compatible(devServerConfig) {
   return compatibleConfig;
 }
 
-let WebpackHealthPlugin;
-let setupHealthEndpoints;
-let healthPluginInstance;
-
-if (config.enableHealthCheck) {
-  WebpackHealthPlugin = require("./plugins/health-check/webpack-health-plugin");
-  setupHealthEndpoints = require("./plugins/health-check/health-endpoints");
-  healthPluginInstance = new WebpackHealthPlugin();
-}
-
 let webpackConfig = {
   eslint: {
     configure: {
@@ -75,8 +61,10 @@ let webpackConfig = {
   },
   jest: {
     configure: (jestConfig) => {
-      // Fix react-router-dom v7: main field points to missing dist/main.js
-      // Force Jest to use the CJS entry point
+      jestConfig.setupFiles = [
+        ...(jestConfig.setupFiles || []),
+        '<rootDir>/config/jest/setup.cjs',
+      ];
       jestConfig.moduleNameMapper = {
         ...jestConfig.moduleNameMapper,
         '^@/(.*)$': '<rootDir>/src/$1',
@@ -103,35 +91,13 @@ let webpackConfig = {
           '**/public/**',
         ],
       };
-
-      if (config.enableHealthCheck && healthPluginInstance) {
-        webpackConfig.plugins.push(healthPluginInstance);
-      }
       return webpackConfig;
     },
   },
 };
 
-webpackConfig.devServer = (devServerConfig) => {
-  if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
-    const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
-
-    devServerConfig.setupMiddlewares = (middlewares, devServer) => {
-      if (originalSetupMiddlewares) {
-        middlewares = originalSetupMiddlewares(middlewares, devServer);
-      }
-      setupHealthEndpoints(devServer, healthPluginInstance);
-      return middlewares;
-    };
-  }
-
-  return devServerConfig;
-};
-
-// Visual edits removed (migrated from Emergent to Google Cloud)
-
 const configureDevServer = webpackConfig.devServer;
 webpackConfig.devServer = (devServerConfig) =>
-  makeDevServerV5Compatible(configureDevServer(devServerConfig));
+  makeDevServerV5Compatible(configureDevServer ? configureDevServer(devServerConfig) : devServerConfig);
 
 module.exports = webpackConfig;

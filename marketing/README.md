@@ -55,5 +55,5 @@ Many small business owners would pay $500-1,500/month for someone to just handle
 2. **Product Hunt launch** — Prepare assets and launch
 3. **Content marketing** — 2 blog posts/week targeting small business SEO keywords
 4. **Real credentials** — Set up MongoDB Atlas, Stripe Price IDs, Resend API key
-5. **Custom domain** — goodly.app or goodly.com
+5. **Custom domain** — searchgoodly.com or searchgoodly.com
 6. **First 100 users** — Personal network, Reddit, free tools

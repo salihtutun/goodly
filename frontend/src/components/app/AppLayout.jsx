@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Logo } from "@/components/app/Common";
 import NotificationCenter from "@/components/app/NotificationCenter";
-import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard, ClipboardList, Share2, Bot, MapPin, Gift, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Gauge, Sparkles, LogOut, User, CreditCard, ClipboardList, Share2, Bot, MapPin, Gift, TrendingUp, Shield, Moon, Sun, PenLine } from "lucide-react";
 
 const navItems = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard", end: true },
@@ -13,9 +13,11 @@ const navItems = [
   { to: "/app/ai-visibility", label: "AI Visibility", icon: Bot, testId: "nav-ai-visibility" },
   { to: "/app/gbp", label: "Google Profile", icon: MapPin, testId: "nav-gbp" },
   { to: "/app/ai-tools", label: "AI Studio", icon: Sparkles, testId: "nav-ai" },
+  { to: "/app/content-studio", label: "Content Studio", icon: PenLine, testId: "nav-content-studio" },
   { to: "/app/competitors", label: "Competitors", icon: TrendingUp, testId: "nav-competitors" },
   { to: "/app/referral", label: "Refer & Earn", icon: Gift, testId: "nav-referral" },
   { to: "/app/billing", label: "Billing", icon: CreditCard, testId: "nav-billing" },
+  { to: "/app/admin", label: "Admin", icon: Shield, testId: "nav-admin", adminOnly: true },
 ];
 
 export default function AppLayout({ children }) {
@@ -36,7 +38,7 @@ export default function AppLayout({ children }) {
           <Link to="/app"><Logo /></Link>
         </div>
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.map(({ to, label, icon: Icon, testId, end }) => (
+          {navItems.filter(item => !item.adminOnly || user?.role === "admin").map(({ to, label, icon: Icon, testId, end }) => (
             <NavLink
               key={to}
               to={to}

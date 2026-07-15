@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Leaf, RefreshCw } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function ErrorPage({ message = "Something went wrong. Our team has been notified." }) {
+  usePageMeta({ title: "Error — Goodly", description: "Something went wrong. Please try again." });
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center px-6">
       <div className="text-center max-w-md">

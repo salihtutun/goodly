@@ -78,7 +78,7 @@ You have the right to:
 - **Export:** Download your audit data from the dashboard
 - **Opt-out:** Unsubscribe from marketing emails
 
-To exercise these rights, contact us at **privacy@goodly.app**.
+To exercise these rights, contact us at **privacy@searchgoodly.com**.
 
 ## 9. Children's Privacy
 
@@ -95,5 +95,5 @@ We may update this Privacy Policy from time to time. We will notify users of mat
 ## 12. Contact
 
 For privacy-related inquiries:
-- **Email:** privacy@goodly.app
+- **Email:** privacy@searchgoodly.com
 - **Address:** Goodly, Inc., Delaware, United States

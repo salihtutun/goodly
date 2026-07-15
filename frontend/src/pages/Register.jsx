@@ -14,11 +14,12 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Register() {
   usePageMeta({ title: "Create your account", description: "Start your free Goodly account and get your first SEO audit in under a minute." });
-  const { register } = useAuth();
+  const { register, refresh } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [website, setWebsite] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -36,7 +37,7 @@ export default function Register() {
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setError("");
-    const res = await register(email.trim(), password, name.trim() || undefined);
+    const res = await register(email.trim(), password, name.trim() || undefined, website.trim() || undefined);
     setBusy(false);
     if (res.ok) {
       toast.success("Account created — check your inbox to verify your email");
@@ -49,12 +50,12 @@ export default function Register() {
   const handleGoogleAuth = async (credential) => {
     setBusy(true); setError("");
     try {
-      const { data } = await api.post("/auth/google", { credential });
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        toast.success("Welcome! Account created with Google.");
-        navigate("/app");
-      }
+      // Auth is cookie-based: the endpoint sets an httpOnly cookie, so we
+      // refresh the auth context instead of stashing tokens in localStorage.
+      await api.post("/auth/google", { credential });
+      await refresh();
+      toast.success("Welcome! Account created with Google.");
+      navigate("/app");
     } catch (err) {
       setError(formatApiError(err));
     } finally { setBusy(false); }
@@ -82,6 +83,12 @@ export default function Register() {
               data-testid="register-name-input"
               className="bg-white border-[#E5E0D8] rounded-xl py-6 focus:ring-2 focus:ring-[#81B29A]"
               placeholder="Greenhouse Lane Co." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="website">Website URL (optional — we'll run your first audit)</Label>
+            <Input id="website" value={website} onChange={(e) => setWebsite(e.target.value)}
+              className="bg-white border-[#E5E0D8] rounded-xl py-6 focus:ring-2 focus:ring-[#81B29A]"
+              placeholder="yourbusiness.com" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>

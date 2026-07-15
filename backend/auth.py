@@ -1,9 +1,10 @@
 """JWT authentication utilities."""
+import logging
 import os
 import bcrypt
 import jwt
 from datetime import datetime, timezone, timedelta
-from fastapi import HTTPException, Request, Depends
+from fastapi import HTTPException, Request
 from typing import Optional
 
 JWT_ALGORITHM = "HS256"
@@ -25,7 +26,8 @@ def hash_password(password: str) -> str:
 def verify_password(plain: str, hashed: str) -> bool:
     try:
         return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
-    except Exception:
+    except Exception as e:
+        logging.getLogger("auth").warning("Password verification error: %s", type(e).__name__)
         return False
 
 

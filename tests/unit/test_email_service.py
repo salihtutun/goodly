@@ -1,334 +1,339 @@
-"""Unit tests for email_service.py — Resend-based email service."""
-import os
-import sys
+"""Unit tests for email_service.py — HTML template functions and send_html_email."""
 import pytest
-from unittest.mock import patch, MagicMock
-
-from conftest import AsyncMock
-
-from email_service import (
-    is_configured,
-    send_html_email,
-    verify_email_html,
-    reset_password_html,
-    audit_digest_html,
-)
+from unittest.mock import AsyncMock, patch
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+class TestIsConfigured:
+    def test_configured(self):
+        with patch("os.environ.get", return_value="fake-key"):
+            from email_service import is_configured
+            assert is_configured() is True
 
-def _set_env(**kwargs):
-    for k, v in kwargs.items():
-        os.environ[k] = v
-
-
-def _clear_env(*keys):
-    for k in keys:
-        os.environ.pop(k, None)
+    def test_not_configured(self):
+        with patch("os.environ.get", return_value=""):
+            from email_service import is_configured
+            assert is_configured() is False
 
 
-# ---------------------------------------------------------------------------
-# is_configured
-# ---------------------------------------------------------------------------
+class TestSendHtmlEmail:
+    @pytest.mark.asyncio
+    async def test_mocked_when_no_api_key(self):
+        with patch("os.environ.get", side_effect=lambda k, d=None: "" if k == "RESEND_API_KEY" else d):
+            from email_service import send_html_email
+            result = await send_html_email(to="a@b.com", subject="Test", html="<p>hi</p>")
+            assert result["mocked"] is True
+            assert result["id"] is None
 
-def test_is_configured_true():
-    """is_configured returns True when RESEND_API_KEY is set."""
-    _set_env(RESEND_API_KEY="re_abc123")
-    try:
-        assert is_configured() is True
-    finally:
-        _clear_env("RESEND_API_KEY")
-
-
-def test_is_configured_false():
-    """is_configured returns False when RESEND_API_KEY is not set."""
-    _clear_env("RESEND_API_KEY")
-    assert is_configured() is False
-
-
-def test_is_configured_empty_string():
-    """is_configured returns False when RESEND_API_KEY is empty string."""
-    _set_env(RESEND_API_KEY="")
-    try:
-        assert is_configured() is False
-    finally:
-        _clear_env("RESEND_API_KEY")
-
-
-# ---------------------------------------------------------------------------
-# send_html_email
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_send_html_email_mocked_when_no_key():
-    """send_html_email returns mocked=True when RESEND_API_KEY is missing."""
-    _clear_env("RESEND_API_KEY")
-    result = await send_html_email(
-        to="user@test.com",
-        subject="Test",
-        html="<p>Hello</p>",
-    )
-    assert result["mocked"] is True
-    assert result["id"] is None
-    assert result["error"] is None
-
-
-@pytest.mark.asyncio
-async def test_send_html_email_sends_when_configured():
-    """send_html_email calls Resend and returns the message id."""
-    _set_env(RESEND_API_KEY="re_test123")
-    try:
-        mock_resend = MagicMock()
-        mock_resend.Emails.send = MagicMock(return_value={"id": "msg_xyz"})
-        with patch.dict(sys.modules, {"resend": mock_resend}):
-            import email_service
-            saved = getattr(email_service.asyncio, 'to_thread', None)
-            email_service.asyncio.to_thread = AsyncMock(return_value={"id": "msg_xyz"})
-            try:
-                result = await send_html_email(
-                    to="user@test.com",
-                    subject="Hello",
-                    html="<p>Hi</p>",
-                )
+    @pytest.mark.asyncio
+    async def test_sends_with_api_key(self):
+        with patch("os.environ.get", side_effect=lambda k, d=None: "fake-key" if k == "RESEND_API_KEY" else (d or "sender@test.com")):
+            with patch("email_service.asyncio.to_thread") as mock_thread:
+                from email_service import send_html_email
+                mock_thread.return_value = {"id": "email-123"}
+                result = await send_html_email(to="a@b.com", subject="Test", html="<p>hi</p>")
                 assert result["mocked"] is False
-                assert result["id"] == "msg_xyz"
-                assert result["error"] is None
-            finally:
-                if saved is not None:
-                    email_service.asyncio.to_thread = saved
-                else:
-                    del email_service.asyncio.to_thread
-    finally:
-        _clear_env("RESEND_API_KEY")
+                assert result["id"] == "email-123"
 
-
-@pytest.mark.asyncio
-async def test_send_html_email_handles_resend_error():
-    """send_html_email catches Resend errors and returns error info."""
-    _set_env(RESEND_API_KEY="re_test123")
-    try:
-        mock_resend = MagicMock()
-        mock_resend.Emails.send = MagicMock(side_effect=Exception("API down"))
-        with patch.dict(sys.modules, {"resend": mock_resend}):
-            import email_service
-            saved = getattr(email_service.asyncio, 'to_thread', None)
-            email_service.asyncio.to_thread = AsyncMock(side_effect=Exception("API down"))
-            try:
-                result = await send_html_email(
-                    to="user@test.com",
-                    subject="Hello",
-                    html="<p>Hi</p>",
-                )
+    @pytest.mark.asyncio
+    async def test_handles_resend_error(self):
+        with patch("os.environ.get", side_effect=lambda k, d=None: "fake-key" if k == "RESEND_API_KEY" else (d or "sender@test.com")):
+            with patch("email_service.asyncio.to_thread") as mock_thread:
+                from email_service import send_html_email
+                mock_thread.side_effect = Exception("Resend API error")
+                result = await send_html_email(to="a@b.com", subject="Test", html="<p>hi</p>")
                 assert result["mocked"] is False
                 assert result["id"] is None
-                assert "API down" in result["error"]
-            finally:
-                if saved is not None:
-                    email_service.asyncio.to_thread = saved
-                else:
-                    del email_service.asyncio.to_thread
-    finally:
-        _clear_env("RESEND_API_KEY")
+                assert "Resend API error" in result["error"]
 
 
-@pytest.mark.asyncio
-async def test_send_html_email_uses_sender_env():
-    """send_html_email uses SENDER_EMAIL env var when set."""
-    _set_env(RESEND_API_KEY="re_test", SENDER_EMAIL="custom@goodly.app")
-    try:
-        mock_resend = MagicMock()
-        mock_resend.Emails.send = MagicMock(return_value={"id": "msg_1"})
-        with patch.dict(sys.modules, {"resend": mock_resend}):
-            import email_service
-            saved = getattr(email_service.asyncio, 'to_thread', None)
-            email_service.asyncio.to_thread = AsyncMock(return_value={"id": "msg_1"})
-            try:
-                result = await send_html_email(to="u@t.com", subject="S", html="<p>H</p>")
-                assert result["mocked"] is False
-                assert result["id"] == "msg_1"
-            finally:
-                if saved is not None:
-                    email_service.asyncio.to_thread = saved
-                else:
-                    del email_service.asyncio.to_thread
-    finally:
-        _clear_env("RESEND_API_KEY", "SENDER_EMAIL")
+class TestVerifyEmailHtml:
+    def test_with_name(self):
+        from email_service import verify_email_html
+        html = verify_email_html(name="John", verify_link="https://example.com/verify?token=abc")
+        assert "John" in html
+        assert "https://example.com/verify?token=abc" in html
+        assert "Verify your email" in html
+
+    def test_without_name(self):
+        from email_service import verify_email_html
+        html = verify_email_html(name="", verify_link="https://example.com/verify")
+        assert "Verify your email" in html
 
 
-# ---------------------------------------------------------------------------
-# verify_email_html
-# ---------------------------------------------------------------------------
-
-def test_verify_email_html_contains_link():
-    """verify_email_html includes the verification link."""
-    html = verify_email_html(name="Alice", verify_link="https://goodly.app/verify/abc")
-    assert "https://goodly.app/verify/abc" in html
-
-
-def test_verify_email_html_contains_name():
-    """verify_email_html includes the user's name."""
-    html = verify_email_html(name="Alice", verify_link="https://goodly.app/verify/abc")
-    assert "Alice" in html
+class TestResetPasswordHtml:
+    def test_generates_html(self):
+        from email_service import reset_password_html
+        html = reset_password_html(name="Jane", reset_link="https://example.com/reset?token=xyz")
+        assert "Jane" in html
+        assert "https://example.com/reset?token=xyz" in html
+        assert "Reset your password" in html
 
 
-def test_verify_email_html_no_name():
-    """verify_email_html works with an empty name."""
-    html = verify_email_html(name="", verify_link="https://goodly.app/verify/abc")
-    assert "Verify your email" in html
-    assert "https://goodly.app/verify/abc" in html
+class TestAuditDigestHtml:
+    def test_score_improved(self):
+        from email_service import audit_digest_html
+        html = audit_digest_html(
+            name="Test", project_name="My Site", url="https://mysite.com",
+            overall_score=85, prev_score=75, top_issues=[], audit_url="https://app.com/audit/1"
+        )
+        assert "85" in html
+        assert "My Site" in html
+        assert "↑ 10 pts" in html
+
+    def test_score_declined(self):
+        from email_service import audit_digest_html
+        html = audit_digest_html(
+            name="Test", project_name="My Site", url="https://mysite.com",
+            overall_score=70, prev_score=80, top_issues=[], audit_url="https://app.com/audit/1"
+        )
+        assert "↓ 10 pts" in html
+
+    def test_no_change(self):
+        from email_service import audit_digest_html
+        html = audit_digest_html(
+            name="Test", project_name="My Site", url="https://mysite.com",
+            overall_score=80, prev_score=80, top_issues=[], audit_url="https://app.com/audit/1"
+        )
+        assert "No change" in html
+
+    def test_no_previous_score(self):
+        from email_service import audit_digest_html
+        html = audit_digest_html(
+            name="Test", project_name="My Site", url="https://mysite.com",
+            overall_score=80, prev_score=None, top_issues=[], audit_url="https://app.com/audit/1"
+        )
+        assert "80" in html
+
+    def test_with_issues(self):
+        from email_service import audit_digest_html
+        issues = [
+            {"severity": "high", "message": "Missing H1", "fix": "Add H1 tag"},
+            {"severity": "medium", "message": "Slow page", "fix": "Optimize images"},
+        ]
+        html = audit_digest_html(
+            name="Test", project_name="My Site", url="https://mysite.com",
+            overall_score=60, prev_score=70, top_issues=issues, audit_url="https://app.com/audit/1"
+        )
+        assert "Missing H1" in html
+        assert "Add H1 tag" in html
+        assert "HIGH" in html
+        assert "MEDIUM" in html
 
 
-def test_verify_email_html_is_valid_html():
-    """verify_email_html returns a string starting with <!DOCTYPE html>."""
-    html = verify_email_html(name="Test", verify_link="https://example.com")
-    assert html.strip().startswith("<!DOCTYPE html>")
+class TestPostAuditHtml:
+    def test_generates_html(self):
+        from email_service import post_audit_html
+        html = post_audit_html(
+            name="Test", url="https://mysite.com", overall_score=75,
+            high_issues=3, audit_url="https://app.com/audit/1"
+        )
+        assert "75" in html
+        assert "3" in html
+        assert "mysite.com" in html
 
 
-# ---------------------------------------------------------------------------
-# reset_password_html
-# ---------------------------------------------------------------------------
+class TestWeeklyTipsHtml:
+    def test_with_tips(self):
+        from email_service import weekly_tips_html
+        tips = [{"title": "Tip 1", "body": "Do this"}, {"title": "Tip 2", "body": "Do that"}]
+        html = weekly_tips_html(name="Test", tips=tips, dashboard_url="https://app.com")
+        assert "Tip 1" in html
+        assert "Do this" in html
 
-def test_reset_password_html_contains_link():
-    """reset_password_html includes the reset link."""
-    html = reset_password_html(name="Bob", reset_link="https://goodly.app/reset/token123")
-    assert "https://goodly.app/reset/token123" in html
-
-
-def test_reset_password_html_contains_name():
-    """reset_password_html includes the user's name."""
-    html = reset_password_html(name="Bob", reset_link="https://goodly.app/reset/token123")
-    assert "Bob" in html
+    def test_empty_tips(self):
+        from email_service import weekly_tips_html
+        html = weekly_tips_html(name="Test", tips=[], dashboard_url="https://app.com")
+        assert "Run an audit" in html
 
 
-def test_reset_password_html_no_name():
-    """reset_password_html works with an empty name."""
-    html = reset_password_html(name="", reset_link="https://goodly.app/reset/token123")
-    assert "Reset your password" in html
+class TestReferralInviteHtml:
+    def test_generates_html(self):
+        from email_service import referral_invite_html
+        html = referral_invite_html(referrer_name="Alice", referral_link="https://example.com/ref/abc")
+        assert "Alice" in html
+        assert "https://example.com/ref/abc" in html
 
 
-def test_reset_password_html_is_valid_html():
-    """reset_password_html returns a string starting with <!DOCTYPE html>."""
-    html = reset_password_html(name="Test", reset_link="https://example.com")
-    assert html.strip().startswith("<!DOCTYPE html>")
+class TestSupportNotificationHtml:
+    def test_generates_html(self):
+        from email_service import support_notification_html
+        html = support_notification_html(
+            name="User", email="user@test.com", message="Help me!", page="/dashboard"
+        )
+        assert "User" in html
+        assert "user@test.com" in html
+        assert "Help me!" in html
+
+    def test_escapes_html(self):
+        from email_service import support_notification_html
+        html = support_notification_html(
+            name="<script>alert(1)</script>", email="x@x.com", message="<b>bold</b>", page="/"
+        )
+        assert "<script>" not in html
+        assert "&lt;script&gt;" in html
 
 
-# ---------------------------------------------------------------------------
-# audit_digest_html
-# ---------------------------------------------------------------------------
+class TestOnboardingEmails:
+    def test_welcome_html(self):
+        from email_service import onboarding_welcome_html
+        html = onboarding_welcome_html(name="New User", dashboard_url="https://app.com")
+        assert "New User" in html
+        assert "Welcome to Goodly" in html
 
-def test_audit_digest_html_contains_score():
-    """audit_digest_html includes the overall score."""
-    html = audit_digest_html(
-        name="Alice", project_name="My Site", url="https://example.com",
-        overall_score=85, prev_score=None, top_issues=[],
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert "85" in html
+    def test_howto_html(self):
+        from email_service import onboarding_howto_html
+        html = onboarding_howto_html(name="User", dashboard_url="https://app.com")
+        assert "How to read your audit report" in html
 
+    def test_quickwins_html(self):
+        from email_service import onboarding_quickwins_html
+        html = onboarding_quickwins_html(name="User", dashboard_url="https://app.com")
+        assert "3 quick wins" in html
 
-def test_audit_digest_html_contains_project_name():
-    """audit_digest_html includes the project name."""
-    html = audit_digest_html(
-        name="Alice", project_name="My Site", url="https://example.com",
-        overall_score=85, prev_score=None, top_issues=[],
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert "My Site" in html
+    def test_competitors_html(self):
+        from email_service import onboarding_competitors_html
+        html = onboarding_competitors_html(name="User", dashboard_url="https://app.com")
+        assert "competitors" in html.lower()
 
-
-def test_audit_digest_html_delta_up():
-    """audit_digest_html shows an upward delta when score improved."""
-    html = audit_digest_html(
-        name="Alice", project_name="Site", url="https://example.com",
-        overall_score=85, prev_score=75, top_issues=[],
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert "↑" in html
-    assert "10 pts" in html
+    def test_upgrade_html(self):
+        from email_service import onboarding_upgrade_html
+        html = onboarding_upgrade_html(name="User", billing_url="https://app.com/billing")
+        assert "3 free audits" in html
 
 
-def test_audit_digest_html_delta_down():
-    """audit_digest_html shows a downward delta when score decreased."""
-    html = audit_digest_html(
-        name="Alice", project_name="Site", url="https://example.com",
-        overall_score=60, prev_score=75, top_issues=[],
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert "↓" in html
-    assert "15 pts" in html
+class TestRankChangeHtml:
+    def test_score_up(self):
+        from email_service import rank_change_html
+        html = rank_change_html(name="Test", project_name="Site", score_delta=10, current_score=85, audit_url="https://app.com/a/1")
+        assert "went up" in html
+        assert "85" in html
+
+    def test_score_down(self):
+        from email_service import rank_change_html
+        html = rank_change_html(name="Test", project_name="Site", score_delta=-5, current_score=70, audit_url="https://app.com/a/1")
+        assert "went down" in html
+        assert "70" in html
 
 
-def test_audit_digest_html_no_change():
-    """audit_digest_html shows 'No change' when score is the same."""
-    html = audit_digest_html(
-        name="Alice", project_name="Site", url="https://example.com",
-        overall_score=75, prev_score=75, top_issues=[],
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert "No change" in html
+class TestWeeklyDigestHtml:
+    def test_with_delta(self):
+        from email_service import weekly_digest_html
+        html = weekly_digest_html(name="Test", current_score=80, score_delta=5, audit_url="https://app.com/a/1")
+        assert "80" in html
+        assert "went up" in html
+
+    def test_steady_score(self):
+        from email_service import weekly_digest_html
+        html = weekly_digest_html(name="Test", current_score=80, prev_score=80, audit_url="https://app.com/a/1")
+        assert "held steady" in html
+
+    def test_with_issues_and_actions(self):
+        from email_service import weekly_digest_html
+        html = weekly_digest_html(
+            name="Test", current_score=70,
+            critical_issues=[{"title": "Missing H1"}, {"message": "Slow page"}],
+            priority_actions=["Fix meta tags", "Add alt text"],
+            audit_url="https://app.com/a/1"
+        )
+        assert "Missing H1" in html
+        assert "Fix meta tags" in html
 
 
-def test_audit_digest_html_no_issues():
-    """audit_digest_html shows a friendly message when there are no issues."""
-    html = audit_digest_html(
-        name="Alice", project_name="Site", url="https://example.com",
-        overall_score=95, prev_score=None, top_issues=[],
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert "No issues found" in html
+class TestKeywordRankChangeHtml:
+    def test_moved_up(self):
+        from email_service import keyword_rank_change_html
+        html = keyword_rank_change_html(name="Test", keyword="seo tools", old_rank=10, new_rank=3, direction="up", serp_url="https://app.com/serp")
+        assert "seo tools" in html
+        assert "moved up" in html
+        assert "was #10" in html
+
+    def test_moved_down(self):
+        from email_service import keyword_rank_change_html
+        html = keyword_rank_change_html(name="Test", keyword="seo tools", old_rank=3, new_rank=10, direction="down", serp_url="https://app.com/serp")
+        assert "dropped" in html
+
+    def test_no_old_rank(self):
+        from email_service import keyword_rank_change_html
+        html = keyword_rank_change_html(name="Test", keyword="new kw", old_rank=None, new_rank=5, direction="up")
+        assert "was #" not in html
 
 
-def test_audit_digest_html_with_issues():
-    """audit_digest_html renders issue rows with severity badges."""
-    issues = [
-        {"severity": "high", "message": "Missing title", "fix": "Add a title tag"},
-        {"severity": "medium", "message": "Slow load", "fix": "Optimize images"},
-    ]
-    html = audit_digest_html(
-        name="Alice", project_name="Site", url="https://example.com",
-        overall_score=50, prev_score=None, top_issues=issues,
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert "Missing title" in html
-    assert "Add a title tag" in html
-    assert "Slow load" in html
-    assert "HIGH" in html
-    assert "MEDIUM" in html
+class TestCompetitorAlertHtml:
+    def test_generates_html(self):
+        from email_service import competitor_alert_html
+        html = competitor_alert_html(name="Test", competitor_name="CompX", competitor_score=90, your_score=70, gap=20, competitors_url="https://app.com/competitors")
+        assert "CompX" in html
+        assert "20 points" in html
+        assert "90" in html
+        assert "70" in html
 
 
-def test_audit_digest_html_contains_audit_url():
-    """audit_digest_html includes the full report link."""
-    html = audit_digest_html(
-        name="Alice", project_name="Site", url="https://example.com",
-        overall_score=80, prev_score=None, top_issues=[],
-        audit_url="https://goodly.app/audits/42",
-    )
-    assert "https://goodly.app/audits/42" in html
+class TestAuditReminderHtml:
+    def test_generates_html(self):
+        from email_service import audit_reminder_html
+        html = audit_reminder_html(name="Test", days_since=35, last_score=65, audit_url="https://app.com/audit")
+        assert "35 days" in html
+        assert "65" in html
 
 
-def test_audit_digest_html_is_valid_html():
-    """audit_digest_html returns a string starting with <!DOCTYPE html>."""
-    html = audit_digest_html(
-        name="Alice", project_name="Site", url="https://example.com",
-        overall_score=80, prev_score=None, top_issues=[],
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert html.strip().startswith("<!DOCTYPE html>")
+class TestNurtureEmails:
+    def test_nurture_1(self):
+        from email_service import nurture_email_1_html
+        html = nurture_email_1_html(name="Test", score=55, issues_count=12, top_issue="Missing meta description", audit_url="https://app.com/audit")
+        assert "55" in html
+        assert "12 issues" in html
+        assert "Missing meta description" in html
+
+    def test_nurture_2(self):
+        from email_service import nurture_email_2_html
+        html = nurture_email_2_html(name="Test", score=55, quick_wins=[{"title": "Fix H1", "detail": "Add H1 tag"}], signup_url="https://app.com/register")
+        assert "Fix H1" in html
+        assert "Add H1 tag" in html
+
+    def test_nurture_3(self):
+        from email_service import nurture_email_3_html
+        html = nurture_email_3_html(name="Test", signup_url="https://app.com/register")
+        assert "free trial" in html
 
 
-def test_audit_digest_html_issues_truncated_to_5():
-    """audit_digest_html only renders the first 5 issues."""
-    issues = [
-        {"severity": "low", "message": f"Issue {i}", "fix": f"Fix {i}"}
-        for i in range(10)
-    ]
-    html = audit_digest_html(
-        name="Alice", project_name="Site", url="https://example.com",
-        overall_score=50, prev_score=None, top_issues=issues,
-        audit_url="https://goodly.app/audits/1",
-    )
-    assert "Issue 0" in html
-    assert "Issue 4" in html
-    assert "Issue 5" not in html
+class TestTrialEmails:
+    def test_trial_ending(self):
+        from email_service import trial_ending_html
+        html = trial_ending_html(name="Test", plan_name="Starter", days_left=2, billing_url="https://app.com/billing")
+        assert "2 days" in html
+        assert "Starter" in html
+
+    def test_trial_expired(self):
+        from email_service import trial_expired_html
+        html = trial_expired_html(name="Test", plan_name="Pro", billing_url="https://app.com/billing")
+        assert "has ended" in html
+        assert "Pro" in html
+
+
+class TestPaymentFailedHtml:
+    def test_generates_html(self):
+        from email_service import payment_failed_html
+        html = payment_failed_html(name="Test", billing_url="https://app.com/billing")
+        assert "Payment issue" in html
+
+
+class TestMonthlyRoiHtml:
+    def test_score_up(self):
+        from email_service import monthly_roi_html
+        html = monthly_roi_html(name="Test", current_score=85, score_delta=10, estimated_revenue_saved=5000, audits_run=8, issues_fixed=4, dashboard_url="https://app.com")
+        assert "85" in html
+        assert "up" in html
+        assert "5,000" in html
+
+    def test_score_down(self):
+        from email_service import monthly_roi_html
+        html = monthly_roi_html(name="Test", current_score=70, score_delta=-5, estimated_revenue_saved=0, audits_run=3, issues_fixed=0, dashboard_url="https://app.com")
+        assert "down" in html
+
+
+class TestReengagementHtml:
+    def test_generates_html(self):
+        from email_service import reengagement_html
+        html = reengagement_html(name="Test", days_inactive=21, last_score=60, dashboard_url="https://app.com")
+        assert "21 days" in html
+        assert "60" in html

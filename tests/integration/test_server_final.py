@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"
 
 def _auth_headers(client):
     resp = client.post("/api/auth/login", json={
-        "email": "admin@goodly.app", "password": "admin-secret-123",
+        "email": "admin@searchgoodly.com", "password": "admin-secret-123",
     })
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return {"Authorization": f"Bearer {resp.json()['token']}"}
@@ -31,7 +31,7 @@ class TestProjectLimit:
     def test_project_limit_reached(self, client):
         """Cover line 336: project limit reached."""
         import server as srv
-        # Register a free user (limit: 1 project)
+        # Register a free user (limit: 2 projects)
         email = f"limit-{uuid.uuid4().hex[:8]}@test.com"
         resp = client.post("/api/auth/register", json={
             "email": email, "password": "Test1234!", "name": "Limit User",
@@ -46,9 +46,15 @@ class TestProjectLimit:
         }, headers=headers)
         assert resp.status_code == 200
 
-        # Create second project (should fail — free plan limit is 1)
+        # Create second project (should succeed — free plan limit is 2)
         resp = client.post("/api/projects", json={
             "name": "Second Project", "url": "https://second.com",
+        }, headers=headers)
+        assert resp.status_code == 200
+
+        # Create third project (should fail — free plan limit is 2)
+        resp = client.post("/api/projects", json={
+            "name": "Third Project", "url": "https://third.com",
         }, headers=headers)
         assert resp.status_code == 402
 
@@ -67,7 +73,7 @@ class TestAuditLimit:
         token = resp.json()["token"]
         headers = {"Authorization": f"Bearer {token}"}
 
-        # Free plan has audit_limit=3. Run 3 audits first.
+        # Free plan has audit_limit=5. Run 5 audits first.
         with patch("server.analyze_url", new_callable=AsyncMock) as mock_analyze, \
              patch("server.ai_service.audit_recommendations", new_callable=AsyncMock) as mock_ai:
             mock_analyze.return_value = {
@@ -77,13 +83,13 @@ class TestAuditLimit:
             mock_ai.return_value = {
                 "summary": "Good", "priority_actions": [], "wins": [], "next_30_days": [],
             }
-            for i in range(3):
+            for i in range(5):
                 resp = client.post("/api/audits", json={
                     "url": f"https://example{i}.com",
                 }, headers=headers)
                 assert resp.status_code == 200
 
-            # 4th audit should fail
+            # 6th audit should fail
             resp = client.post("/api/audits", json={
                 "url": "https://example4.com",
             }, headers=headers)
@@ -130,7 +136,7 @@ class TestWebhookApplied:
         """Cover lines 775-779: webhook payment applied."""
         import server as srv
         srv._client["goodly_test"].payment_transactions.insert_one({
-            "id": "tx-wh-1", "user_id": "admin-1", "user_email": "admin@goodly.app",
+            "id": "tx-wh-1", "user_id": "admin-1", "user_email": "admin@searchgoodly.com",
             "session_id": "cs_wh_paid", "plan_id": "concierge", "amount": 1000,
             "currency": "usd", "payment_status": "initiated", "status": "open",
             "applied": False, "metadata": {}, "created_at": "2026-01-01T00:00:00",

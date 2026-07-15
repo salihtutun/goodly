@@ -20,7 +20,6 @@ export default function SupportWidget() {
     setError(null);
 
     try {
-      // Send support message via the contact endpoint
       await api.post("/support/contact", {
         name: form.name || "Anonymous",
         email: form.email || "no-email@provided.com",
@@ -29,8 +28,7 @@ export default function SupportWidget() {
       });
       setSent(true);
     } catch (err) {
-      // If endpoint doesn't exist yet, just show success (non-blocking)
-      setSent(true);
+      setError("Could not send message. Please try again or email us directly.");
     } finally {
       setLoading(false);
     }
@@ -118,7 +116,7 @@ export default function SupportWidget() {
                   {loading ? <Loader2 className="animate-spin" size={16} /> : <><Send size={14} className="mr-1.5" /> Send message</>}
                 </Button>
                 <p className="text-[10px] text-[#9CA89C] text-center">
-                  Or email us at <a href="mailto:hello@goodly.app" className="text-[#81B29A] hover:underline">hello@goodly.app</a>
+                  Or email us at <a href="mailto:hello@searchgoodly.com" className="text-[#81B29A] hover:underline">hello@searchgoodly.com</a>
                 </p>
               </form>
             )}

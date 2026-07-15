@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Copy, Leaf } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import GoogleSERPPreview from "@/components/app/GoogleSERPPreview";
 
 export default function AiTools() {
   usePageMeta({ title: "AI Studio", description: "AI-powered meta tag writer, keyword research, and competitor analysis." });
@@ -101,6 +102,12 @@ function MetaTab() {
         {busy && <Loader label="Claude is composing your tags…"/>}
         {result && (
           <div className="space-y-4" data-testid="meta-result">
+            {/* Google SERP Preview — show how tags look in search results */}
+            <GoogleSERPPreview
+              title={result.title_options?.[0]?.text || "Your Page Title"}
+              url={form.business_name.toLowerCase().replace(/\s+/g, "") + ".com"}
+              description={result.description_options?.[0]?.text || "Your meta description appears here."}
+            />
             <ResultBlock title="Title options">
               {result.title_options?.map((t, i) => (
                 <ResultRow key={i} text={t.text} sub={`${t.length} chars · ${t.rationale}`} />

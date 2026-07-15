@@ -27,6 +27,8 @@ def clean_env():
     for k in keys_to_remove:
         if k in os.environ:
             saved[k] = os.environ.pop(k)
+    # Ensure MONGO_URL is set so database.db lazy proxy doesn't fail
+    os.environ.setdefault("MONGO_URL", "mongodb://localhost:27017")
     yield
     for k, v in saved.items():
         os.environ[k] = v

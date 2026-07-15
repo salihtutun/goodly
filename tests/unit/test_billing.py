@@ -39,8 +39,8 @@ def test_get_plan_free():
     assert plan["id"] == "free"
     assert plan["name"] == "Self-serve"
     assert plan["price_usd"] == 0.0
-    assert plan["audit_limit"] == 3
-    assert plan["project_limit"] == 1
+    assert plan["audit_limit"] == 5
+    assert plan["project_limit"] == 2
 
 
 def test_get_plan_concierge():
@@ -148,8 +148,8 @@ def test_plans_have_required_fields():
 def test_free_plan_limits():
     """Free plan has finite audit and project limits."""
     free = PLANS["free"]
-    assert free["audit_limit"] == 3
-    assert free["project_limit"] == 1
+    assert free["audit_limit"] == 5
+    assert free["project_limit"] == 2
     assert free["perks"]["pdf_export"] is False
     assert free["perks"]["scheduled_audits"] is False
     assert free["perks"]["serp_tracking"] is False
@@ -173,11 +173,11 @@ async def test_create_checkout_free_plan_raises():
     """create_subscription_checkout raises ValueError for the free plan."""
     with pytest.raises(ValueError, match="Invalid plan for checkout"):
         await create_subscription_checkout(
-            host_url="https://goodly.app",
+            host_url="https://searchgoodly.com",
             plan_id="free",
             user_id="u1",
             user_email="u@test.com",
-            origin_url="https://goodly.app",
+            origin_url="https://searchgoodly.com",
         )
 
 
@@ -186,11 +186,11 @@ async def test_create_checkout_unknown_plan_raises():
     """create_subscription_checkout raises ValueError for an unknown plan."""
     with pytest.raises(ValueError, match="Invalid plan for checkout"):
         await create_subscription_checkout(
-            host_url="https://goodly.app",
+            host_url="https://searchgoodly.com",
             plan_id="nonexistent",
             user_id="u1",
             user_email="u@test.com",
-            origin_url="https://goodly.app",
+            origin_url="https://searchgoodly.com",
         )
 
 
@@ -200,11 +200,11 @@ async def test_create_checkout_missing_stripe_key_raises():
     _clear_env("STRIPE_API_KEY")
     with pytest.raises(RuntimeError, match="STRIPE_API_KEY not configured"):
         await create_subscription_checkout(
-            host_url="https://goodly.app",
+            host_url="https://searchgoodly.com",
             plan_id="concierge",
             user_id="u1",
             user_email="u@test.com",
-            origin_url="https://goodly.app",
+            origin_url="https://searchgoodly.com",
         )
 
 
@@ -225,11 +225,11 @@ async def test_create_checkout_payment_mode():
             billing.asyncio.to_thread = AsyncMock(return_value=mock_session)
             try:
                 session, plan = await create_subscription_checkout(
-                    host_url="https://goodly.app",
+                    host_url="https://searchgoodly.com",
                     plan_id="concierge",
                     user_id="u1",
                     user_email="u@test.com",
-                    origin_url="https://goodly.app",
+                    origin_url="https://searchgoodly.com",
                 )
                 assert session.session_id == "cs_test_123"
                 assert session.url == "https://checkout.stripe.com/pay/cs_test_123"
@@ -258,11 +258,11 @@ async def test_create_checkout_subscription_mode():
             billing.asyncio.to_thread = AsyncMock(return_value=mock_session)
             try:
                 session, plan = await create_subscription_checkout(
-                    host_url="https://goodly.app",
+                    host_url="https://searchgoodly.com",
                     plan_id="concierge",
                     user_id="u1",
                     user_email="u@test.com",
-                    origin_url="https://goodly.app",
+                    origin_url="https://searchgoodly.com",
                 )
                 assert session.session_id == "cs_sub_456"
                 assert plan["id"] == "concierge"
@@ -291,11 +291,11 @@ async def test_create_checkout_metadata():
             billing.asyncio.to_thread = AsyncMock(return_value=mock_session)
             try:
                 session, plan = await create_subscription_checkout(
-                    host_url="https://goodly.app",
+                    host_url="https://searchgoodly.com",
                     plan_id="concierge",
                     user_id="user-42",
                     user_email="user42@test.com",
-                    origin_url="https://goodly.app",
+                    origin_url="https://searchgoodly.com",
                 )
                 assert session.session_id == "cs_meta"
                 assert plan["id"] == "concierge"
@@ -324,11 +324,11 @@ async def test_create_checkout_success_cancel_urls():
             billing.asyncio.to_thread = AsyncMock(return_value=mock_session)
             try:
                 session, plan = await create_subscription_checkout(
-                    host_url="https://goodly.app",
+                    host_url="https://searchgoodly.com",
                     plan_id="concierge",
                     user_id="u1",
                     user_email="u@test.com",
-                    origin_url="https://app.goodly.app/",
+                    origin_url="https://app.searchgoodly.com/",
                 )
                 assert session.session_id == "cs_urls"
                 assert plan["id"] == "concierge"

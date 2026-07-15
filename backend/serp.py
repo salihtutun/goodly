@@ -115,8 +115,8 @@ async def check_rank(keyword: str, domain: str, max_results: int = 30) -> dict:
         if use_serpapi:
             try:
                 return await _check_via_duckduckgo(keyword, target, max_results)
-            except Exception as e2:
+            except Exception:
                 return {"keyword": keyword, "domain": target, "rank": None, "results": [],
-                        "error": f"Search failed: {e2}"[:200]}
+                        "error": "Search is temporarily unavailable. Please try again."}
         return {"keyword": keyword, "domain": target, "rank": None, "results": [],
-                "error": f"Search failed: {e}"[:200]}
+                "error": "Search is temporarily unavailable. Please try again."}

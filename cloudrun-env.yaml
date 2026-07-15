@@ -1,0 +1,12 @@
+ENVIRONMENT: production
+FRONTEND_URL: https://searchgoodly.com
+PRODUCTION_DOMAIN: https://searchgoodly.com
+CORS_ORIGINS: "https://searchgoodly.com,https://www.searchgoodly.com"
+SENDER_EMAIL: hello@searchgoodly.com
+SUPPORT_EMAIL: hello@searchgoodly.com
+ADMIN_EMAIL: admin@searchgoodly.com
+DB_NAME: goodly
+SCHEDULER_ENABLED: "true"
+SENTRY_ENVIRONMENT: production
+SENTRY_RELEASE: goodly@1.9.0
+DEMO_PASSWORD: DemoGoodly2024!

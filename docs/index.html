@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goodly — Documentation</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      color: white;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 3rem 2rem; }
+    .header { margin-bottom: 3rem; text-align: center; }
+    .header-row { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.75rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.9rem; }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+    .badge-green { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .badge-cyan { background: rgba(34, 211, 238, 0.15); color: #22d3ee; border: 1px solid rgba(34, 211, 238, 0.3); }
+    .badge-amber { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+    .badge-rose { background: rgba(251, 113, 133, 0.15); color: #fb7185; border: 1px solid rgba(251, 113, 133, 0.3); }
+    .badge-violet { background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 3rem; }
+    .stat-card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-value { font-size: 1.75rem; font-weight: 700; }
+    .stat-label { color: #94a3b8; font-size: 0.75rem; margin-top: 0.25rem; }
+    .stat-cyan { color: #22d3ee; }
+    .stat-emerald { color: #34d399; }
+    .stat-violet { color: #a78bfa; }
+    .stat-amber { color: #fbbf24; }
+    .stat-rose { color: #fb7185; }
+    .section { margin-bottom: 2.5rem; }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-cyan { background: #22d3ee; }
+    .dot-emerald { background: #34d399; }
+    .dot-violet { background: #a78bfa; }
+    .dot-amber { background: #fbbf24; }
+    .dot-rose { background: #fb7185; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      transition: border-color 0.2s, transform 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    a.card:hover { border-color: #22d3ee; transform: translateY(-2px); }
+    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .card p { color: #94a3b8; font-size: 0.8rem; line-height: 1.5; }
+    .card-meta { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .tag {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 500;
+    }
+    .tag-cyan { background: rgba(34, 211, 238, 0.1); color: #22d3ee; }
+    .tag-emerald { background: rgba(52, 211, 153, 0.1); color: #34d399; }
+    .tag-violet { background: rgba(167, 139, 250, 0.1); color: #a78bfa; }
+    .tag-amber { background: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+    .tag-rose { background: rgba(251, 113, 133, 0.1); color: #fb7185; }
+
+    /* File index table */
+    .file-index { margin-top: 2rem; }
+    .file-index table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .file-index th { text-align: left; padding: 10px 14px; color: #94a3b8; font-weight: 500; font-size: 0.65rem; text-transform: uppercase; border-bottom: 1px solid #1e293b; }
+    .file-index td { padding: 10px 14px; border-bottom: 1px solid rgba(30, 41, 59, 0.5); }
+    .file-index tr:hover td { background: rgba(30, 41, 59, 0.3); }
+    .file-index a { color: #22d3ee; text-decoration: none; font-weight: 500; }
+    .file-index a:hover { text-decoration: underline; }
+    .file-index .size { color: #64748b; font-size: 0.7rem; }
+    .file-index .desc { color: #94a3b8; font-size: 0.75rem; }
+
+    .footer { text-align: center; margin-top: 3rem; color: #475569; font-size: 0.75rem; }
+    .footer a { color: #64748b; text-decoration: none; }
+    .footer a:hover { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Goodly Documentation</h1>
+      </div>
+      <p class="subtitle">Visibility OS for Small Businesses — v1.9.0 — Production Ready</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value stat-cyan">8</div>
+        <div class="stat-label">Doc Files</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value stat-emerald">54</div>
+        <div class="stat-label">Pages Tested</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value stat-violet">487</div>
+        <div class="stat-label">Tests Passing</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value stat-amber">100</div>
+        <div class="stat-label">Issues Fixed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value stat-rose">0</div>
+        <div class="stat-label">Console Errors</div>
+      </div>
+    </div>
+
+    <!-- ===== SECTION 1: Architecture & Design ===== -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-dot dot-cyan"></div>
+        Architecture & Design
+      </div>
+      <div class="cards">
+        <a href="architecture.html" class="card">
+          <h3>🏗️ Architecture Diagram</h3>
+          <p>Interactive SVG diagram showing the full system architecture — Vercel, Cloud Run, MongoDB, Stripe, Resend, Gemini, and all service connections with QA metrics.</p>
+          <div class="card-meta">
+            <span class="tag tag-cyan">SVG</span>
+            <span class="tag tag-emerald">Infrastructure</span>
+            <span class="tag tag-amber">Cloud</span>
+          </div>
+        </a>
+        <a href="sitemap.html" class="card">
+          <h3>🗺️ Page Sitemap</h3>
+          <p>Visual map of all 54 pages organized by category — public, comparison, industry, tools, blog, and authenticated routes with color-coded sections.</p>
+          <div class="card-meta">
+            <span class="tag tag-cyan">Frontend</span>
+            <span class="tag tag-violet">Routes</span>
+            <span class="tag tag-amber">Navigation</span>
+          </div>
+        </a>
+        <a href="api-reference.html" class="card">
+          <h3>🔌 API Reference</h3>
+          <p>Complete reference of all 50 backend API endpoints — auth, dashboard, audits, projects, billing, social, GBP, AI, SERP, and more with methods and auth levels.</p>
+          <div class="card-meta">
+            <span class="tag tag-emerald">Backend</span>
+            <span class="tag tag-violet">REST</span>
+            <span class="tag tag-rose">Auth</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ===== SECTION 2: Development & Operations ===== -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-dot dot-amber"></div>
+        Development & Operations
+      </div>
+      <div class="cards">
+        <a href="workflow.html" class="card">
+          <h3>📘 Development & Deployment Workflow</h3>
+          <p>Complete end-to-end workflow — 18 sections covering local dev, testing, CI/CD, deployments, monitoring, incident response, rollbacks, and troubleshooting.</p>
+          <div class="card-meta">
+            <span class="tag tag-amber">DevOps</span>
+            <span class="tag tag-cyan">Workflow</span>
+            <span class="tag tag-emerald">Guide</span>
+          </div>
+        </a>
+        <a href="deployment-guide.html" class="card">
+          <h3>🚀 Deployment Guide</h3>
+          <p>Step-by-step production deployment — Cloud Run, Vercel, MongoDB Atlas, Stripe, Resend, DNS, SSL, environment variables, and verification checklist.</p>
+          <div class="card-meta">
+            <span class="tag tag-amber">DevOps</span>
+            <span class="tag tag-cyan">Cloud Run</span>
+            <span class="tag tag-emerald">Vercel</span>
+          </div>
+        </a>
+        <a href="README.md" class="card">
+          <h3>📖 README</h3>
+          <p>Project overview — mission, channels, pricing, tech stack, architecture, design decisions, and QA status table.</p>
+          <div class="card-meta">
+            <span class="tag tag-emerald">Markdown</span>
+            <span class="tag tag-cyan">Overview</span>
+            <span class="tag tag-violet">Quick Start</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ===== SECTION 3: Quality & Security ===== -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-dot dot-rose"></div>
+        Quality & Security
+      </div>
+      <div class="cards">
+        <a href="qa-report.html" class="card">
+          <h3>📋 QA Report</h3>
+          <p>Comprehensive quality assurance — all 100 fixes across 17 rounds, browser test results, code quality scans, interactive elements tested, and production readiness checklist.</p>
+          <div class="card-meta">
+            <span class="tag tag-rose">QA</span>
+            <span class="tag tag-cyan">Testing</span>
+            <span class="tag tag-emerald">Passed</span>
+          </div>
+        </a>
+        <a href="security.html" class="card">
+          <h3>🔒 Security Overview</h3>
+          <p>6-layer defense-in-depth security architecture — TLS, JWT auth, RBAC, input sanitization, rate limiting, security headers, and 20-point checklist.</p>
+          <div class="card-meta">
+            <span class="tag tag-rose">Security</span>
+            <span class="tag tag-amber">Auth</span>
+            <span class="tag tag-violet">Headers</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ===== SECTION 4: Quick Reference ===== -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-dot dot-emerald"></div>
+        Quick Reference
+      </div>
+      <div class="cards">
+        <div class="card" style="border-color: rgba(52, 211, 153, 0.3);">
+          <h3>🌐 Production URLs</h3>
+          <p>Frontend: searchgoodly.com<br>API: Cloud Run (via api.searchgoodly.com)<br>Status: /status<br>Blog RSS: /blog/rss.xml</p>
+          <div class="card-meta">
+            <span class="tag tag-amber">Production</span>
+            <span class="tag tag-cyan">URLs</span>
+          </div>
+        </div>
+        <div class="card" style="border-color: rgba(167, 139, 250, 0.3);">
+          <h3>📦 Tech Stack</h3>
+          <p>Python 3.14 • FastAPI • React 18 • Vite 5 • MongoDB Atlas • Stripe • Resend • Gemini 2.5 Flash • Tailwind CSS • Radix UI • Lucide Icons • Recharts</p>
+          <div class="card-meta">
+            <span class="tag tag-violet">Stack</span>
+            <span class="tag tag-emerald">Backend</span>
+            <span class="tag tag-cyan">Frontend</span>
+          </div>
+        </div>
+        <div class="card" style="border-color: rgba(34, 211, 238, 0.3);">
+          <h3>📊 Key Metrics</h3>
+          <p>71 routes • 83 API endpoints • 3 route modules • 54 pages • 675 tests • 9 static assets • 6 blog posts • 8 comparison pages • 9 industry pages</p>
+          <div class="card-meta">
+            <span class="tag tag-cyan">Metrics</span>
+            <span class="tag tag-emerald">Stats</span>
+            <span class="tag tag-violet">Numbers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FILE INDEX ===== -->
+    <div class="file-index">
+      <div class="section-title">
+        <div class="section-dot dot-violet"></div>
+        Complete File Index
+      </div>
+      <table>
+        <tr>
+          <th>File</th>
+          <th>Size</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td><a href="index.html">index.html</a></td>
+          <td class="size">10 KB</td>
+          <td class="desc">Documentation hub — this page</td>
+        </tr>
+        <tr>
+          <td><a href="architecture.html">architecture.html</a></td>
+          <td class="size">20 KB</td>
+          <td class="desc">Interactive SVG architecture diagram — Vercel, Cloud Run, MongoDB, Stripe, Resend, Gemini</td>
+        </tr>
+        <tr>
+          <td><a href="workflow.html">workflow.html</a></td>
+          <td class="size">75 KB</td>
+          <td class="desc">Complete development & deployment workflow — 18 sections, 1,312 lines</td>
+        </tr>
+        <tr>
+          <td><a href="qa-report.html">qa-report.html</a></td>
+          <td class="size">12 KB</td>
+          <td class="desc">Comprehensive QA report — 100 fixes, 17 rounds, code scans, page inventory</td>
+        </tr>
+        <tr>
+          <td><a href="deployment-guide.html">deployment-guide.html</a></td>
+          <td class="size">10 KB</td>
+          <td class="desc">Step-by-step production deployment guide with env var reference</td>
+        </tr>
+        <tr>
+          <td><a href="sitemap.html">sitemap.html</a></td>
+          <td class="size">15 KB</td>
+          <td class="desc">Visual page sitemap — 54 pages across 7 categories</td>
+        </tr>
+        <tr>
+          <td><a href="api-reference.html">api-reference.html</a></td>
+          <td class="size">21 KB</td>
+          <td class="desc">Complete API reference — 83 endpoints across 3 modules</td>
+        </tr>
+        <tr>
+          <td><a href="security.html">security.html</a></td>
+          <td class="size">9 KB</td>
+          <td class="desc">Security overview — 6-layer defense-in-depth with 20-point checklist</td>
+        </tr>
+        <tr style="border-top: 1px solid #1e293b;">
+          <td><strong>Total</strong></td>
+          <td class="size"><strong>172 KB</strong></td>
+          <td class="desc"><strong>8 files — all cross-linked</strong></td>
+        </tr>
+      </table>
+    </div>
+
+    <p class="footer">
+      Goodly — Visibility OS for Small Businesses • v1.9.0 • 
+      <a href="architecture.html">Architecture</a> • 
+      <a href="workflow.html">Workflow</a> • 
+      <a href="qa-report.html">QA Report</a> • 
+      <a href="security.html">Security</a> • 
+      <a href="deployment-guide.html">Deployment</a> • 
+      <a href="sitemap.html">Sitemap</a> • 
+      <a href="api-reference.html">API</a>
+    </p>
+  </div>
+</body>
+</html>

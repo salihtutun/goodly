@@ -10,10 +10,10 @@ os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
 os.environ.setdefault("STRIPE_API_KEY", "test-stripe-key")
 os.environ.setdefault("STRIPE_WEBHOOK_SECRET", "test-webhook-secret")
 os.environ.setdefault("RESEND_API_KEY", "test-resend-key")
-os.environ.setdefault("SENDER_EMAIL", "test@goodly.app")
+os.environ.setdefault("SENDER_EMAIL", "test@searchgoodly.com")
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("SCHEDULER_ENABLED", "false")
-os.environ.setdefault("ADMIN_EMAIL", "admin@goodly.app")
+os.environ.setdefault("ADMIN_EMAIL", "admin@searchgoodly.com")
 os.environ.setdefault("ADMIN_PASSWORD", "admin-secret-123")
 os.environ.setdefault("DEMO_PASSWORD", "demo1234")
 
@@ -114,7 +114,7 @@ def setup():
     mock_db._wrapped.clear()
     from auth import hash_password
     _raw_db.users.insert_one({
-        "id": "admin-1", "email": "admin@goodly.app",
+        "id": "admin-1", "email": "admin@searchgoodly.com",
         "password_hash": hash_password("admin-secret-123"),
         "name": "Admin", "role": "admin", "plan": "concierge",
         "onboarded": True, "email_verified": True,
@@ -133,5 +133,5 @@ def client():
 def auth_headers(client):
     """Return auth headers for the seeded admin user."""
     from auth import create_access_token
-    token = create_access_token("admin-1", "admin@goodly.app")
+    token = create_access_token("admin-1", "admin@searchgoodly.com")
     return {"Authorization": f"Bearer {token}"}

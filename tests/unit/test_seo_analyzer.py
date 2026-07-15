@@ -131,7 +131,7 @@ async def test_analyze_url_handles_fetch_failure():
         result = await analyze_url("https://example.com")
         assert result["fetch_failed"] is True
         assert "error" in result
-        assert "Connection refused" in result["error"]
+        assert "Could not fetch URL" in result["error"]
 
 
 @pytest.mark.asyncio
@@ -336,7 +336,7 @@ def test_analyze_url_skip_special_hrefs():
     from seo_analyzer import analyze_url
     html = '<html><head><title>T</title></head><body><a href="#top">T</a><a href="mailto:x@x.com">E</a><a href="tel:555">C</a><a href="/page">P</a></body></html>'
     async def mock_fetch(u): return html, 200, 100.0, {'content-type':'text/html'}
-    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch):
+    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch), patch('asyncio.to_thread', new=AsyncMock(return_value=True)):
         r = asyncio.run(analyze_url('https://test.com'))
         assert 'overall_score' in r
 
@@ -345,7 +345,7 @@ def test_analyze_url_title_too_long():
     from seo_analyzer import analyze_url
     html = '<html><head><title>' + 'A'*70 + '</title></head><body><h1>H</h1></body></html>'
     async def mock_fetch(u): return html, 200, 100.0, {'content-type':'text/html'}
-    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch):
+    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch), patch('asyncio.to_thread', new=AsyncMock(return_value=True)):
         r = asyncio.run(analyze_url('https://test.com'))
         assert 'overall_score' in r
 
@@ -354,7 +354,7 @@ def test_analyze_url_meta_desc_too_long():
     from seo_analyzer import analyze_url
     html = '<html><head><title>T</title><meta name="description" content="' + 'D'*200 + '"></head><body><h1>H</h1></body></html>'
     async def mock_fetch(u): return html, 200, 100.0, {'content-type':'text/html'}
-    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch):
+    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch), patch('asyncio.to_thread', new=AsyncMock(return_value=True)):
         r = asyncio.run(analyze_url('https://test.com'))
         assert 'overall_score' in r
 
@@ -363,7 +363,7 @@ def test_analyze_url_multiple_h1s():
     from seo_analyzer import analyze_url
     html = '<html><head><title>T</title></head><body><h1>H1a</h1><h1>H1b</h1></body></html>'
     async def mock_fetch(u): return html, 200, 100.0, {'content-type':'text/html'}
-    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch):
+    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch), patch('asyncio.to_thread', new=AsyncMock(return_value=True)):
         r = asyncio.run(analyze_url('https://test.com'))
         assert 'overall_score' in r
 
@@ -372,7 +372,7 @@ def test_analyze_url_images_missing_alt():
     from seo_analyzer import analyze_url
     html = '<html><head><title>T</title></head><body><h1>H</h1><img src="a.jpg"><img src="b.jpg"></body></html>'
     async def mock_fetch(u): return html, 200, 100.0, {'content-type':'text/html'}
-    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch):
+    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch), patch('asyncio.to_thread', new=AsyncMock(return_value=True)):
         r = asyncio.run(analyze_url('https://test.com'))
         assert 'overall_score' in r
 
@@ -381,6 +381,6 @@ def test_analyze_url_medium_performance():
     from seo_analyzer import analyze_url
     html = '<html><head><title>T</title></head><body><h1>H</h1></body></html>'
     async def mock_fetch(u): return html, 200, 2500.0, {'content-type':'text/html'}
-    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch):
+    with patch('seo_analyzer.fetch_page', side_effect=mock_fetch), patch('asyncio.to_thread', new=AsyncMock(return_value=True)):
         r = asyncio.run(analyze_url('https://test.com'))
         assert 'overall_score' in r

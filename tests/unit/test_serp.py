@@ -87,7 +87,7 @@ async def test_check_rank_handles_error():
         result = await check_rank("test", "example.com")
         assert result["rank"] is None
         assert "error" in result
-        assert "Network error" in result["error"]
+        assert "Search is temporarily unavailable" in result["error"]
 
 
 @pytest.mark.asyncio
@@ -140,7 +140,7 @@ async def test_check_rank_both_fail():
             with patch("serp._check_via_duckduckgo", new=AsyncMock(side_effect=Exception("DDG down"))):
                 result = await check_rank("test", "example.com")
                 assert result["rank"] is None
-                assert "Search failed" in result["error"]
+                assert "Search is temporarily unavailable" in result["error"]
     finally:
         _clear_env("SERPAPI_KEY")
 

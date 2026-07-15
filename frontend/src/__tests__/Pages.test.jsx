@@ -34,7 +34,7 @@ import VerifyEmail from '../pages/VerifyEmail';
 describe('Landing Page', () => {
   test('renders hero section', () => {
     render(<BrowserRouter><Landing /></BrowserRouter>);
-    expect(screen.getByTestId('hero-cta-primary')).toBeInTheDocument();
+    expect(screen.getByTestId('cta-get-started')).toBeInTheDocument();
   });
 
   test('renders navigation links', () => {

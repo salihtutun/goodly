@@ -1,8 +1,6 @@
-"""Playwright E2E test config for Goodly frontend.
-
-Install: npm install -D @playwright/test
-Run: npx playwright test
-"""
+// Playwright E2E test config for Goodly frontend.
+// Install: npm install -D @playwright/test
+// Run: npx playwright test --config=tests/e2e/playwright.config.js
 const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({

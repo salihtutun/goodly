@@ -1,5 +1,5 @@
 """Final coverage gap tests — evals 96%→100%, logging 96%→100%, scheduler 95%→100%."""
-import os, sys, pytest, json, logging
+import os, sys, pytest, json, logging, inspect
 from unittest.mock import patch, MagicMock, AsyncMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
@@ -77,7 +77,7 @@ class TestSchedulerGaps:
             call_args = mock_sched.add_job.call_args
             # First positional arg is the tick function
             tick_fn = call_args[0][0]
-            assert asyncio.iscoroutinefunction(tick_fn)
+            assert inspect.iscoroutinefunction(tick_fn)
             # Verify it's an interval job
             assert call_args[1].get("id") == "scheduled_audits_hourly"
 

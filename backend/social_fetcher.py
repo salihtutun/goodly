@@ -17,7 +17,12 @@ UA = (
 
 
 def _strip_handle(handle: str) -> str:
-    return (handle or "").strip().lstrip("@").split("/")[0]
+    """Strip @ and path separators, reject suspicious characters."""
+    cleaned = (handle or "").strip().lstrip("@").split("/")[0]
+    # Reject handles with path traversal or control characters
+    if not cleaned or any(c in cleaned for c in ("..", "\0", "\n", "\r", "<", ">", "\\")):
+        return ""
+    return cleaned
 
 
 def _parse_followers(text: str):
@@ -27,7 +32,7 @@ def _parse_followers(text: str):
 
 
 async def fetch_profile_signals(platform: str, handle: str) -> dict:
-    """Returns whatever signals we can detect; never raises."""
+    """Returns whatever signals we can detect; never raises. Retries once on transient failures."""
     handle = _strip_handle(handle)
     if not handle:
         return {"fetched": False, "reason": "Empty handle"}
@@ -42,12 +47,21 @@ async def fetch_profile_signals(platform: str, handle: str) -> dict:
     else:
         return {"fetched": False, "reason": "Unknown platform"}
 
-    try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0,
-                                     headers={"User-Agent": UA, "Accept-Language": "en"}) as client:
-            resp = await client.get(url)
-    except Exception as e:
-        return {"fetched": False, "reason": f"Network error: {str(e)[:120]}", "url": url}
+    last_error = None
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=10.0,
+                                         headers={"User-Agent": UA, "Accept-Language": "en"}) as client:
+                resp = await client.get(url)
+            break  # success — exit retry loop
+        except Exception as e:
+            last_error = e
+            if attempt == 0:
+                import asyncio
+                await asyncio.sleep(1.0)  # brief backoff before retry
+    else:
+        # All retries exhausted
+        return {"fetched": False, "reason": "Profile not reachable", "url": url}
 
     if resp.status_code >= 400:
         return {"fetched": False, "status": resp.status_code, "reason": "Profile not reachable", "url": url}

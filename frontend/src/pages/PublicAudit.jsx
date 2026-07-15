@@ -4,9 +4,11 @@ import api, { formatApiError } from "@/lib/api";
 import { Logo, Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Gauge, Leaf, Sparkles, ShieldCheck, Star } from "lucide-react";
+import { ArrowRight, Gauge, Leaf, Sparkles, ShieldCheck, Star, PenLine, Code, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import EmailCapture from "@/components/app/EmailCapture";
+import ShareAudit from "@/components/app/ShareAudit";
 
 export default function PublicAudit() {
   usePageMeta({ title: "Free SEO Audit", description: "Get a free SEO score for any website in 10 seconds. No signup required." });
@@ -23,7 +25,7 @@ export default function PublicAudit() {
     setError("");
     setResult(null);
     try {
-      const { data } = await api.post("/audits", {
+      const { data } = await api.post("/public/audit", {
         url: url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`,
       });
       setResult(data);
@@ -39,10 +41,12 @@ export default function PublicAudit() {
     }
   };
 
-  const score = result?.result?.overall_score;
-  const issues = result?.result?.issues || [];
+  const score = result?.overall_score ?? result?.result?.overall_score;
+  const issues = result?.issues || result?.result?.issues || [];
+  const categories = result?.categories || result?.result?.categories || [];
   const highIssues = issues.filter((i) => i.severity === "high");
   const medIssues = issues.filter((i) => i.severity === "medium");
+  const resultUrl = result?.url || result?.result?.url || url;
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
@@ -94,7 +98,7 @@ export default function PublicAudit() {
               {error === "create_account" && (
                 <div className="mt-6 bg-[#F3F0E9] border border-[#E5E0D8] rounded-2xl p-6 text-center">
                   <div className="font-display font-bold text-xl text-[#1A201A]">Create your free account to run audits</div>
-                  <p className="mt-2 text-[#5C685C]">It takes 30 seconds. You'll get 3 free audits per month, forever.</p>
+                  <p className="mt-2 text-[#5C685C]">It takes 30 seconds. You'll get 5 free audits per month, forever.</p>
                   <Button onClick={() => navigate("/register")} className="mt-4 bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-8">
                     Create free account <ArrowRight size={16} className="ml-2" />
                   </Button>
@@ -140,7 +144,7 @@ export default function PublicAudit() {
             <div className="text-center">
               <Eyebrow className="justify-center">Your SEO Score</Eyebrow>
               <h1 className="mt-4 font-display font-bold text-4xl sm:text-5xl text-[#1A201A] tracking-tight">
-                {result.result.url}
+                {resultUrl}
               </h1>
             </div>
 
@@ -183,6 +187,73 @@ export default function PublicAudit() {
               )}
             </div>
 
+            {/* AI Summary — free value, no auth required */}
+            {result?.ai_summary?.summary && (
+              <div className="mt-6 bg-[#F3F0E9] border border-[#E5E0D8] rounded-xl p-5 flex gap-3">
+                <Sparkles className="text-[#E07A5F] shrink-0 mt-0.5" size={20}/>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-[#E07A5F] mb-1">AI Analysis</div>
+                  <p className="text-[#1A201A] text-sm leading-relaxed">{result.ai_summary.summary}</p>
+                  {result.ai_summary.top_action && (
+                    <div className="mt-3 bg-white border border-[#E5E0D8] rounded-lg p-3">
+                      <div className="text-xs font-semibold text-[#2D3E32] uppercase tracking-wider">Top Priority</div>
+                      <div className="text-sm font-medium text-[#1A201A] mt-1">{result.ai_summary.top_action.title}</div>
+                      <div className="text-xs text-[#5C685C] mt-1">{result.ai_summary.top_action.how}</div>
+                    </div>
+                  )}
+                  {result.ai_summary.wins?.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {result.ai_summary.wins.map((w, i) => (
+                        <span key={i} className="text-xs bg-[#81B29A]/10 text-[#2D3E32] px-2 py-0.5 rounded-full">{w}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Schema Markup — free JSON-LD for their site */}
+            {result?.schema_markup && (
+              <div className="mt-6 bg-white border border-[#E5E0D8] rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Code size={16} className="text-[#81B29A]" />
+                    <div className="text-xs font-semibold uppercase tracking-wider text-[#81B29A]">Free Schema Markup</div>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(result.schema_markup); toast.success("Schema copied!"); }}
+                    className="text-xs text-[#5C685C] hover:text-[#1A201A] flex items-center gap-1 bg-[#F3F0E9] hover:bg-[#E5E0D8] rounded-full px-3 py-1 transition-colors"
+                  >
+                    <Copy size={12} /> Copy
+                  </button>
+                </div>
+                <p className="text-xs text-[#5C685C] mb-3">Google uses this to show rich results (star ratings, hours, location). Paste it in your site's &lt;head&gt;.</p>
+                <pre className="bg-[#1A201A] text-[#81B29A] rounded-lg p-4 text-xs overflow-x-auto max-h-48 font-mono leading-relaxed">
+                  {result.schema_markup}
+                </pre>
+              </div>
+            )}
+
+            {/* Revenue Impact */}
+            {result?.revenue_impact && result.revenue_impact.total_estimated_monthly_revenue_loss > 0 && (
+              <div className="mt-6 bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-2xl p-6 text-center">
+                <div className="text-3xl font-display font-bold text-[#92400E]">
+                  ${result.revenue_impact.total_estimated_monthly_revenue_loss.toLocaleString()}/mo
+                </div>
+                <div className="text-sm text-[#92400E]/70 mt-1">
+                  Estimated revenue you're losing each month
+                </div>
+                {result.revenue_impact.top_quick_wins?.length > 0 && (
+                  <div className="mt-3 text-xs text-[#92400E]/60">
+                    Top fix: {result.revenue_impact.top_quick_wins[0].title}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Email capture — get their email before showing full CTA */}
+            <EmailCapture score={score} url={resultUrl} issues={issues} />
+
             {/* CTA to register */}
             <div className="mt-8 bg-[#2D3E32] rounded-2xl p-8 text-center">
               <Sparkles size={32} className="text-[#81B29A] mx-auto mb-4" />
@@ -199,10 +270,25 @@ export default function PublicAudit() {
                 </Button>
               </div>
               <div className="mt-4 flex items-center justify-center gap-4 text-xs text-[#FDFBF7]/50">
-                <span className="flex items-center gap-1"><Star size={12} /> 3 free audits/month</span>
+                <span className="flex items-center gap-1"><Star size={12} /> 5 free audits/month</span>
                 <span className="flex items-center gap-1"><Star size={12} /> AI action plan</span>
                 <span className="flex items-center gap-1"><Star size={12} /> No credit card</span>
               </div>
+            </div>
+
+            {/* Share your audit */}
+            <ShareAudit score={score} url={resultUrl} />
+
+            {/* Try Content Studio */}
+            <div className="mt-6 bg-gradient-to-r from-[#F3F0E9] to-[#FDFBF7] border border-[#E5E0D8] rounded-2xl p-6 text-center">
+              <PenLine size={28} className="text-[#2D3E32] mx-auto mb-3" />
+              <h3 className="font-display font-bold text-lg text-[#1A201A]">Need content for your website?</h3>
+              <p className="mt-1 text-sm text-[#5C685C] max-w-md mx-auto">
+                Generate blog posts, social captions, emails, and more — all written by AI, ready to publish in seconds.
+              </p>
+              <Link to="/content-studio" className="mt-4 inline-flex items-center gap-2 bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-6 py-3 text-sm font-medium transition-colors">
+                <Sparkles size={16} /> Try Content Studio free <ArrowRight size={14} />
+              </Link>
             </div>
 
             {/* Try another */}

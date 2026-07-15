@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goodly — Development & Deployment Workflow</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; color: white; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem; }
+    .header { margin-bottom: 2rem; text-align: center; }
+    .header-row { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.75rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.85rem; }
+    .back-link { color: #64748b; font-size: 0.75rem; text-decoration: none; margin-bottom: 2rem; display: inline-block; }
+    .back-link:hover { color: #94a3b8; }
+
+    /* TOC */
+    .toc { background: rgba(15, 23, 42, 0.5); border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 2rem; }
+    .toc h2 { font-size: 1rem; margin-bottom: 1rem; }
+    .toc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.5rem; }
+    .toc-item { display: flex; align-items: center; gap: 0.5rem; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; color: #94a3b8; text-decoration: none; transition: all 0.15s; }
+    .toc-item:hover { background: rgba(34, 211, 238, 0.05); color: white; }
+    .toc-num { color: #22d3ee; font-weight: 600; font-size: 0.7rem; min-width: 20px; }
+
+    /* Sections */
+    h2 { font-size: 1.2rem; font-weight: 600; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 0.75rem; }
+    h2 .num { background: #22d3ee; color: #020617; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+    h3 { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: #e2e8f0; }
+    h4 { font-size: 0.85rem; font-weight: 600; margin: 1rem 0 0.5rem; color: #94a3b8; }
+
+    /* Content blocks */
+    .step { background: rgba(15, 23, 42, 0.5); border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1rem; }
+    .step-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+    .step-num { background: #22d3ee; color: #020617; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
+    .step-title { font-size: 0.9rem; font-weight: 600; }
+    .step p { color: #94a3b8; font-size: 0.8rem; line-height: 1.7; margin-bottom: 0.5rem; }
+    .step ul, .step ol { color: #94a3b8; font-size: 0.8rem; line-height: 1.7; margin: 0.5rem 0 0.5rem 1.5rem; }
+    .step li { margin-bottom: 0.25rem; }
+
+    /* Code blocks */
+    .code-block { background: rgba(0,0,0,0.5); border: 1px solid #1e293b; border-radius: 6px; padding: 14px 18px; margin: 0.75rem 0; font-size: 0.72rem; color: #34d399; overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .code-block .comment { color: #64748b; }
+    .code-block .cmd { color: #22d3ee; }
+    .code-block .key { color: #a78bfa; }
+    .code-block .val { color: #fb923c; }
+    .code-block .warn { color: #fbbf24; }
+    .code-block .err { color: #fb7185; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin: 0.75rem 0; }
+    th { text-align: left; padding: 8px 12px; color: #94a3b8; font-weight: 500; font-size: 0.65rem; text-transform: uppercase; border-bottom: 1px solid #1e293b; }
+    td { padding: 8px 12px; border-bottom: 1px solid rgba(30, 41, 59, 0.5); }
+    tr:hover td { background: rgba(30, 41, 59, 0.3); }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.6rem; font-weight: 600; }
+    .badge-cyan { background: rgba(34, 211, 238, 0.15); color: #22d3ee; }
+    .badge-emerald { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .badge-amber { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .badge-rose { background: rgba(251, 113, 133, 0.15); color: #fb7185; }
+    .badge-violet { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+
+    /* Flow diagram */
+    .flow { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 1rem 0; }
+    .flow-box { padding: 8px 16px; border-radius: 8px; font-size: 0.7rem; font-weight: 600; text-align: center; }
+    .flow-arrow { color: #64748b; font-size: 1rem; }
+    .flow-dev { background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.3); color: #22d3ee; }
+    .flow-test { background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); color: #34d399; }
+    .flow-build { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24; }
+    .flow-deploy { background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.3); color: #a78bfa; }
+    .flow-prod { background: rgba(251, 113, 133, 0.1); border: 1px solid rgba(251, 113, 133, 0.3); color: #fb7185; }
+
+    /* Checklist */
+    .checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0.4rem; }
+    .check-item { display: flex; align-items: flex-start; gap: 0.5rem; padding: 6px 10px; background: rgba(15, 23, 42, 0.3); border-radius: 4px; font-size: 0.75rem; color: #94a3b8; }
+    .check-pass { color: #34d399; flex-shrink: 0; }
+    .check-pending { color: #fbbf24; flex-shrink: 0; }
+
+    /* Info boxes */
+    .info { background: rgba(34, 211, 238, 0.05); border: 1px solid rgba(34, 211, 238, 0.2); border-radius: 8px; padding: 1rem 1.25rem; margin: 0.75rem 0; font-size: 0.75rem; color: #94a3b8; }
+    .info strong { color: #22d3ee; }
+    .warn-box { background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 8px; padding: 1rem 1.25rem; margin: 0.75rem 0; font-size: 0.75rem; color: #94a3b8; }
+    .warn-box strong { color: #fbbf24; }
+    .danger-box { background: rgba(251, 113, 133, 0.05); border: 1px solid rgba(251, 113, 133, 0.2); border-radius: 8px; padding: 1rem 1.25rem; margin: 0.75rem 0; font-size: 0.75rem; color: #94a3b8; }
+    .danger-box strong { color: #fb7185; }
+
+    .footer { text-align: center; margin-top: 4rem; color: #475569; font-size: 0.7rem; }
+    .footer a { color: #64748b; text-decoration: none; }
+    .footer a:hover { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Back to Documentation</a>
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Development & Deployment Workflow</h1>
+      </div>
+      <p class="subtitle">Complete end-to-end workflow — from local dev to production monitoring</p>
+    </div>
+
+    <!-- ===== TABLE OF CONTENTS ===== -->
+    <div class="toc">
+      <h2>📑 Table of Contents</h2>
+      <div class="toc-grid">
+        <a href="#s1" class="toc-item"><span class="toc-num">01</span> Local Development Setup</a>
+        <a href="#s2" class="toc-item"><span class="toc-num">02</span> Project Structure</a>
+        <a href="#s3" class="toc-item"><span class="toc-num">03</span> Development Workflow</a>
+        <a href="#s4" class="toc-item"><span class="toc-num">04</span> Testing Strategy</a>
+        <a href="#s5" class="toc-item"><span class="toc-num">05</span> Code Quality & Linting</a>
+        <a href="#s6" class="toc-item"><span class="toc-num">06</span> Git Workflow & Branching</a>
+        <a href="#s7" class="toc-item"><span class="toc-num">07</span> CI/CD Pipeline</a>
+        <a href="#s8" class="toc-item"><span class="toc-num">08</span> Backend Deployment (Cloud Run)</a>
+        <a href="#s9" class="toc-item"><span class="toc-num">09</span> Frontend Deployment (Vercel)</a>
+        <a href="#s10" class="toc-item"><span class="toc-num">10</span> Database Operations</a>
+        <a href="#s11" class="toc-item"><span class="toc-num">11</span> Environment Management</a>
+        <a href="#s12" class="toc-item"><span class="toc-num">12</span> Monitoring & Observability</a>
+        <a href="#s13" class="toc-item"><span class="toc-num">13</span> Incident Response</a>
+        <a href="#s14" class="toc-item"><span class="toc-num">14</span> Release Process</a>
+        <a href="#s15" class="toc-item"><span class="toc-num">15</span> Rollback Procedures</a>
+        <a href="#s16" class="toc-item"><span class="toc-num">16</span> Security Operations</a>
+        <a href="#s17" class="toc-item"><span class="toc-num">17</span> Performance Optimization</a>
+        <a href="#s18" class="toc-item"><span class="toc-num">18</span> Troubleshooting Guide</a>
+      </div>
+    </div>
+
+    <!-- ===== HIGH-LEVEL FLOW ===== -->
+    <h2 id="flow"><span class="num">→</span> High-Level Workflow</h2>
+    <div class="flow">
+      <span class="flow-box flow-dev">💻 Local Dev</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-test">🧪 Write Tests</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-dev">📝 Commit</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-test">🔍 PR Review</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-build">🔄 CI/CD</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-deploy">🚀 Staging</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-test">✅ QA</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-prod">🌐 Production</span>
+    </div>
+
+    <!-- ===== SECTION 1: LOCAL DEV SETUP ===== -->
+    <h2 id="s1"><span class="num">1</span> Local Development Setup</h2>
+
+    <h3>1.1 Prerequisites</h3>
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Install Required Tools</span></div>
+      <div class="code-block"><span class="comment"># macOS (Homebrew)</span>
+<span class="cmd">brew install</span> python@3.14 node@20 mongodb-community
+<span class="cmd">brew install</span> --cask docker
+
+<span class="comment"># Verify installations</span>
+<span class="cmd">python3 --version</span>   <span class="comment"># Python 3.14.x</span>
+<span class="cmd">node --version</span>        <span class="comment"># v20.x or v26.x</span>
+<span class="cmd">npm --version</span>         <span class="comment"># 10.x</span>
+<span class="cmd">docker --version</span>      <span class="comment"># 27.x</span>
+
+<span class="comment"># Install Google Cloud SDK</span>
+<span class="cmd">brew install</span> --cask google-cloud-sdk
+<span class="cmd">gcloud init</span>
+<span class="cmd">gcloud auth login</span>
+
+<span class="comment"># Install Vercel CLI</span>
+<span class="cmd">npm install -g</span> vercel</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">Clone & Install Dependencies</span></div>
+      <div class="code-block"><span class="comment"># Clone repository</span>
+<span class="cmd">git clone</span> https://github.com/your-org/goodly.git
+<span class="cmd">cd</span> goodly
+
+<span class="comment"># Backend setup</span>
+<span class="cmd">cd</span> backend
+<span class="cmd">python3 -m venv</span> .venv
+<span class="cmd">source</span> .venv/bin/activate
+<span class="cmd">pip install</span> -r requirements.txt
+
+<span class="comment"># Frontend setup</span>
+<span class="cmd">cd</span> ../frontend
+<span class="cmd">npm install</span> <span class="comment"># or yarn install</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span><span class="step-title">Configure Environment Variables</span></div>
+      <div class="code-block"><span class="comment"># Backend: copy and edit .env</span>
+<span class="cmd">cp</span> backend/.env.example backend/.env
+<span class="comment"># Fill in: MONGO_URL, JWT_SECRET, GEMINI_API_KEY, STRIPE_API_KEY, etc.</span>
+
+<span class="comment"># Frontend: create .env</span>
+<span class="cmd">echo</span> <span class="val">"REACT_APP_BACKEND_URL=http://localhost:8001"</span> > frontend/.env</div>
+      <div class="info"><strong>💡 Tip:</strong> For local dev without MongoDB, the backend runs in degraded mode. Most features work — audits, tools, blog. Auth and billing require a real database.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">4</span><span class="step-title">Start Development Servers</span></div>
+      <div class="code-block"><span class="comment"># Terminal 1: Backend (port 8001)</span>
+<span class="cmd">cd</span> backend
+<span class="cmd">source</span> .venv/bin/activate
+<span class="cmd">uvicorn</span> server:app --host 0.0.0.0 --port 8001 --reload
+
+<span class="comment"># Terminal 2: Frontend (port 3000)</span>
+<span class="cmd">cd</span> frontend
+<span class="cmd">npx vite</span> --port 3000
+
+<span class="comment"># Verify both are running</span>
+<span class="cmd">curl</span> http://localhost:8001/api/health
+<span class="cmd">curl</span> http://localhost:3000</div>
+    </div>
+
+    <!-- ===== SECTION 2: PROJECT STRUCTURE ===== -->
+    <h2 id="s2"><span class="num">2</span> Project Structure</h2>
+    <div class="code-block">goodly/
+├── <span class="key">backend/</span>                    <span class="comment"># FastAPI Python backend</span>
+│   ├── server.py               <span class="comment"># Main app — 83 endpoints, 3 route modules</span>
+│   ├── auth.py                  <span class="comment"># JWT auth, password hashing</span>
+│   ├── seo_analyzer.py          <span class="comment"># On-page SEO audit (50+ signals)</span>
+│   ├── serp.py                  <span class="comment"># SERP rank checking (SerpAPI + DDG fallback)</span>
+│   ├── social_fetcher.py        <span class="comment"># Social profile scraping</span>
+│   ├── social_service.py        <span class="comment"># Social media audit logic</span>
+│   ├── ai_service.py            <span class="comment"># Gemini AI integration</span>
+│   ├── ai_visibility.py         <span class="comment"># AI assistant visibility checks</span>
+│   ├── gbp_service.py           <span class="comment"># Google Business Profile audit</span>
+│   ├── billing.py               <span class="comment"># Stripe billing integration</span>
+│   ├── email_service.py         <span class="comment"># Resend email + templates</span>
+│   ├── nurture_service.py       <span class="comment"># 3-email nurture sequence</span>
+│   ├── pdf_export.py            <span class="comment"># PDF audit report generation</span>
+│   ├── scheduler.py             <span class="comment"># APScheduler for weekly audits</span>
+│   ├── database.py              <span class="comment"># MongoDB connection (Motor async)</span>
+│   ├── cache.py                 <span class="comment"># In-memory cache</span>
+│   ├── dependencies.py          <span class="comment"># Shared deps, _store_base_url</span>
+│   ├── features.py              <span class="comment"># Feature flags per module</span>
+│   ├── limiter.py               <span class="comment"># Rate limiting (SlowAPI)</span>
+│   ├── validators.py            <span class="comment"># URL, email, domain validation</span>
+│   ├── sanitize.py              <span class="comment"># HTML + name sanitization</span>
+│   ├── sentry_integration.py    <span class="comment"># Error tracking</span>
+│   ├── metrics.py               <span class="comment"># Request metrics middleware</span>
+│   ├── security_headers.py      <span class="comment"># CSP, HSTS, X-Frame, etc.</span>
+│   ├── version_header.py        <span class="comment"># X-API-Version header</span>
+│   ├── logging_config.py        <span class="comment"># Structured JSON logging</span>
+│   ├── blog_service.py          <span class="comment"># Blog post management</span>
+│   ├── seed_blog_posts.py       <span class="comment"># Blog seed data</span>
+│   ├── routes/                  <span class="comment"># Route modules</span>
+│   │   ├── auth.py
+│   │   ├── dashboard.py
+│   │   ├── audits.py
+│   │   ├── referrals.py
+│   │   ├── scheduler.py
+│   │   └── support.py
+│   ├── api/                     <span class="comment"># Vercel demo backend (quarantined)</span>
+│   │   └── index.py
+│   └── tests/                   <span class="comment"># Backend tests</span>
+│       ├── unit/                <span class="comment"># 440 unit tests</span>
+│       └── integration/         <span class="comment"># 188 integration tests</span>
+│
+├── <span class="key">frontend/</span>                   <span class="comment"># React + Vite frontend</span>
+│   ├── src/
+│   │   ├── App.jsx              <span class="comment"># Router — 71 routes</span>
+│   │   ├── main.jsx             <span class="comment"># Entry point</span>
+│   │   ├── pages/               <span class="comment"># 54 page components</span>
+│   │   │   ├── Landing.jsx      <span class="comment"># Homepage with hero audit</span>
+│   │   │   ├── Pricing.jsx      <span class="comment"># 4-tier pricing</span>
+│   │   │   ├── Login.jsx        <span class="comment"># Auth login</span>
+│   │   │   ├── Register.jsx     <span class="comment"># Auth register</span>
+│   │   │   ├── Dashboard.jsx    <span class="comment"># User dashboard</span>
+│   │   │   ├── Audit.jsx        <span class="comment"># New audit</span>
+│   │   │   ├── AuditDetail.jsx  <span class="comment"># Audit results</span>
+│   │   │   ├── Blog.jsx         <span class="comment"># Blog index</span>
+│   │   │   ├── BlogPost.jsx     <span class="comment"># Blog detail</span>
+│   │   │   ├── ComparisonPage.jsx <span class="comment"># vs/ pages</span>
+│   │   │   ├── IndustryPage.jsx <span class="comment"># Industry landing pages</span>
+│   │   │   ├── tools/           <span class="comment"># 8 free SEO tools</span>
+│   │   │   └── ...              <span class="comment"># 30+ more pages</span>
+│   │   ├── components/
+│   │   │   ├── app/             <span class="comment"># App components</span>
+│   │   │   │   ├── AppLayout.jsx
+│   │   │   │   ├── ErrorBoundary.jsx
+│   │   │   │   ├── Common.jsx
+│   │   │   │   ├── FAQ.jsx
+│   │   │   │   ├── CookieConsent.jsx
+│   │   │   │   ├── SupportWidget.jsx
+│   │   │   │   ├── NotificationCenter.jsx
+│   │   │   │   └── ...
+│   │   │   └── ui/              <span class="comment"># shadcn/ui components</span>
+│   │   ├── contexts/            <span class="comment"># AuthContext, ThemeContext</span>
+│   │   ├── hooks/               <span class="comment"># usePageMeta, useAnalytics</span>
+│   │   ├── lib/                 <span class="comment"># api.jsx, env.js, utils.jsx</span>
+│   │   └── __tests__/           <span class="comment"># 47 frontend tests</span>
+│   ├── public/                  <span class="comment"># Static assets (9 files)</span>
+│   ├── build/                   <span class="comment"># Production build output</span>
+│   ├── vite.config.js
+│   ├── vercel.json
+│   └── Dockerfile
+│
+├── <span class="key">docs/</span>                       <span class="comment"># Documentation (7 HTML files)</span>
+│   ├── index.html               <span class="comment"># Documentation hub</span>
+│   ├── architecture.html        <span class="comment"># Architecture diagram</span>
+│   ├── workflow.html            <span class="comment"># This file</span>
+│   ├── qa-report.html           <span class="comment"># QA report</span>
+│   ├── deployment-guide.html    <span class="comment"># Deployment guide</span>
+│   ├── sitemap.html             <span class="comment"># Page sitemap</span>
+│   ├── api-reference.html       <span class="comment"># API reference</span>
+│   └── security.html            <span class="comment"># Security overview</span>
+│
+├── <span class="key">tests/</span>                      <span class="comment"># Project-level tests</span>
+│   ├── unit/                    <span class="comment"># 440 backend unit tests</span>
+│   └── integration/             <span class="comment"># 188 integration tests</span>
+│
+├── cloudbuild.yaml              <span class="comment"># Google Cloud Build config</span>
+├── docker-compose.yml           <span class="comment"># Local Docker setup</span>
+├── Dockerfile                   <span class="comment"># Backend Docker image</span>
+├── deploy.sh                    <span class="comment"># Deployment script</span>
+├── pyproject.toml               <span class="comment"># Python project config</span>
+├── SETUP.md                     <span class="comment"># Setup instructions</span>
+└── README.md                    <span class="comment"># Project overview</span></div>
+
+    <!-- ===== SECTION 3: DEVELOPMENT WORKFLOW ===== -->
+    <h2 id="s3"><span class="num">3</span> Development Workflow</h2>
+
+    <h3>3.1 Daily Development Cycle</h3>
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Start of Day</span></div>
+      <div class="code-block"><span class="comment"># Pull latest changes</span>
+<span class="cmd">git checkout</span> main
+<span class="cmd">git pull</span> origin main
+
+<span class="comment"># Start backend (auto-reloads on changes)</span>
+<span class="cmd">cd</span> backend && <span class="cmd">source</span> .venv/bin/activate
+<span class="cmd">uvicorn</span> server:app --host 0.0.0.0 --port 8001 --reload
+
+<span class="comment"># Start frontend (HMR on changes)</span>
+<span class="cmd">cd</span> frontend && <span class="cmd">npx vite</span> --port 3000</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">Create Feature Branch</span></div>
+      <div class="code-block"><span class="comment"># Branch naming convention</span>
+<span class="cmd">git checkout</span> -b feature/<span class="val">short-description</span>    <span class="comment"># New features</span>
+<span class="cmd">git checkout</span> -b fix/<span class="val">short-description</span>       <span class="comment"># Bug fixes</span>
+<span class="cmd">git checkout</span> -b refactor/<span class="val">short-description</span>  <span class="comment"># Refactoring</span>
+<span class="cmd">git checkout</span> -b hotfix/<span class="val">short-description</span>    <span class="comment"># Critical production fixes</span>
+
+<span class="comment"># Examples</span>
+<span class="cmd">git checkout</span> -b feature/add-competitor-export
+<span class="cmd">git checkout</span> -b fix/pricing-page-crash
+<span class="cmd">git checkout</span> -b hotfix/stripe-webhook-timeout</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span><span class="step-title">Develop & Test Locally</span></div>
+      <div class="code-block"><span class="comment"># Write code, then run tests</span>
+<span class="cmd">cd</span> backend
+<span class="cmd">python -m pytest</span> tests/unit/ -x -q     <span class="comment"># Backend unit tests (440)</span>
+<span class="cmd">python -m pytest</span> tests/integration/ -x -q <span class="comment"># Integration tests (188)</span>
+
+<span class="cmd">cd</span> ../frontend
+<span class="cmd">npx jest</span> --passWithNoTests            <span class="comment"># Frontend tests (47)</span>
+
+<span class="comment"># Run specific test file</span>
+<span class="cmd">python -m pytest</span> tests/unit/test_seo_analyzer.py -v
+<span class="cmd">npx jest</span> src/__tests__/Landing.test.jsx
+
+<span class="comment"># Run with coverage</span>
+<span class="cmd">python -m pytest</span> tests/unit/ --cov=backend --cov-report=html
+<span class="cmd">npx jest</span> --coverage</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">4</span><span class="step-title">Manual Browser Testing</span></div>
+      <p>For UI changes, manually test in the browser:</p>
+      <ul>
+        <li>Open http://localhost:3000</li>
+        <li>Test the specific page/feature you changed</li>
+        <li>Check browser console for errors (F12 → Console)</li>
+        <li>Test on mobile viewport (F12 → Toggle device toolbar)</li>
+        <li>Test with slow network (F12 → Network → Throttling)</li>
+        <li>Verify all interactive elements work (buttons, forms, links)</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">5</span><span class="step-title">Commit Changes</span></div>
+      <div class="code-block"><span class="comment"># Conventional commit format</span>
+<span class="cmd">git add</span> .
+<span class="cmd">git commit</span> -m <span class="val">"feat: add competitor CSV export button"</span>
+<span class="cmd">git commit</span> -m <span class="val">"fix: resolve Pricing.jsx TrendingUp import crash"</span>
+<span class="cmd">git commit</span> -m <span class="val">"refactor: extract _store_base_url to dependencies.py"</span>
+<span class="cmd">git commit</span> -m <span class="val">"test: add unit tests for social_fetcher retry logic"</span>
+<span class="cmd">git commit</span> -m <span class="val">"docs: update README with v1.9.0 changes"</span>
+<span class="cmd">git commit</span> -m <span class="val">"chore: bump version to 1.9.0"</span>
+
+<span class="comment"># Push to remote</span>
+<span class="cmd">git push</span> origin feature/add-competitor-export</div>
+      <table>
+        <tr><th>Prefix</th><th>Usage</th></tr>
+        <tr><td><span class="badge badge-cyan">feat</span></td><td>New feature or functionality</td></tr>
+        <tr><td><span class="badge badge-rose">fix</span></td><td>Bug fix</td></tr>
+        <tr><td><span class="badge badge-amber">refactor</span></td><td>Code restructuring without behavior change</td></tr>
+        <tr><td><span class="badge badge-emerald">test</span></td><td>Adding or updating tests</td></tr>
+        <tr><td><span class="badge badge-violet">docs</span></td><td>Documentation changes</td></tr>
+        <tr><td><span class="badge badge-cyan">chore</span></td><td>Maintenance, dependencies, config</td></tr>
+        <tr><td><span class="badge badge-rose">hotfix</span></td><td>Critical production fix</td></tr>
+      </table>
+    </div>
+
+    <!-- ===== SECTION 4: TESTING STRATEGY ===== -->
+    <h2 id="s4"><span class="num">4</span> Testing Strategy</h2>
+
+    <h3>4.1 Test Pyramid</h3>
+    <table>
+      <tr><th>Layer</th><th>Count</th><th>Tool</th><th>Scope</th><th>Speed</th></tr>
+      <tr><td><span class="badge badge-cyan">Unit</span></td><td>440</td><td>pytest</td><td>Individual functions, classes</td><td>~6s</td></tr>
+      <tr><td><span class="badge badge-amber">Integration</span></td><td>188</td><td>pytest + TestClient</td><td>API endpoints, DB interactions</td><td>~100s</td></tr>
+      <tr><td><span class="badge badge-emerald">Frontend</span></td><td>47</td><td>Jest + Testing Library</td><td>React components, pages</td><td>~6s</td></tr>
+      <tr><td><span class="badge badge-violet">E2E</span></td><td>—</td><td>Playwright (planned)</td><td>Full user flows</td><td>—</td></tr>
+    </table>
+
+    <h3>4.2 Running Tests</h3>
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Backend Unit Tests</span></div>
+      <div class="code-block"><span class="comment"># Run all unit tests</span>
+<span class="cmd">cd</span> backend
+<span class="cmd">python -m pytest</span> tests/unit/ -x -q
+
+<span class="comment"># Run with verbose output</span>
+<span class="cmd">python -m pytest</span> tests/unit/ -v
+
+<span class="comment"># Run specific test file</span>
+<span class="cmd">python -m pytest</span> tests/unit/test_seo_analyzer.py -v
+
+<span class="comment"># Run specific test function</span>
+<span class="cmd">python -m pytest</span> tests/unit/test_seo_analyzer.py::test_analyze_url -v
+
+<span class="comment"># Run with coverage report</span>
+<span class="cmd">python -m pytest</span> tests/unit/ --cov=. --cov-report=term-missing
+
+<span class="comment"># Run with parallel execution (faster)</span>
+<span class="cmd">python -m pytest</span> tests/unit/ -n auto</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">Backend Integration Tests</span></div>
+      <div class="code-block"><span class="comment"># Requires MongoDB connection</span>
+<span class="cmd">export</span> <span class="key">MONGO_URL</span>=<span class="val">"mongodb://localhost:27017/goodly_test"</span>
+
+<span class="comment"># Run integration tests</span>
+<span class="cmd">python -m pytest</span> tests/integration/ -x -q
+
+<span class="comment"># Run specific integration test</span>
+<span class="cmd">python -m pytest</span> tests/integration/test_server_endpoints.py -v</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span><span class="step-title">Frontend Tests</span></div>
+      <div class="code-block"><span class="comment"># Run all frontend tests</span>
+<span class="cmd">cd</span> frontend
+<span class="cmd">npx jest</span> --passWithNoTests
+
+<span class="comment"># Run with watch mode (auto-rerun on changes)</span>
+<span class="cmd">npx jest</span> --watch
+
+<span class="comment"># Run specific test file</span>
+<span class="cmd">npx jest</span> src/__tests__/Landing.test.jsx
+
+<span class="comment"># Run with coverage</span>
+<span class="cmd">npx jest</span> --coverage</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">4</span><span class="step-title">Pre-Commit Test Checklist</span></div>
+      <div class="checklist">
+        <div class="check-item"><span class="check-pending">○</span> All backend unit tests pass (440/440)</div>
+        <div class="check-item"><span class="check-pending">○</span> All frontend tests pass (47/47)</div>
+        <div class="check-item"><span class="check-pending">○</span> No new console errors in browser</div>
+        <div class="check-item"><span class="check-pending">○</span> New code has test coverage</div>
+        <div class="check-item"><span class="check-pending">○</span> No linting errors</div>
+        <div class="check-item"><span class="check-pending">○</span> Production build succeeds</div>
+      </div>
+    </div>
+
+    <!-- ===== SECTION 5: CODE QUALITY ===== -->
+    <h2 id="s5"><span class="num">5</span> Code Quality & Linting</h2>
+
+    <h3>5.1 Backend Linting</h3>
+    <div class="code-block"><span class="comment"># Python linting with ruff</span>
+<span class="cmd">pip install</span> ruff
+<span class="cmd">ruff check</span> backend/                     <span class="comment"># Check for issues</span>
+<span class="cmd">ruff check</span> backend/ --fix              <span class="comment"># Auto-fix where possible</span>
+<span class="cmd">ruff format</span> backend/                   <span class="comment"># Format code</span>
+
+<span class="comment"># Type checking with mypy (if configured)</span>
+<span class="cmd">mypy</span> backend/</div>
+
+    <h3>5.2 Frontend Linting</h3>
+    <div class="code-block"><span class="comment"># ESLint</span>
+<span class="cmd">cd</span> frontend
+<span class="cmd">npx eslint</span> src/                         <span class="comment"># Check for issues</span>
+<span class="cmd">npx eslint</span> src/ --fix                  <span class="comment"># Auto-fix where possible</span>
+
+<span class="comment"># Prettier (if configured)</span>
+<span class="cmd">npx prettier</span> --check src/
+<span class="cmd">npx prettier</span> --write src/</div>
+
+    <h3>5.3 Code Quality Rules</h3>
+    <div class="checklist">
+      <div class="check-item"><span class="check-pass">✓</span> No React hooks after early returns</div>
+      <div class="check-item"><span class="check-pass">✓</span> All lucide-react icons properly imported</div>
+      <div class="check-item"><span class="check-pass">✓</span> dangerouslySetInnerHTML only with HTML escaping</div>
+      <div class="check-item"><span class="check-pass">✓</span> No eval() or new Function()</div>
+      <div class="check-item"><span class="check-pass">✓</span> No innerHTML / outerHTML / insertAdjacentHTML</div>
+      <div class="check-item"><span class="check-pass">✓</span> No bare except: pass without comments</div>
+      <div class="check-item"><span class="check-pass">✓</span> No silent .catch(() => {})</div>
+      <div class="check-item"><span class="check-pass">✓</span> All setTimeout/setInterval properly cleaned up</div>
+      <div class="check-item"><span class="check-pass">✓</span> All addEventListener properly removed</div>
+      <div class="check-item"><span class="check-pass">✓</span> All &lt;img&gt; tags have alt attributes</div>
+      <div class="check-item"><span class="check-pass">✓</span> No hardcoded production URLs in code</div>
+      <div class="check-item"><span class="check-pass">✓</span> No TODOs/FIXMEs/HACKs</div>
+      <div class="check-item"><span class="check-pass">✓</span> Generic error messages (no internal leaks)</div>
+      <div class="check-item"><span class="check-pass">✓</span> All user inputs validated and sanitized</div>
+    </div>
+
+    <!-- ===== SECTION 6: GIT WORKFLOW ===== -->
+    <h2 id="s6"><span class="num">6</span> Git Workflow & Branching</h2>
+
+    <h3>6.1 Branch Strategy</h3>
+    <div class="code-block"><span class="comment"># Main branches</span>
+main              <span class="comment"># Production-ready code</span>
+staging           <span class="comment"># Pre-production testing</span>
+develop           <span class="comment"># Integration branch (optional)</span>
+
+<span class="comment"># Feature branches (from main)</span>
+feature/*         <span class="comment"># New features</span>
+fix/*             <span class="comment"># Bug fixes</span>
+refactor/*        <span class="comment"># Code refactoring</span>
+
+<span class="comment"># Release branches</span>
+release/*         <span class="comment"># Release preparation</span>
+
+<span class="comment"># Hotfix branches (from main)</span>
+hotfix/*          <span class="comment"># Critical production fixes</span></div>
+
+    <h3>6.2 Pull Request Process</h3>
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Create PR</span></div>
+      <div class="code-block"><span class="comment"># Push branch and create PR via GitHub CLI</span>
+<span class="cmd">gh pr create</span> \
+  --title <span class="val">"feat: add competitor CSV export"</span> \
+  --body <span class="val">"## What
+- Adds CSV export button to competitor comparison page
+- Exports score, keywords, and gap analysis
+
+## Testing
+- [x] Unit tests added
+- [x] Manual browser testing done
+- [x] All existing tests pass
+
+## Screenshots
+(attach if UI change)"</span> \
+  --base main \
+  --head feature/add-competitor-export</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">PR Review Checklist</span></div>
+      <div class="checklist">
+        <div class="check-item"><span class="check-pending">○</span> Code follows project conventions</div>
+        <div class="check-item"><span class="check-pending">○</span> All tests pass (CI checks green)</div>
+        <div class="check-item"><span class="check-pending">○</span> New code has test coverage</div>
+        <div class="check-item"><span class="check-pending">○</span> No security vulnerabilities introduced</div>
+        <div class="check-item"><span class="check-pending">○</span> No hardcoded secrets or URLs</div>
+        <div class="check-item"><span class="check-pending">○</span> Error handling is appropriate</div>
+        <div class="check-item"><span class="check-pending">○</span> Documentation updated if needed</div>
+        <div class="check-item"><span class="check-pending">○</span> Version bumped if needed</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span><span class="step-title">Merge Strategy</span></div>
+      <div class="code-block"><span class="comment"># Squash merge (recommended for feature branches)</span>
+<span class="comment"># Keeps main branch history clean</span>
+<span class="cmd">gh pr merge</span> --squash feature/add-competitor-export
+
+<span class="comment"># Rebase merge (for clean linear history)</span>
+<span class="cmd">gh pr merge</span> --rebase feature/add-competitor-export
+
+<span class="comment"># After merge, delete the branch</span>
+<span class="cmd">git branch</span> -d feature/add-competitor-export
+<span class="cmd">git push</span> origin --delete feature/add-competitor-export</div>
+    </div>
+
+    <!-- ===== SECTION 7: CI/CD ===== -->
+    <h2 id="s7"><span class="num">7</span> CI/CD Pipeline</h2>
+
+    <h3>7.1 Pipeline Overview</h3>
+    <div class="flow">
+      <span class="flow-box flow-dev">Push/PR</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-test">Lint</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-test">Unit Tests</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-test">Integration Tests</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-build">Build</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-deploy">Deploy Staging</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-test">E2E Tests</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box flow-prod">Deploy Production</span>
+    </div>
+
+    <h3>7.2 GitHub Actions Workflow</h3>
+    <div class="code-block"><span class="comment"># .github/workflows/ci.yml</span>
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main]
+
+jobs:
+  <span class="key">lint:</span>
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: <span class="val">'3.14'</span> }
+      - run: <span class="cmd">pip install ruff</span>
+      - run: <span class="cmd">ruff check backend/</span>
+
+  <span class="key">test-backend:</span>
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports: [27017:27017]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: <span class="val">'3.14'</span> }
+      - run: <span class="cmd">pip install -r backend/requirements.txt</span>
+      - run: <span class="cmd">python -m pytest tests/unit/ -x -q</span>
+        env:
+          MONGO_URL: <span class="val">mongodb://localhost:27017/test</span>
+          JWT_SECRET: <span class="val">test-secret-key-for-ci</span>
+
+  <span class="key">test-frontend:</span>
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: <span class="val">'20'</span> }
+      - run: <span class="cmd">cd frontend && npm ci</span>
+      - run: <span class="cmd">cd frontend && npx jest --passWithNoTests</span>
+
+  <span class="key">build:</span>
+    needs: [lint, test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: <span class="val">'20'</span> }
+      - run: <span class="cmd">cd frontend && npm ci && npx vite build</span>
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/build/
+
+  <span class="key">deploy-staging:</span>
+    if: github.ref == <span class="val">'refs/heads/staging'</span>
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: <span class="val">goodly-api-staging</span>
+          region: <span class="val">us-central1</span>
+          credentials: <span class="val">${{ secrets.GCP_SA_KEY }}</span>
+
+  <span class="key">deploy-production:</span>
+    if: github.ref == <span class="val">'refs/heads/main'</span>
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: <span class="val">goodly-api</span>
+          region: <span class="val">us-central1</span>
+          credentials: <span class="val">${{ secrets.GCP_SA_KEY }}</span></div>
+
+    <!-- ===== SECTION 8: BACKEND DEPLOYMENT ===== -->
+    <h2 id="s8"><span class="num">8</span> Backend Deployment (Cloud Run)</h2>
+
+    <h3>8.1 Manual Deployment</h3>
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Build & Push Docker Image</span></div>
+      <div class="code-block"><span class="comment"># Using Cloud Build (recommended)</span>
+<span class="cmd">gcloud builds submit</span> --config cloudbuild.yaml
+
+<span class="comment"># Or build manually</span>
+<span class="cmd">docker build</span> -t gcr.io/<span class="val">PROJECT_ID</span>/goodly-api:<span class="val">v1.9.0</span> .
+<span class="cmd">docker push</span> gcr.io/<span class="val">PROJECT_ID</span>/goodly-api:<span class="val">v1.9.0</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">Deploy to Cloud Run</span></div>
+      <div class="code-block"><span class="comment"># Deploy with environment variables</span>
+<span class="cmd">gcloud run deploy</span> goodly-api \
+  --image gcr.io/<span class="val">PROJECT_ID</span>/goodly-api:<span class="val">v1.9.0</span> \
+  --region us-central1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --memory 512Mi \
+  --cpu 1 \
+  --min-instances 0 \
+  --max-instances 10 \
+  --concurrency 80 \
+  --timeout 300 \
+  --set-env-vars="<span class="key">MONGO_URL</span>=<span class="val">mongodb+srv://...</span>" \
+  --set-env-vars="<span class="key">JWT_SECRET</span>=<span class="val">...</span>" \
+  --set-env-vars="<span class="key">GEMINI_API_KEY</span>=<span class="val">...</span>" \
+  --set-env-vars="<span class="key">STRIPE_API_KEY</span>=<span class="val">sk_live_...</span>" \
+  --set-env-vars="<span class="key">STRIPE_WEBHOOK_SECRET</span>=<span class="val">whsec_...</span>" \
+  --set-env-vars="<span class="key">RESEND_API_KEY</span>=<span class="val">re_...</span>" \
+  --set-env-vars="<span class="key">SENDER_EMAIL</span>=<span class="val">hello@searchgoodly.com</span>" \
+  --set-env-vars="<span class="key">FRONTEND_URL</span>=<span class="val">https://searchgoodly.com</span>" \
+  --set-env-vars="<span class="key">CORS_ORIGINS</span>=<span class="val">https://searchgoodly.com,https://www.searchgoodly.com</span>" \
+  --set-env-vars="<span class="key">ENVIRONMENT</span>=<span class="val">production</span>" \
+  --set-env-vars="<span class="key">SENTRY_DSN</span>=<span class="val">https://...</span>" \
+  --set-env-vars="<span class="key">SCHEDULER_ENABLED</span>=<span class="val">true</span>"</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span><span class="step-title">Verify Deployment</span></div>
+      <div class="code-block"><span class="comment"># Check health endpoint</span>
+<span class="cmd">curl</span> https://api.searchgoodly.com/api/health
+
+<span class="comment"># Expected response:</span>
+{
+  <span class="key">"status"</span>: <span class="val">"healthy"</span>,
+  <span class="key">"service"</span>: <span class="val">"Goodly API"</span>,
+  <span class="key">"version"</span>: <span class="val">"1.9.0"</span>,
+  <span class="key">"database"</span>: <span class="val">"connected"</span>,
+  <span class="key">"ai_service"</span>: <span class="val">"available"</span>,
+  <span class="key">"stripe"</span>: <span class="val">"configured"</span>,
+  <span class="key">"email"</span>: <span class="val">"configured"</span>,
+  <span class="key">"scheduler"</span>: <span class="val">"enabled"</span>
+}
+
+<span class="comment"># Check version header</span>
+<span class="cmd">curl</span> -I https://api.searchgoodly.com/api/health | grep X-API-Version
+<span class="comment"># X-API-Version: 1.9.0</span></div>
+    </div>
+
+    <!-- ===== SECTION 9: FRONTEND DEPLOYMENT ===== -->
+    <h2 id="s9"><span class="num">9</span> Frontend Deployment (Vercel)</h2>
+
+    <h3>9.1 Production Build</h3>
+    <div class="code-block"><span class="comment"># Build for production</span>
+<span class="cmd">cd</span> frontend
+<span class="cmd">npx vite build</span>
+
+<span class="comment"># Preview production build locally</span>
+<span class="cmd">npx vite preview</span> --port 4173
+
+<span class="comment"># Check build output</span>
+<span class="cmd">ls</span> -la build/
+<span class="cmd">du</span> -sh build/                     <span class="comment"># Check bundle size</span></div>
+
+    <h3>9.2 Deploy to Vercel</h3>
+    <div class="code-block"><span class="comment"># Deploy to production</span>
+<span class="cmd">cd</span> frontend
+<span class="cmd">vercel</span> --prod
+
+<span class="comment"># Deploy to preview (staging)</span>
+<span class="cmd">vercel</span>
+
+<span class="comment"># Set environment variables in Vercel dashboard</span>
+<span class="comment"># or via CLI:</span>
+<span class="cmd">vercel env add</span> REACT_APP_BACKEND_URL production
+<span class="cmd">vercel env add</span> REACT_APP_GA_ID production</div>
+
+    <h3>9.3 Vercel Configuration</h3>
+    <div class="code-block"><span class="comment"># vercel.json</span>
+{
+  <span class="key">"rewrites"</span>: [
+    { <span class="key">"source"</span>: <span class="val">"/api/(.*)"</span>, <span class="key">"destination"</span>: <span class="val">"https://api.searchgoodly.com/api/$1"</span> },
+    { <span class="key">"source"</span>: <span class="val">"/(.*)"</span>, <span class="key">"destination"</span>: <span class="val">"/index.html"</span> }
+  ],
+  <span class="key">"headers"</span>: [
+    {
+      <span class="key">"source"</span>: <span class="val">"/(.*)"</span>,
+      <span class="key">"headers"</span>: [
+        { <span class="key">"key"</span>: <span class="val">"X-Frame-Options"</span>, <span class="key">"value"</span>: <span class="val">"DENY"</span> },
+        { <span class="key">"key"</span>: <span class="val">"X-Content-Type-Options"</span>, <span class="key">"value"</span>: <span class="val">"nosniff"</span> },
+        { <span class="key">"key"</span>: <span class="val">"Referrer-Policy"</span>, <span class="key">"value"</span>: <span class="val">"strict-origin-when-cross-origin"</span> }
+      ]
+    }
+  ]
+}</div>
+
+    <!-- ===== SECTION 10: DATABASE ===== -->
+    <h2 id="s10"><span class="num">10</span> Database Operations</h2>
+
+    <h3>10.1 MongoDB Atlas Connection</h3>
+    <div class="code-block"><span class="comment"># Connection string format</span>
+<span class="key">MONGO_URL</span>=<span class="val">mongodb+srv://user:password@cluster.mongodb.net/goodly?retryWrites=true&w=majority</span>
+
+<span class="comment"># Test connection</span>
+<span class="cmd">python3</span> -c "
+from motor.motor_asyncio import AsyncIOMotorClient
+import asyncio
+async def test():
+    client = AsyncIOMotorClient('<span class="val">MONGO_URL</span>')
+    await client.admin.command('ping')
+    print('Connected!')
+asyncio.run(test())
+"</div>
+
+    <h3>10.2 Database Backups</h3>
+    <div class="code-block"><span class="comment"># MongoDB Atlas automated backups (recommended)</span>
+<span class="comment"># Configure in Atlas dashboard → Backup → Policy</span>
+
+<span class="comment"># Manual backup with mongodump</span>
+<span class="cmd">mongodump</span> --uri=<span class="val">"mongodb+srv://..."</span> --out=./backup-<span class="val">$(date +%Y%m%d)</span>
+
+<span class="comment"># Restore from backup</span>
+<span class="cmd">mongorestore</span> --uri=<span class="val">"mongodb+srv://..."</span> ./backup-<span class="val">20260709</span></div>
+
+    <h3>10.3 Database Migrations</h3>
+    <div class="warn-box"><strong>⚠️ Important:</strong> Goodly uses a schema-less MongoDB design. There are no formal migrations. When adding new fields, ensure backward compatibility — old documents without the new field should not break.</div>
+    <div class="code-block"><span class="comment"># Add index for new query pattern</span>
+<span class="cmd">python3</span> -c "
+from motor.motor_asyncio import AsyncIOMotorClient
+import asyncio
+async def add_index():
+    client = AsyncIOMotorClient('<span class="val">MONGO_URL</span>')
+    db = client.goodly
+    await db.audits.create_index([(<span class="val">'user_id'</span>, 1), (<span class="val">'created_at'</span>, -1)])
+    print('Index created')
+asyncio.run(add_index())
+"</div>
+
+    <!-- ===== SECTION 11: ENV MANAGEMENT ===== -->
+    <h2 id="s11"><span class="num">11</span> Environment Management</h2>
+
+    <h3>11.1 Environment Variables Reference</h3>
+    <table>
+      <tr><th>Variable</th><th>Required</th><th>Dev Default</th><th>Production</th></tr>
+      <tr><td>MONGO_URL</td><td><span class="badge badge-rose">Yes</span></td><td>—</td><td>Atlas connection string</td></tr>
+      <tr><td>JWT_SECRET</td><td><span class="badge badge-rose">Yes</span></td><td>dev-secret</td><td>64+ char random</td></tr>
+      <tr><td>GEMINI_API_KEY</td><td><span class="badge badge-rose">Yes</span></td><td>—</td><td>Google AI key</td></tr>
+      <tr><td>STRIPE_API_KEY</td><td><span class="badge badge-rose">Yes</span></td><td>sk_test_...</td><td>sk_live_...</td></tr>
+      <tr><td>STRIPE_WEBHOOK_SECRET</td><td><span class="badge badge-rose">Yes</span></td><td>whsec_test_...</td><td>whsec_...</td></tr>
+      <tr><td>RESEND_API_KEY</td><td><span class="badge badge-rose">Yes</span></td><td>—</td><td>re_...</td></tr>
+      <tr><td>SENDER_EMAIL</td><td><span class="badge badge-rose">Yes</span></td><td>—</td><td>hello@searchgoodly.com</td></tr>
+      <tr><td>FRONTEND_URL</td><td><span class="badge badge-rose">Yes</span></td><td>http://localhost:3000</td><td>https://searchgoodly.com</td></tr>
+      <tr><td>CORS_ORIGINS</td><td><span class="badge badge-rose">Yes</span></td><td>http://localhost:3000</td><td>https://searchgoodly.com,...</td></tr>
+      <tr><td>ENVIRONMENT</td><td>No</td><td>development</td><td>production</td></tr>
+      <tr><td>SERPAPI_KEY</td><td>No</td><td>—</td><td>SerpAPI key (optional)</td></tr>
+      <tr><td>SENTRY_DSN</td><td>No</td><td>—</td><td>Sentry DSN</td></tr>
+      <tr><td>ADMIN_PASSWORD</td><td>No</td><td>—</td><td>Admin seed password</td></tr>
+      <tr><td>SUPPORT_EMAIL</td><td>No</td><td>—</td><td>hello@searchgoodly.com</td></tr>
+      <tr><td>ADMIN_EMAIL</td><td>No</td><td>—</td><td>admin@searchgoodly.com</td></tr>
+      <tr><td>SCHEDULER_ENABLED</td><td>No</td><td>true</td><td>true</td></tr>
+      <tr><td>GOOGLE_CLIENT_ID</td><td>No</td><td>—</td><td>OAuth client ID</td></tr>
+    </table>
+
+    <h3>11.2 Secrets Rotation</h3>
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Rotate JWT Secret</span></div>
+      <div class="code-block"><span class="comment"># Generate new secret</span>
+<span class="cmd">python3</span> -c "import secrets; print(secrets.token_urlsafe(64))"
+
+<span class="comment"># Update in Cloud Run</span>
+<span class="cmd">gcloud run services update</span> goodly-api \
+  --update-env-vars=<span class="key">JWT_SECRET</span>=<span class="val">NEW_SECRET</span>
+
+<span class="warn"># Note: This invalidates all existing tokens. Users will need to re-login.</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">Rotate API Keys</span></div>
+      <div class="code-block"><span class="comment"># Stripe: Generate new key in Stripe Dashboard → Developers → API Keys</span>
+<span class="comment"># Resend: Generate new key in Resend Dashboard → API Keys</span>
+<span class="comment"># Gemini: Generate new key in Google AI Studio → API Keys</span>
+
+<span class="comment"># Update all at once</span>
+<span class="cmd">gcloud run services update</span> goodly-api \
+  --update-env-vars=<span class="key">STRIPE_API_KEY</span>=<span class="val">sk_live_NEW</span> \
+  --update-env-vars=<span class="key">RESEND_API_KEY</span>=<span class="val">re_NEW</span> \
+  --update-env-vars=<span class="key">GEMINI_API_KEY</span>=<span class="val">AIza_NEW</span></div>
+    </div>
+
+    <!-- ===== SECTION 12: MONITORING ===== -->
+    <h2 id="s12"><span class="num">12</span> Monitoring & Observability</h2>
+
+    <h3>12.1 Health Monitoring</h3>
+    <div class="code-block"><span class="comment"># Health endpoint (public)</span>
+<span class="cmd">curl</span> https://api.searchgoodly.com/api/health
+
+<span class="comment"># Status page (public)</span>
+<span class="cmd">open</span> https://searchgoodly.com/status
+
+<span class="comment"># Set up uptime monitoring (recommended)</span>
+<span class="comment"># - Google Cloud Monitoring (Uptime Checks)</span>
+<span class="comment"># - Better Uptime / Pingdom / UptimeRobot</span>
+<span class="comment"># - Check /api/health every 60 seconds</span>
+<span class="comment"># - Alert if status is not "healthy"</span></div>
+
+    <h3>12.2 Error Tracking (Sentry)</h3>
+    <div class="code-block"><span class="comment"># Sentry is configured via SENTRY_DSN env var</span>
+<span class="comment"># Automatically captures:</span>
+<span class="comment"># - Unhandled exceptions</span>
+<span class="comment"># - HTTP 500 errors</span>
+<span class="comment"># - AI service failures</span>
+<span class="comment"># - Database connection errors</span>
+
+<span class="comment"># View errors: https://sentry.io → Goodly project</span>
+<span class="comment"># Configure alerts: Settings → Alerts → New Alert Rule</span></div>
+
+    <h3>12.3 Google Cloud Monitoring</h3>
+    <div class="code-block"><span class="comment"># Cloud Run metrics (automatic)</span>
+<span class="comment"># - Request count, latency, error rate</span>
+<span class="comment"># - Container instance count</span>
+<span class="comment"># - Memory and CPU utilization</span>
+
+<span class="comment"># View in Google Cloud Console:</span>
+<span class="comment"># Cloud Run → goodly-api → Metrics tab</span>
+
+<span class="comment"># Set up alerts:</span>
+<span class="cmd">gcloud monitoring policies create</span> \
+  --display-name=<span class="val">"Goodly API Error Rate"</span> \
+  --condition-filter=<span class="val">'metric.type="run.googleapis.com/request_count" resource.labels.service_name="goodly-api" metric.labels.response_code_class="5xx"'</span> \
+  --condition-threshold-value=<span class="val">5</span> \
+  --condition-threshold-duration=<span class="val">300s</span></div>
+
+    <h3>12.4 Logging</h3>
+    <div class="code-block"><span class="comment"># View Cloud Run logs</span>
+<span class="cmd">gcloud logging read</span> <span class="val">"resource.type=cloud_run_revision AND resource.labels.service_name=goodly-api"</span> --limit 50
+
+<span class="comment"># Filter by severity</span>
+<span class="cmd">gcloud logging read</span> <span class="val">"severity>=ERROR"</span> --limit 20
+
+<span class="comment"># View recent errors</span>
+<span class="cmd">gcloud logging read</span> <span class="val">'jsonPayload.level="ERROR"'</span> --limit 20 --format=<span class="val">"table(timestamp, jsonPayload.message)"</span></div>
+
+    <!-- ===== SECTION 13: INCIDENT RESPONSE ===== -->
+    <h2 id="s13"><span class="num">13</span> Incident Response</h2>
+
+    <h3>13.1 Incident Severity Levels</h3>
+    <table>
+      <tr><th>Level</th><th>Description</th><th>Response Time</th><th>Example</th></tr>
+      <tr><td><span class="badge badge-rose">P0 - Critical</span></td><td>Service completely down</td><td>15 minutes</td><td>API returns 500 for all requests</td></tr>
+      <tr><td><span class="badge badge-amber">P1 - High</span></td><td>Major feature broken</td><td>1 hour</td><td>Audit engine failing, payments broken</td></tr>
+      <tr><td><span class="badge badge-cyan">P2 - Medium</span></td><td>Feature partially broken</td><td>4 hours</td><td>PDF export failing, blog not loading</td></tr>
+      <tr><td><span class="badge badge-emerald">P3 - Low</span></td><td>Minor issue</td><td>24 hours</td><td>UI glitch, typo, cosmetic issue</td></tr>
+    </table>
+
+    <h3>13.2 Incident Response Checklist</h3>
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Detect & Acknowledge</span></div>
+      <div class="code-block"><span class="comment"># Check health endpoint</span>
+<span class="cmd">curl</span> https://api.searchgoodly.com/api/health
+
+<span class="comment"># Check status page</span>
+<span class="cmd">open</span> https://searchgoodly.com/status
+
+<span class="comment"># Check Sentry for errors</span>
+<span class="comment"># Check Google Cloud Monitoring for alerts</span>
+<span class="comment"># Check Cloud Run logs for errors</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">Diagnose</span></div>
+      <div class="code-block"><span class="comment"># Check recent deployments</span>
+<span class="cmd">gcloud run revisions list</span> --service goodly-api --limit 5
+
+<span class="comment"># Check database connectivity</span>
+<span class="cmd">curl</span> https://api.searchgoodly.com/api/health | grep database
+
+<span class="comment"># Check external service status</span>
+<span class="comment"># - MongoDB Atlas: https://status.cloud.mongodb.com</span>
+<span class="comment"># - Stripe: https://status.stripe.com</span>
+<span class="comment"># - Resend: https://status.resend.com</span>
+<span class="comment"># - Google Cloud: https://status.cloud.google.com</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span><span class="step-title">Mitigate</span></div>
+      <div class="code-block"><span class="comment"># Option A: Rollback to previous revision</span>
+<span class="cmd">gcloud run services update-traffic</span> goodly-api --to-revisions=<span class="val">PREVIOUS_REVISION</span>=100
+
+<span class="comment"># Option B: Deploy hotfix</span>
+<span class="cmd">git checkout</span> -b hotfix/critical-fix main
+<span class="comment"># ... make fix ...</span>
+<span class="cmd">git push</span> origin hotfix/critical-fix
+<span class="comment"># ... create PR, merge, deploy ...</span>
+
+<span class="comment"># Option C: Scale up if under load</span>
+<span class="cmd">gcloud run services update</span> goodly-api --max-instances=<span class="val">20</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">4</span><span class="step-title">Communicate</span></div>
+      <ul>
+        <li>Update status page with incident details</li>
+        <li>Post in team Slack/Discord channel</li>
+        <li>If customer-facing: post on Twitter/X, update status page</li>
+        <li>Document timeline in postmortem</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">5</span><span class="step-title">Postmortem</span></div>
+      <ul>
+        <li>What happened? (timeline)</li>
+        <li>What was the root cause?</li>
+        <li>How was it detected?</li>
+        <li>How was it resolved?</li>
+        <li>What prevented earlier detection?</li>
+        <li>What changes prevent recurrence?</li>
+        <li>Action items with owners and deadlines</li>
+      </ul>
+    </div>
+
+    <!-- ===== SECTION 14: RELEASE PROCESS ===== -->
+    <h2 id="s14"><span class="num">14</span> Release Process</h2>
+
+    <h3>14.1 Release Checklist</h3>
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Pre-Release (1 day before)</span></div>
+      <div class="checklist">
+        <div class="check-item"><span class="check-pending">○</span> All PRs for this release merged to main</div>
+        <div class="check-item"><span class="check-pending">○</span> All tests passing on main (CI green)</div>
+        <div class="check-item"><span class="check-pending">○</span> Version bumped in version_header.py</div>
+        <div class="check-item"><span class="check-pending">○</span> Changelog updated</div>
+        <div class="check-item"><span class="check-pending">○</span> Documentation updated</div>
+        <div class="check-item"><span class="check-pending">○</span> Staging deployment verified</div>
+        <div class="check-item"><span class="check-pending">○</span> Smoke tests pass on staging</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">Release Day</span></div>
+      <div class="code-block"><span class="comment"># 1. Create release tag</span>
+<span class="cmd">git tag</span> -a v1.9.0 -m <span class="val">"Release v1.9.0 - Admin Dashboard, Free Tools, Landing Page Overhaul"</span>
+<span class="cmd">git push</span> origin v1.9.0
+
+<span class="comment"># 2. Deploy backend</span>
+<span class="cmd">gcloud builds submit</span> --config cloudbuild.yaml
+
+<span class="comment"># 3. Deploy frontend</span>
+<span class="cmd">cd</span> frontend && <span class="cmd">vercel</span> --prod
+
+<span class="comment"># 4. Verify deployment</span>
+<span class="cmd">curl</span> https://api.searchgoodly.com/api/health
+<span class="cmd">curl</span> -I https://searchgoodly.com</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span><span class="step-title">Post-Release (1 hour after)</span></div>
+      <div class="checklist">
+        <div class="check-item"><span class="check-pending">○</span> Health endpoint returns healthy</div>
+        <div class="check-item"><span class="check-pending">○</span> Status page shows all green</div>
+        <div class="check-item"><span class="check-pending">○</span> No spike in Sentry errors</div>
+        <div class="check-item"><span class="check-pending">○</span> No spike in Cloud Run error rate</div>
+        <div class="check-item"><span class="check-pending">○</span> Key flows tested (audit, login, billing)</div>
+        <div class="check-item"><span class="check-pending">○</span> Stripe webhooks receiving events</div>
+        <div class="check-item"><span class="check-pending">○</span> Emails delivering (check Resend dashboard)</div>
+      </div>
+    </div>
+
+    <h3>14.2 Version Bumping</h3>
+    <div class="code-block"><span class="comment"># Update version in backend/version_header.py</span>
+<span class="key">VERSION</span> = <span class="val">"1.9.0"</span>
+
+<span class="comment"># Update version in frontend (if displayed)</span>
+<span class="comment"># Update version in docs/README.md</span>
+<span class="comment"># Update version in cloudrun-env.yaml</span>
+<span class="comment"># Update version in pyproject.toml</span>
+
+<span class="comment"># Commit version bump</span>
+<span class="cmd">git commit</span> -m <span class="val">"chore: bump version to 1.9.0"</span></div>
+
+    <!-- ===== SECTION 15: ROLLBACK ===== -->
+    <h2 id="s15"><span class="num">15</span> Rollback Procedures</h2>
+
+    <h3>15.1 Backend Rollback</h3>
+    <div class="code-block"><span class="comment"># List recent revisions</span>
+<span class="cmd">gcloud run revisions list</span> --service goodly-api --limit 10
+
+<span class="comment"># Rollback to specific revision</span>
+<span class="cmd">gcloud run services update-traffic</span> goodly-api \
+  --to-revisions <span class="val">goodly-api-00008-abc</span>=100
+
+<span class="comment"># Verify rollback</span>
+<span class="cmd">curl</span> https://api.searchgoodly.com/api/health
+
+<span class="comment"># Rollback to previous version (one command)</span>
+<span class="cmd">gcloud run services rollback</span> goodly-api --region us-central1</div>
+
+    <h3>15.2 Frontend Rollback</h3>
+    <div class="code-block"><span class="comment"># Vercel: Go to Dashboard → Deployments → Select previous → Promote to Production</span>
+<span class="comment"># Or via CLI:</span>
+<span class="cmd">vercel rollback</span></div>
+
+    <h3>15.3 Database Rollback</h3>
+    <div class="danger-box"><strong>⚠️ Warning:</strong> Database rollbacks are risky. Only perform if data corruption occurred. Prefer code rollbacks that are backward-compatible.</div>
+    <div class="code-block"><span class="comment"># Restore from latest backup (MongoDB Atlas)</span>
+<span class="comment"># Atlas Dashboard → Backup → Restore → Select snapshot → Restore</span>
+
+<span class="comment"># Manual restore from local backup</span>
+<span class="cmd">mongorestore</span> --uri=<span class="val">"mongodb+srv://..."</span> --drop ./backup-<span class="val">20260709</span></div>
+
+    <!-- ===== SECTION 16: SECURITY OPS ===== -->
+    <h2 id="s16"><span class="num">16</span> Security Operations</h2>
+
+    <h3>16.1 Security Audit Checklist</h3>
+    <div class="checklist">
+      <div class="check-item"><span class="check-pending">○</span> All secrets rotated in last 90 days</div>
+      <div class="check-item"><span class="check-pending">○</span> No secrets in code or git history</div>
+      <div class="check-item"><span class="check-pending">○</span> Dependencies scanned for vulnerabilities (npm audit, pip audit)</div>
+      <div class="check-item"><span class="check-pending">○</span> CSP headers verified in production</div>
+      <div class="check-item"><span class="check-pending">○</span> HSTS header present and correct</div>
+      <div class="check-item"><span class="check-pending">○</span> CORS origins restricted (no wildcard)</div>
+      <div class="check-item"><span class="check-pending">○</span> Rate limits active on all endpoints</div>
+      <div class="check-item"><span class="check-pending">○</span> Stripe webhook signature verified</div>
+      <div class="check-item"><span class="check-pending">○</span> MongoDB network access restricted</div>
+      <div class="check-item"><span class="check-pending">○</span> Cloud Run IAM permissions minimal</div>
+    </div>
+
+    <h3>16.2 Dependency Updates</h3>
+    <div class="code-block"><span class="comment"># Backend: Check for outdated packages</span>
+<span class="cmd">pip list</span> --outdated
+
+<span class="comment"># Backend: Update all packages</span>
+<span class="cmd">pip install</span> --upgrade -r requirements.txt
+
+<span class="comment"># Backend: Security audit</span>
+<span class="cmd">pip-audit</span>
+
+<span class="comment"># Frontend: Check for outdated packages</span>
+<span class="cmd">npm outdated</span>
+
+<span class="comment"># Frontend: Update packages</span>
+<span class="cmd">npm update</span>
+
+<span class="comment"># Frontend: Security audit</span>
+<span class="cmd">npm audit</span>
+<span class="cmd">npm audit fix</span></div>
+
+    <!-- ===== SECTION 17: PERFORMANCE ===== -->
+    <h2 id="s17"><span class="num">17</span> Performance Optimization</h2>
+
+    <h3>17.1 Backend Performance</h3>
+    <div class="code-block"><span class="comment"># Check Cloud Run metrics</span>
+<span class="comment"># - P50/P95/P99 latency</span>
+<span class="comment"># - Request count</span>
+<span class="comment"># - Container instance count</span>
+<span class="comment"># - Memory/CPU utilization</span>
+
+<span class="comment"># Optimize if needed:</span>
+<span class="comment"># - Increase memory: --memory 1Gi</span>
+<span class="comment"># - Increase CPU: --cpu 2</span>
+<span class="comment"># - Increase concurrency: --concurrency 120</span>
+<span class="comment"># - Increase max instances: --max-instances 20</span>
+<span class="comment"># - Enable minimum instances: --min-instances 1 (reduces cold starts)</span></div>
+
+    <h3>17.2 Frontend Performance</h3>
+    <div class="code-block"><span class="comment"># Analyze bundle size</span>
+<span class="cmd">cd</span> frontend
+<span class="cmd">npx vite build</span> --mode production
+<span class="cmd">du</span> -sh build/assets/*.js | sort -rh | head -10
+
+<span class="comment"># Current bundle sizes:</span>
+<span class="comment"># index.js: 433KB (main bundle)</span>
+<span class="comment"># ProjectDetail.js: 346KB (largest page)</span>
+<span class="comment"># IndustryPage.js: 24KB</span>
+<span class="comment"># Pricing.js: 21KB</span>
+
+<span class="comment"># Optimizations applied:</span>
+<span class="comment"># - Lazy loading with React.lazy() + Suspense</span>
+<span class="comment"># - Code splitting per route</span>
+<span class="comment"># - Tree shaking via Vite</span>
+<span class="comment"># - Gzip compression (Vercel auto)</span></div>
+
+    <!-- ===== SECTION 18: TROUBLESHOOTING ===== -->
+    <h2 id="s18"><span class="num">18</span> Troubleshooting Guide</h2>
+
+    <h3>18.1 Common Issues</h3>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span><span class="step-title">Backend won't start</span></div>
+      <div class="code-block"><span class="comment"># Check Python version</span>
+<span class="cmd">python3 --version</span>  <span class="comment"># Must be 3.11+</span>
+
+<span class="comment"># Check virtual environment</span>
+<span class="cmd">which python3</span>      <span class="comment"># Should point to .venv/bin/python3</span>
+
+<span class="comment"># Check dependencies</span>
+<span class="cmd">pip install</span> -r requirements.txt
+
+<span class="comment"># Check port availability</span>
+<span class="cmd">lsof</span> -i :8001        <span class="comment"># Should be free</span>
+
+<span class="comment"># Check .env file exists</span>
+<span class="cmd">ls</span> -la backend/.env</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span><span class="step-title">Frontend won't start</span></div>
+      <div class="code-block"><span class="comment"># Check Node version</span>
+<span class="cmd">node --version</span>     <span class="comment"># Must be 18+</span>
+
+<span class="comment"># Clear node_modules and reinstall</span>
+<span class="cmd">rm</span> -rf node_modules package-lock.json
+<span class="cmd">npm install</span>
+
+<span class="comment"># Check port availability</span>
+<span class="cmd">lsof</span> -i :3000        <span class="comment"># Should be free</span>
+
+<span class="comment"># Check .env file</span>
+<span class="cmd">cat</span> frontend/.env    <span class="comment"># Should have REACT_APP_BACKEND_URL</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span><span class="step-title">Tests failing</span></div>
+      <div class="code-block"><span class="comment"># Check test database</span>
+<span class="cmd">curl</span> http://localhost:8001/api/health  <span class="comment"># Check database status</span>
+
+<span class="comment"># Run specific failing test with verbose output</span>
+<span class="cmd">python -m pytest</span> tests/unit/test_seo_analyzer.py::test_analyze_url -vv
+
+<span class="comment"># Check for environment issues</span>
+<span class="cmd">python -m pytest</span> tests/unit/ -x --tb=long
+
+<span class="comment"># Clear Python cache</span>
+<span class="cmd">find</span> . -type d -name __pycache__ -exec rm -rf {} +</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">4</span><span class="step-title">CORS errors in browser</span></div>
+      <div class="code-block"><span class="comment"># Check CORS_ORIGINS includes frontend URL</span>
+<span class="cmd">echo</span> $CORS_ORIGINS
+
+<span class="comment"># For local dev, ensure it includes:</span>
+<span class="key">CORS_ORIGINS</span>=<span class="val">http://localhost:3000</span>
+
+<span class="comment"># Check backend is running</span>
+<span class="cmd">curl</span> http://localhost:8001/api/health
+
+<span class="comment"># Check frontend .env points to correct backend</span>
+<span class="cmd">cat</span> frontend/.env | grep REACT_APP_BACKEND_URL</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">5</span><span class="step-title">MongoDB connection issues</span></div>
+      <div class="code-block"><span class="comment"># Check connection string format</span>
+<span class="comment"># Must be: mongodb+srv://user:pass@cluster.mongodb.net/dbname</span>
+
+<span class="comment"># Check network access in Atlas</span>
+<span class="comment"># Atlas → Network Access → Add IP (or allow all: 0.0.0.0/0)</span>
+
+<span class="comment"># Test connection directly</span>
+<span class="cmd">python3</span> -c "
+from pymongo import MongoClient
+client = MongoClient('<span class="val">MONGO_URL</span>', serverSelectionTimeoutMS=5000)
+client.admin.command('ping')
+print('Connected!')
+"</div>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">6</span><span class="step-title">Stripe webhook not receiving events</span></div>
+      <div class="code-block"><span class="comment"># Check webhook endpoint in Stripe Dashboard</span>
+<span class="comment"># Dashboard → Developers → Webhooks → goodly-api</span>
+
+<span class="comment"># Verify endpoint URL is correct</span>
+<span class="comment"># Must be: https://api.searchgoodly.com/api/billing/webhook</span>
+
+<span class="comment"># Check webhook secret matches</span>
+<span class="comment"># STRIPE_WEBHOOK_SECRET must match the signing secret in Stripe Dashboard</span>
+
+<span class="comment"># Test webhook locally</span>
+<span class="cmd">stripe listen</span> --forward-to localhost:8001/api/billing/webhook</div>
+    </div>
+
+    <p class="footer">
+      Goodly Development & Deployment Workflow • v1.9.0 • 
+      <a href="index.html">Documentation Home</a> • 
+      <a href="architecture.html">Architecture</a> • 
+      <a href="deployment-guide.html">Deployment Guide</a>
+    </p>
+  </div>
+</body>
+</html>

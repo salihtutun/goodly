@@ -1,5 +1,5 @@
 #!/bin/bash
-# Goodly Deployment Script
+# Goodly Deployment Script — searchgoodly.com
 # Usage: ./deploy.sh [backend|frontend|all]
 
 set -e
@@ -30,17 +30,16 @@ deploy_backend() {
   check_env "$STRIPE_WEBHOOK_SECRET" "STRIPE_WEBHOOK_SECRET"
   check_env "$RESEND_API_KEY" "RESEND_API_KEY"
 
-  gcloud builds submit \
-    --config=cloudbuild.yaml \
-    --substitutions=_MONGO_URL="$MONGO_URL",_JWT_SECRET="$JWT_SECRET",_GEMINI_API_KEY="$GEMINI_API_KEY",_STRIPE_API_KEY="$STRIPE_API_KEY",_STRIPE_WEBHOOK_SECRET="$STRIPE_WEBHOOK_SECRET",_RESEND_API_KEY="$RESEND_API_KEY"
+  gcloud builds submit --config=cloudbuild.yaml
 
-  log "Backend deployed! Get the URL with: gcloud run services describe goodly --format='value(status.url)'"
+  log "Backend deployed! URL: https://api.searchgoodly.com"
+  log "Health check: curl https://api.searchgoodly.com/api/health"
 }
 
 deploy_frontend() {
   log "Deploying frontend to Vercel..."
 
-  check_env "REACT_APP_BACKEND_URL" "REACT_APP_BACKEND_URL"
+  check_env "REACT_APP_BACKEND_URL" "REACT_APP_BACKEND_URL (should be https://api.searchgoodly.com)"
 
   cd frontend
   echo "REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL" > .env.production
@@ -50,10 +49,10 @@ deploy_frontend() {
     vercel --prod
   else
     warn "Vercel CLI not found. Install with: npm i -g vercel"
-    warn "Or deploy manually: connect your GitHub repo to Vercel and set REACT_APP_BACKEND_URL"
+    warn "Or deploy via Vercel dashboard: connect GitHub repo, set REACT_APP_BACKEND_URL=https://api.searchgoodly.com"
   fi
 
-  log "Frontend build complete!"
+  log "Frontend build complete! Deploy to: https://searchgoodly.com"
 }
 
 deploy_all() {

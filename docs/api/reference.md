@@ -1,6 +1,6 @@
 # Goodly — API Reference
 
-Base URL: `https://api.goodly.app/api`
+Base URL: `https://api.searchgoodly.com/api`
 
 ## Authentication
 

@@ -16,11 +16,11 @@ PLANS: Dict[str, dict] = {
         "id": "free",
         "name": "Self-serve",
         "price_usd": 0.0,
-        "audit_limit": 3,
-        "project_limit": 1,
+        "audit_limit": 5,
+        "project_limit": 2,
         "features": [
-            "3 audits per month",
-            "1 saved project",
+            "5 audits per month",
+            "2 saved projects",
             "AI-generated action plan",
             "Try the tool — no card needed",
         ],
@@ -198,6 +198,15 @@ async def create_subscription_checkout(
         sid = raw["id"] if isinstance(raw, dict) else raw.id
         url = raw["url"] if isinstance(raw, dict) else raw.url
         return _NormalizedSession(sid, url), plan
+
+    # No Stripe Price ID configured for this plan. In production this must be a
+    # hard error — the one-time payment fallback would charge users once while
+    # the webhook applies a recurring plan they never subscribed to.
+    if os.environ.get("ENVIRONMENT") == "production":
+        raise RuntimeError(
+            f"Stripe price ID not configured for plan '{plan_id}' "
+            f"(missing env {plan.get('stripe_price_env')})"
+        )
 
     # Fallback: one-time payment for dev/test
     raw = await asyncio.to_thread(
