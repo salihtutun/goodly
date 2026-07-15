@@ -31,22 +31,8 @@ jobs:
           docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/goodly/goodly-api:${{ github.sha }} .
           docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/goodly/goodly-api:${{ github.sha }}
 
-      - name: Pre-deploy smoke test
+      - name: Deploy to Cloud Run
         run: |
-          sleep 30  # Wait for new revision to start serving
-          for i in 1 2 3 4 5; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://api.searchgoodly.com/api/health")
-            if [ "$STATUS" = "200" ]; then
-              echo "Health check passed"
-              break
-            fi
-            echo "Attempt $i: got $STATUS, retrying..."
-            sleep 10
-          done
-          curl -s --max-time 10 "https://api.searchgoodly.com/api/health" | grep -q '"status":"ok"' || exit 1
-          echo "Smoke test passed"
-
-      - run: |
           gcloud run deploy goodly-api \
             --image=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/goodly/goodly-api:${{ github.sha }} \
             --region=us-central1 \
@@ -58,17 +44,18 @@ jobs:
             --max-instances=10 \
             --timeout=300 \
             --env-vars-file=cloudrun-env.yaml \
-            --set-secrets=MONGO_URL=MONGO_URL:latest \
-            --set-secrets=JWT_SECRET=JWT_SECRET:latest \
-            --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest \
-            --set-secrets=STRIPE_API_KEY=STRIPE_API_KEY:latest \
-            --set-secrets=RESEND_API_KEY=RESEND_API_KEY:latest \
-            --set-secrets=STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest \
-            --set-secrets=STRIPE_PRICE_ID_STARTER=STRIPE_PRICE_ID_STARTER:latest \
-            --set-secrets=STRIPE_PRICE_ID_STARTER_ANNUAL=STRIPE_PRICE_ID_STARTER_ANNUAL:latest \
-            --set-secrets=STRIPE_PRICE_ID_PRO=STRIPE_PRICE_ID_PRO:latest \
-            --set-secrets=STRIPE_PRICE_ID_PRO_ANNUAL=STRIPE_PRICE_ID_PRO_ANNUAL:latest \
-            --set-secrets=STRIPE_PRICE_ID_CONCIERGE=STRIPE_PRICE_ID_CONCIERGE:latest \
-            --set-secrets=GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest \
-            --set-secrets=SENTRY_DSN=SENTRY_DSN:latest \
-            --set-secrets=DEMO_PASSWORD=DEMO_PASSWORD:latest
+            --set-secrets=MONGO_URL=MONGO_URL:latest,JWT_SECRET=JWT_SECRET:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,STRIPE_API_KEY=STRIPE_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,STRIPE_PRICE_ID_STARTER=STRIPE_PRICE_ID_STARTER:latest,STRIPE_PRICE_ID_STARTER_ANNUAL=STRIPE_PRICE_ID_STARTER_ANNUAL:latest,STRIPE_PRICE_ID_PRO=STRIPE_PRICE_ID_PRO:latest,STRIPE_PRICE_ID_PRO_ANNUAL=STRIPE_PRICE_ID_PRO_ANNUAL:latest,STRIPE_PRICE_ID_CONCIERGE=STRIPE_PRICE_ID_CONCIERGE:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,SENTRY_DSN=SENTRY_DSN:latest,DEMO_PASSWORD=DEMO_PASSWORD:latest,SCHEDULER_API_KEY=SCHEDULER_API_KEY:latest
+
+      - name: Post-deploy smoke test
+        run: |
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://api.searchgoodly.com/api/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed"
+              break
+            fi
+            echo "Attempt $i: got $STATUS, retrying..."
+            sleep 10
+          done
+          curl -s --max-time 10 "https://api.searchgoodly.com/api/health" | grep -q '"status":"ok"' || exit 1
+          echo "Smoke test passed"

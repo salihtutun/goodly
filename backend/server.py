@@ -123,18 +123,34 @@ from starlette.responses import JSONResponse
 
 class CSRFTokenMiddleware(BaseHTTPMiddleware):
     SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+    # Machine-to-machine + pre-auth endpoints use their own auth (API key,
+    # Stripe signature, or credentials) and cannot carry a CSRF cookie yet.
+    EXEMPT_PREFIXES = (
+        "/api/webhook/",
+        "/api/scheduler/trigger",
+        "/api/public/",
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/google",
+        "/api/auth/forgot-password",
+        "/api/auth/reset-password",
+        "/api/auth/refresh",
+        "/api/support/contact",
+    )
 
     async def dispatch(self, request, call_next):
         # Only enforce CSRF in production — dev/tests skip it
         is_production = os.environ.get("ENVIRONMENT", "development") == "production"
+        path = request.url.path
         if is_production and request.method not in self.SAFE_METHODS:
-            cookie_token = request.cookies.get("csrf_token", "")
-            header_token = request.headers.get("X-CSRF-Token", "")
-            if not cookie_token or not header_token or cookie_token != header_token:
-                return JSONResponse(
-                    status_code=403,
-                    content={"detail": "CSRF token missing or invalid"},
-                )
+            if not any(path.startswith(p) for p in self.EXEMPT_PREFIXES):
+                cookie_token = request.cookies.get("csrf_token", "")
+                header_token = request.headers.get("X-CSRF-Token", "")
+                if not cookie_token or not header_token or cookie_token != header_token:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF token missing or invalid"},
+                    )
         response = await call_next(request)
         return response
 
