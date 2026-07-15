@@ -51,12 +51,12 @@ async def usage_for(user_id: str) -> dict:
     return {"month": mk, "audits_this_month": audits_this_month, "projects_count": projects_count}
 
 
-def _invalidate_dashboard_cache(user_id: str) -> None:
+async def _invalidate_dashboard_cache(user_id: str) -> None:
     """Clear cached dashboard data for a user after mutations."""
-    dashboard_cache.delete(f"summary:{user_id}")
-    dashboard_cache.delete(f"achievements:{user_id}")
-    dashboard_cache.delete(f"visibility:{user_id}")
-    dashboard_cache.delete(f"notifications:{user_id}")
+    await dashboard_cache.delete(f"summary:{user_id}")
+    await dashboard_cache.delete(f"achievements:{user_id}")
+    await dashboard_cache.delete(f"visibility:{user_id}")
+    await dashboard_cache.delete(f"notifications:{user_id}")
 
 
 def _store_base_url(request: Request) -> str:

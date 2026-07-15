@@ -70,4 +70,5 @@ jobs:
             --set-secrets=STRIPE_PRICE_ID_PRO_ANNUAL=STRIPE_PRICE_ID_PRO_ANNUAL:latest \
             --set-secrets=STRIPE_PRICE_ID_CONCIERGE=STRIPE_PRICE_ID_CONCIERGE:latest \
             --set-secrets=GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest \
-            --set-secrets=SENTRY_DSN=SENTRY_DSN:latest
+            --set-secrets=SENTRY_DSN=SENTRY_DSN:latest \
+            --set-secrets=DEMO_PASSWORD=DEMO_PASSWORD:latest

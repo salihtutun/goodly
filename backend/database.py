@@ -24,7 +24,14 @@ def _get_db():
         mongo_url = os.environ.get("MONGO_URL")
         if not mongo_url:
             raise RuntimeError("MONGO_URL not configured")
-        _client = AsyncIOMotorClient(mongo_url)
+        _client = AsyncIOMotorClient(
+            mongo_url,
+            minPoolSize=2,
+            maxPoolSize=20,
+            maxIdleTimeMS=30000,
+            connectTimeoutMS=5000,
+            serverSelectionTimeoutMS=5000,
+        )
         _db = _client[os.environ.get("DB_NAME", "goodly")]
     return _db
 

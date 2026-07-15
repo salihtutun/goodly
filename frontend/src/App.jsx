@@ -96,6 +96,8 @@ const ChecklistPage = lazy(() => import("@/pages/ChecklistPage"));
 // AI Content Studio
 const ContentStudio = lazy(() => import("@/pages/ContentStudio"));
 const ContentStudioLanding = lazy(() => import("@/pages/ContentStudioLanding"));
+// Health
+const HealthPage = lazy(() => import("@/pages/HealthPage"));
 
 function Lazy({ children }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -253,6 +255,7 @@ export default function App() {
             {/* AI Content Studio */}
             <Route path="/app/content-studio" element={<Protected><Lazy><ContentStudio /></Lazy></Protected>} />
             <Route path="/content-studio" element={<Lazy><ContentStudioLanding /></Lazy>} />
+            <Route path="/health" element={<Lazy><HealthPage /></Lazy>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </ErrorBoundary>

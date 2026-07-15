@@ -78,15 +78,18 @@ class TestUsageFor:
 
 
 class TestInvalidateDashboardCache:
-    def test_clears_cache_keys(self):
+    @pytest.mark.asyncio
+    async def test_clears_cache_keys(self):
+        mock_delete = AsyncMock()
         with patch("dependencies.dashboard_cache") as mock_cache:
+            mock_cache.delete = mock_delete
             from dependencies import _invalidate_dashboard_cache
-            _invalidate_dashboard_cache("u1")
-            assert mock_cache.delete.call_count == 4
-            mock_cache.delete.assert_any_call("summary:u1")
-            mock_cache.delete.assert_any_call("achievements:u1")
-            mock_cache.delete.assert_any_call("visibility:u1")
-            mock_cache.delete.assert_any_call("notifications:u1")
+            await _invalidate_dashboard_cache("u1")
+            assert mock_delete.call_count == 4
+            mock_delete.assert_any_call("summary:u1")
+            mock_delete.assert_any_call("achievements:u1")
+            mock_delete.assert_any_call("visibility:u1")
+            mock_delete.assert_any_call("notifications:u1")
 
 
 class TestStoreBaseUrl:

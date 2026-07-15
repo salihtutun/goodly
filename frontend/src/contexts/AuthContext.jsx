@@ -26,6 +26,10 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.post("/auth/login", { email, password });
       setUser(data.user);
+      // Store refresh token for automatic token refresh
+      if (data.refresh_token) {
+        localStorage.setItem("refresh_token", data.refresh_token);
+      }
       return { ok: true };
     } catch (e) {
       return { ok: false, error: formatApiError(e) };
@@ -36,6 +40,10 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.post("/auth/register", { email, password, name, website });
       setUser(data.user);
+      // Store refresh token for automatic token refresh
+      if (data.refresh_token) {
+        localStorage.setItem("refresh_token", data.refresh_token);
+      }
       // Include auto-audit result when registration provided a website.
       return { ok: true, audit: data.audit ?? null };
     } catch (e) {
@@ -45,6 +53,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try { await api.post("/auth/logout"); } catch { /* ignore */ }
+    localStorage.removeItem("refresh_token");
     setUser(false);
   };
 

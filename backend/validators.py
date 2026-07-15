@@ -26,8 +26,11 @@ def is_public_url(url: str) -> bool:
     """SSRF guard: True only if the URL's host resolves exclusively to public IPs.
 
     Blocks loopback, RFC1918/private, link-local (incl. cloud metadata
-    169.254.169.254), reserved, and multicast addresses. Performs blocking DNS
-    resolution — call via asyncio.to_thread from async code.
+    169.254.169.254), reserved, and multicast addresses.
+
+    NOTE: This function performs blocking DNS resolution. Call it via
+    asyncio.to_thread(is_public_url, url) from async code to avoid
+    blocking the event loop.
     """
     if not url or not url.strip():
         return False

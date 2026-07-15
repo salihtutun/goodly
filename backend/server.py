@@ -23,7 +23,14 @@ from auth import (
     hash_password,
     verify_password,
     create_access_token,
+    create_refresh_token,
     get_current_user_id,
+    set_auth_cookie,
+    store_refresh_token,
+    consume_refresh_token,
+    revoke_user_refresh_tokens,
+    extract_token,
+    decode_token,
 )
 from seo_analyzer import analyze_url
 import ai_service
@@ -54,6 +61,7 @@ import competitor_analysis
 import ai_content
 import ai_remediation
 import ai_strategy
+import seo_enhanced
 
 # Structured JSON logging for Cloud Logging
 setup_logging()
@@ -72,7 +80,14 @@ def _get_db():
         mongo_url = os.environ.get("MONGO_URL")
         if not mongo_url:
             raise RuntimeError("MONGO_URL not configured")
-        _client = AsyncIOMotorClient(mongo_url)
+        _client = AsyncIOMotorClient(
+            mongo_url,
+            minPoolSize=2,
+            maxPoolSize=20,
+            maxIdleTimeMS=30000,
+            connectTimeoutMS=5000,
+            serverSelectionTimeoutMS=5000,
+        )
         _db = _client[os.environ.get("DB_NAME", "goodly")]
         # Share connection with database.py so all routes use the same client
         import database as _db_mod
@@ -97,6 +112,54 @@ api = APIRouter(prefix="/api")
 from limiter import limiter
 
 logger = logging.getLogger("seo_framework")
+
+
+# ── CSRF Protection Middleware ──────────────────────────
+# Double-submit cookie pattern: server sets a random csrf_token cookie
+# (readable by JS, not HttpOnly). State-changing requests must include
+# the same value in X-CSRF-Token header. GET/HEAD/OPTIONS are exempt.
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+class CSRFTokenMiddleware(BaseHTTPMiddleware):
+    SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+    async def dispatch(self, request, call_next):
+        # Only enforce CSRF in production — dev/tests skip it
+        is_production = os.environ.get("ENVIRONMENT", "development") == "production"
+        if is_production and request.method not in self.SAFE_METHODS:
+            cookie_token = request.cookies.get("csrf_token", "")
+            header_token = request.headers.get("X-CSRF-Token", "")
+            if not cookie_token or not header_token or cookie_token != header_token:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "CSRF token missing or invalid"},
+                )
+        response = await call_next(request)
+        return response
+
+app.add_middleware(CSRFTokenMiddleware)
+
+
+# ── Request Body Size Limit ────────────────────────────
+# Reject requests with bodies larger than 10MB before they reach handlers.
+MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB
+
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > MAX_BODY_SIZE:
+                    return JSONResponse(
+                        status_code=413,
+                        content={"detail": "Request body too large (max 10MB)"},
+                    )
+            except ValueError:
+                pass
+        return await call_next(request)
+
+app.add_middleware(BodySizeLimitMiddleware)
 
 
 # ---------------------------------------------------------------
@@ -148,12 +211,12 @@ async def _send_email_background(to: str, subject: str, html: str) -> None:
         logger.warning("Background email to %s failed: %s", to, e)
 
 
-def _invalidate_dashboard_cache(user_id: str) -> None:
+async def _invalidate_dashboard_cache(user_id: str) -> None:
     """Clear cached dashboard data for a user after mutations."""
-    dashboard_cache.delete(f"summary:{user_id}")
-    dashboard_cache.delete(f"achievements:{user_id}")
-    dashboard_cache.delete(f"visibility:{user_id}")
-    dashboard_cache.delete(f"notifications:{user_id}")
+    await dashboard_cache.delete(f"summary:{user_id}")
+    await dashboard_cache.delete(f"achievements:{user_id}")
+    await dashboard_cache.delete(f"visibility:{user_id}")
+    await dashboard_cache.delete(f"notifications:{user_id}")
 
 
 async def _seed_demo_experience(user_id: str) -> None:
@@ -281,18 +344,21 @@ class AuthOut(BaseModel):
     audit: Optional[dict] = None
 
 
-def _set_auth_cookie(response: Response, token: str):
-    is_production = os.environ.get("ENVIRONMENT", "development") == "production"
-    # SameSite=None required when frontend (searchgoodly.com) calls API on another host (Cloud Run).
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=is_production,
-        samesite="none" if is_production else "lax",
-        max_age=60 * 60 * 24 * 7,
-        path="/",
-    )
+def _set_auth_cookies(response: Response, access_token: str, csrf_token: str = None):
+    """Set auth + CSRF cookies on the response."""
+    set_auth_cookie(response, access_token)
+    # Set CSRF token cookie (readable by JS, not HttpOnly)
+    if csrf_token:
+        is_production = os.environ.get("ENVIRONMENT", "development") == "production"
+        response.set_cookie(
+            key="csrf_token",
+            value=csrf_token,
+            httponly=False,  # Must be readable by JS
+            secure=is_production,
+            samesite="none" if is_production else "lax",
+            max_age=60 * 60 * 24,  # 24 hours
+            path="/",
+        )
 
 
 @api.post("/auth/register", response_model=AuthOut)
@@ -335,7 +401,10 @@ async def register(request: Request, body: RegisterIn, response: Response, bg: B
     )
 
     token = create_access_token(user_doc["id"], email)
-    _set_auth_cookie(response, token)
+    refresh = create_refresh_token(user_doc["id"])
+    await store_refresh_token(db, user_doc["id"], refresh)
+    csrf = str(uuid.uuid4())
+    _set_auth_cookies(response, token, csrf)
 
     # Auto-run audit if website provided during registration
     audit_result = None
@@ -352,7 +421,7 @@ async def register(request: Request, body: RegisterIn, response: Response, bg: B
     except Exception as e:
         logger.warning("Demo seed failed: %s", e)
 
-    return {"user": public_user(user_doc), "token": token, "audit": audit_result}
+    return {"user": public_user(user_doc), "token": token, "refresh_token": refresh, "audit": audit_result}
 
 
 @api.post("/auth/login", response_model=AuthOut)
@@ -363,8 +432,11 @@ async def login(request: Request, body: LoginIn, response: Response):
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_access_token(user["id"], email)
-    _set_auth_cookie(response, token)
-    return {"user": public_user(user), "token": token}
+    refresh = create_refresh_token(user["id"])
+    await store_refresh_token(db, user["id"], refresh)
+    csrf = str(uuid.uuid4())
+    _set_auth_cookies(response, token, csrf)
+    return {"user": public_user(user), "token": token, "refresh_token": refresh}
 
 
 @api.post("/auth/google", response_model=AuthOut)
@@ -424,7 +496,8 @@ async def google_auth(request: Request, body: GoogleAuthIn, response: Response):
                 user["email_verified"] = True
 
         token = create_access_token(user["id"], email)
-        _set_auth_cookie(response, token)
+        csrf = str(uuid.uuid4())
+        _set_auth_cookies(response, token, csrf)
         return {"user": public_user(user), "token": token}
 
     except ValueError:
@@ -437,7 +510,8 @@ async def google_auth(request: Request, body: GoogleAuthIn, response: Response):
 
 
 @api.post("/auth/logout")
-async def logout(response: Response):
+async def logout(response: Response, request: Request):
+    """Clear auth cookies. Best-effort — works even without valid auth."""
     is_production = os.environ.get("ENVIRONMENT", "development") == "production"
     response.delete_cookie(
         "access_token",
@@ -445,7 +519,59 @@ async def logout(response: Response):
         secure=is_production,
         samesite="none" if is_production else "lax",
     )
+    response.delete_cookie(
+        "csrf_token",
+        path="/",
+        secure=is_production,
+        samesite="none" if is_production else "lax",
+    )
+    # Try to revoke refresh tokens if user is authenticated
+    try:
+        token = extract_token(request)
+        if token:
+            payload = decode_token(token)
+            user_id = payload.get("sub")
+            if user_id:
+                await revoke_user_refresh_tokens(db, user_id)
+    except Exception:
+        pass
     return {"ok": True}
+
+
+@api.post("/auth/refresh")
+async def refresh_token(request: Request, response: Response):
+    """Exchange a refresh token for a new access token.
+
+    The refresh token is sent in the request body (not a cookie).
+    On success, a new access token cookie is set and the old refresh
+    token is consumed (rotated).
+    """
+    body = await request.json()
+    refresh = body.get("refresh_token", "")
+    if not refresh:
+        raise HTTPException(status_code=400, detail="refresh_token is required")
+
+    user_id = await consume_refresh_token(db, refresh)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    # Issue new tokens
+    access_token = create_access_token(user_id, user["email"])
+    new_refresh = create_refresh_token(user_id)
+    await store_refresh_token(db, user_id, new_refresh)
+
+    csrf = str(uuid.uuid4())
+    _set_auth_cookies(response, access_token, csrf)
+
+    return {
+        "user": public_user(user),
+        "token": access_token,
+        "refresh_token": new_refresh,
+    }
 
 
 @api.get("/auth/me")
@@ -2415,12 +2541,113 @@ async def scheduler_run_now(request: Request, user: dict = Depends(get_current_u
     return summary
 
 
+@api.post("/scheduler/trigger")
+async def scheduler_cloud_trigger(request: Request):
+    """Cloud Scheduler HTTP trigger — uses shared secret, not user auth.
+
+    Set SCHEDULER_API_KEY in Cloud Run env vars and configure Cloud Scheduler
+    to POST to https://api.searchgoodly.com/api/scheduler/trigger with header
+    X-Scheduler-Key: <SCHEDULER_API_KEY> every 15 minutes.
+
+    This ensures scheduled audits run even when Cloud Run scales to zero.
+    The in-process APScheduler still runs as a fallback when the instance is warm.
+    """
+    import os as _os
+    expected = _os.environ.get("SCHEDULER_API_KEY", "")
+    provided = request.headers.get("X-Scheduler-Key", "")
+    if not expected or provided != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing scheduler key")
+    base_url = _store_base_url(request)
+    summary = await scheduler_mod.run_due_audits(db, base_url)
+    return summary
+
+
 @api.get("/scheduler/runs")
 async def scheduler_runs(user: dict = Depends(get_current_user_doc)):
     docs = await db.scheduled_runs.find(
         {"user_id": user["id"]}, {"_id": 0}
     ).sort("run_at", -1).limit(50).to_list(50)
     return docs
+
+
+# ---------------------------------------------------------------
+# Enhanced SEO endpoints (claude-seo integration)
+# ---------------------------------------------------------------
+@api.post("/seo/schema/generate")
+async def seo_schema_generate(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Generate Schema.org JSON-LD markup for a given business type."""
+    schema_type = body.get("type", "local_business")
+    try:
+        schema = seo_enhanced.generate_schema(schema_type, **body.get("fields", {}))
+        html = seo_enhanced.generate_schema_html(schema_type, **body.get("fields", {}))
+        return {"schema": schema, "html": html}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@api.get("/seo/schema/types")
+async def seo_schema_types():
+    """List available Schema.org template types."""
+    return {"types": list(seo_enhanced.SCHEMA_TEMPLATES.keys())}
+
+
+@api.post("/seo/pagespeed")
+async def seo_pagespeed(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Run PageSpeed Insights / Core Web Vitals analysis."""
+    url = body.get("url", "")
+    strategy = body.get("strategy", "mobile")
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+    result = await seo_enhanced.check_pagespeed(url, strategy)
+    return result
+
+
+@api.post("/seo/content-quality")
+async def seo_content_quality(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Analyze content quality (E-E-A-T signals)."""
+    html = body.get("html", "")
+    text = body.get("text", "")
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+    return seo_enhanced.analyze_content_quality(html, text)
+
+
+@api.post("/seo/indexnow")
+async def seo_indexnow(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Submit URL to search engines via IndexNow protocol."""
+    url = body.get("url", "")
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+    result = await seo_enhanced.submit_indexnow(url, body.get("key"))
+    return result
+
+
+@api.post("/seo/drift/baseline")
+async def seo_drift_baseline(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Capture SEO baseline for drift monitoring."""
+    url = body.get("url", "")
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+    return await seo_enhanced.capture_seo_baseline(db, url, user["id"])
+
+
+@api.post("/seo/drift/compare")
+async def seo_drift_compare(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Compare current page state to baseline (drift detection)."""
+    url = body.get("url", "")
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+    return await seo_enhanced.compare_seo_drift(db, url, user["id"])
+
+
+@api.post("/seo/cluster-keywords")
+async def seo_cluster_keywords(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Group keywords into semantic clusters."""
+    keywords = body.get("keywords", [])
+    n_clusters = body.get("n_clusters", 5)
+    if not keywords:
+        raise HTTPException(status_code=400, detail="keywords list is required")
+    return seo_enhanced.cluster_keywords(keywords, n_clusters)
 
 
 # ---------------------------------------------------------------

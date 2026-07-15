@@ -68,15 +68,18 @@ class TestTTLCache:
 
 class TestGlobalCaches:
     def test_dashboard_cache_exists(self):
-        assert isinstance(dashboard_cache, TTLCache)
+        from cache import HybridCache
+        assert isinstance(dashboard_cache, HybridCache)
         assert dashboard_cache._default_ttl == 60.0
 
     def test_plan_cache_exists(self):
-        assert isinstance(plan_cache, TTLCache)
+        from cache import HybridCache
+        assert isinstance(plan_cache, HybridCache)
         assert plan_cache._default_ttl == 300.0
 
     def test_health_cache_exists(self):
-        assert isinstance(health_cache, TTLCache)
+        from cache import HybridCache
+        assert isinstance(health_cache, HybridCache)
         assert health_cache._default_ttl == 30.0
 
 

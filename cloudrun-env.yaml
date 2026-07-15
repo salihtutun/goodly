@@ -9,4 +9,4 @@ DB_NAME: goodly
 SCHEDULER_ENABLED: "true"
 SENTRY_ENVIRONMENT: production
 SENTRY_RELEASE: goodly@1.9.0
-DEMO_PASSWORD: DemoGoodly2024!
+# DEMO_PASSWORD is set via Secret Manager (--set-secrets=DEMO_PASSWORD=DEMO_PASSWORD:latest)
