@@ -2666,6 +2666,55 @@ async def seo_cluster_keywords(body: dict, user: dict = Depends(get_current_user
     return seo_enhanced.cluster_keywords(keywords, n_clusters)
 
 
+@api.post("/seo/humanize")
+async def seo_humanize(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Remove AI-typical filler phrases from content (46 patterns)."""
+    text = body.get("text", "")
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+    return seo_enhanced.humanize_content(text)
+
+
+@api.post("/seo/preload-audit")
+async def seo_preload_audit(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Audit Speculation Rules, bfcache, prerender, and LCP preload signals."""
+    html = body.get("html", "")
+    headers = body.get("headers", {})
+    if not html:
+        raise HTTPException(status_code=400, detail="html is required")
+    return seo_enhanced.audit_preload_signals(html, headers)
+
+
+@api.post("/seo/nlp-analyze")
+async def seo_nlp_analyze(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Analyze text with Google NLP: entities, sentiment, classification."""
+    text = body.get("text", "")
+    features = body.get("features", None)
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+    return await seo_enhanced.analyze_nlp(text, features)
+
+
+@api.post("/seo/lcp-subparts")
+async def seo_lcp_subparts(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Break down LCP into 4 sub-metrics via Chrome UX Report API."""
+    url = body.get("url", "")
+    form_factor = body.get("form_factor", "PHONE")
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+    return await seo_enhanced.analyze_lcp_subparts(url, form_factor)
+
+
+@api.post("/seo/parasite-risk")
+async def seo_parasite_risk(body: dict, user: dict = Depends(get_current_user_doc)):
+    """Detect parasite-SEO risk signals (sponsored content, affiliate links)."""
+    html = body.get("html", "")
+    url = body.get("url", "")
+    if not html:
+        raise HTTPException(status_code=400, detail="html is required")
+    return seo_enhanced.detect_parasite_risk(html, url)
+
+
 # ---------------------------------------------------------------
 # Support contact endpoint
 # ---------------------------------------------------------------
