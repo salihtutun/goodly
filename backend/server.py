@@ -158,22 +158,40 @@ app.add_middleware(CSRFTokenMiddleware)
 
 
 # ── Request Body Size Limit ────────────────────────────
-# Reject requests with bodies larger than 10MB before they reach handlers.
+# Raw ASGI middleware — rejects oversized requests before any body reading,
+# avoiding uvicorn 500 errors from Content-Length mismatches.
 MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB
 
-class BodySizeLimitMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                if int(content_length) > MAX_BODY_SIZE:
-                    return JSONResponse(
-                        status_code=413,
-                        content={"detail": "Request body too large (max 10MB)"},
-                    )
-            except ValueError:
-                pass
-        return await call_next(request)
+class BodySizeLimitMiddleware:
+    def __init__(self, app, max_size: int = MAX_BODY_SIZE):
+        self.app = app
+        self.max_size = max_size
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        for name, value in scope.get("headers", []):
+            if name.lower() == b"content-length":
+                try:
+                    if int(value) > self.max_size:
+                        await self._send_413(send)
+                        return
+                except ValueError:
+                    pass
+                break
+        await self.app(scope, receive, send)
+
+    async def _send_413(self, send):
+        await send({
+            "type": "http.response.start",
+            "status": 413,
+            "headers": [(b"content-type", b"application/json")],
+        })
+        await send({
+            "type": "http.response.body",
+            "body": b'{"detail":"Request body too large (max 10MB)"}',
+        })
 
 app.add_middleware(BodySizeLimitMiddleware)
 
