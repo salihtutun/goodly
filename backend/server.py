@@ -356,6 +356,7 @@ class GoogleAuthIn(BaseModel):
 class AuthOut(BaseModel):
     user: dict
     token: str
+    refresh_token: Optional[str] = None
     # Present when registration includes a website and auto-audit succeeds.
     audit: Optional[dict] = None
 
