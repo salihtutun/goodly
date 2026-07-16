@@ -159,8 +159,6 @@ app.add_middleware(CSRFTokenMiddleware)
 
 # ── Request Body Size Limit ────────────────────────────
 # Raw ASGI middleware — rejects oversized requests before any body reading.
-# FastAPI exception handler below catches uvicorn protocol errors from
-# Content-Length mismatches and returns 413 instead of 500.
 MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB
 
 class BodySizeLimitMiddleware:
@@ -2873,18 +2871,25 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Catch uvicorn protocol errors from Content-Length mismatches (body < header)
-# and return 413 instead of 500.
+# and return 413 instead of 500. The error format {"error":{"code":"500"...}}
+# confirms it reaches FastAPI's exception pipeline, so a catch-all handler works.
 async def _body_size_error_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=413,
         content={"detail": "Request body too large (max 10MB)"},
     )
-# uvicorn's h11 raises RemoteProtocolError; catch broadly to cover all variants
-try:
-    from uvicorn.protocols.http.h11_impl import RemoteProtocolError
-    app.add_exception_handler(RemoteProtocolError, _body_size_error_handler)
-except ImportError:
-    pass
+# Register for all known uvicorn protocol error types
+for _exc_module in (
+    "uvicorn.protocols.http.h11_impl",
+    "uvicorn.protocols.http.httptools_impl",
+):
+    try:
+        _mod = __import__(_exc_module, fromlist=["RequestResponseCycleError"])
+        for _name in ("RemoteProtocolError", "HttpParserError", "RequestResponseCycleError"):
+            if hasattr(_mod, _name):
+                app.add_exception_handler(getattr(_mod, _name), _body_size_error_handler)
+    except ImportError:
+        pass
 
 cors_origins_raw = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
 if cors_origins_raw == "*" and os.environ.get("ENVIRONMENT") == "production":

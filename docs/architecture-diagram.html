@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goodly Architecture Diagram</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; padding: 2rem; color: white; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container { background: rgba(15, 23, 42, 0.5); border-radius: 1rem; border: 1px solid #1e293b; padding: 1.5rem; overflow-x: auto; }
+    svg { width: 100%; min-width: 1000px; display: block; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .card { background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Goodly Architecture — v1.10.0</h1>
+      </div>
+      <p class="subtitle">Visibility OS for Small Businesses — searchgoodly.com | api.searchgoodly.com</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1100 750">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+          </marker>
+          <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa" />
+          </marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- GCP Region Boundary -->
+        <rect x="30" y="50" width="1040" height="670" rx="12" fill="rgba(251, 191, 36, 0.03)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="42" y="68" fill="#fbbf24" font-size="10" font-weight="600">GCP: us-central1 (Cloud Run + Secret Manager + Scheduler)</text>
+
+        <!-- Users -->
+        <rect x="40" y="120" width="120" height="55" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="100" y="142" fill="white" font-size="11" font-weight="600" text-anchor="middle">Users</text>
+        <text x="100" y="158" fill="#94a3b8" font-size="9" text-anchor="middle">Browser / Mobile</text>
+
+        <!-- Vercel (Frontend) -->
+        <rect x="220" y="120" width="180" height="55" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="310" y="142" fill="white" font-size="11" font-weight="600" text-anchor="middle">Vercel (Frontend)</text>
+        <text x="310" y="158" fill="#94a3b8" font-size="9" text-anchor="middle">React 19 + Vite + Tailwind</text>
+
+        <!-- Cloud Run (Backend) -->
+        <rect x="460" y="120" width="200" height="55" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="560" y="142" fill="white" font-size="11" font-weight="600" text-anchor="middle">Cloud Run (Backend)</text>
+        <text x="560" y="158" fill="#94a3b8" font-size="9" text-anchor="middle">FastAPI + Python 3.11</text>
+
+        <!-- MongoDB Atlas -->
+        <rect x="720" y="120" width="160" height="55" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="800" y="142" fill="white" font-size="11" font-weight="600" text-anchor="middle">MongoDB Atlas</text>
+        <text x="800" y="158" fill="#94a3b8" font-size="9" text-anchor="middle">Pool: min=2 max=20</text>
+
+        <!-- Arrows: Users -> Vercel -> Cloud Run -> MongoDB -->
+        <line x1="160" y1="147" x2="218" y2="147" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+        <text x="189" y="141" fill="#94a3b8" font-size="8" text-anchor="middle">HTTPS</text>
+        <line x1="400" y1="147" x2="458" y2="147" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <text x="429" y="141" fill="#94a3b8" font-size="8" text-anchor="middle">API</text>
+        <line x1="660" y1="147" x2="718" y2="147" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+        <text x="689" y="141" fill="#94a3b8" font-size="8" text-anchor="middle">TLS</text>
+
+        <!-- Security Layer -->
+        <rect x="220" y="210" width="660" height="80" rx="8" fill="transparent" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="232" y="226" fill="#fb7185" font-size="9" font-weight="600">Security Layer</text>
+
+        <!-- Security components -->
+        <rect x="240" y="235" width="100" height="40" rx="5" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="290" y="252" fill="white" font-size="10" font-weight="600" text-anchor="middle">CSRF</text>
+        <text x="290" y="266" fill="#94a3b8" font-size="8" text-anchor="middle">Double Cookie</text>
+
+        <rect x="360" y="235" width="100" height="40" rx="5" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="410" y="252" fill="white" font-size="10" font-weight="600" text-anchor="middle">JWT Auth</text>
+        <text x="410" y="266" fill="#94a3b8" font-size="8" text-anchor="middle">24h + Refresh</text>
+
+        <rect x="480" y="235" width="100" height="40" rx="5" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="530" y="252" fill="white" font-size="10" font-weight="600" text-anchor="middle">CORS</text>
+        <text x="530" y="266" fill="#94a3b8" font-size="8" text-anchor="middle">searchgoodly.com</text>
+
+        <rect x="600" y="235" width="100" height="40" rx="5" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="650" y="252" fill="white" font-size="10" font-weight="600" text-anchor="middle">Body Limit</text>
+        <text x="650" y="266" fill="#94a3b8" font-size="8" text-anchor="middle">10MB → 413</text>
+
+        <rect x="720" y="235" width="140" height="40" rx="5" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="790" y="252" fill="white" font-size="10" font-weight="600" text-anchor="middle">Rate Limiting</text>
+        <text x="790" y="266" fill="#94a3b8" font-size="8" text-anchor="middle">SlowAPI</text>
+
+        <!-- AI & External Services -->
+        <rect x="40" y="340" width="1040" height="120" rx="8" fill="transparent" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="52" y="356" fill="#fbbf24" font-size="9" font-weight="600">External Services</text>
+
+        <!-- Gemini AI -->
+        <rect x="60" y="370" width="150" height="70" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="135" y="392" fill="white" font-size="11" font-weight="600" text-anchor="middle">Google Gemini</text>
+        <text x="135" y="408" fill="#94a3b8" font-size="8" text-anchor="middle">2.5 Flash / Pro</text>
+        <text x="135" y="422" fill="#94a3b8" font-size="8" text-anchor="middle">SEO + Content AI</text>
+        <text x="135" y="434" fill="#fbbf24" font-size="7" text-anchor="middle">GEMINI_API_KEY</text>
+
+        <!-- Stripe -->
+        <rect x="240" y="370" width="130" height="70" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="305" y="392" fill="white" font-size="11" font-weight="600" text-anchor="middle">Stripe</text>
+        <text x="305" y="408" fill="#94a3b8" font-size="8" text-anchor="middle">Checkout + Portal</text>
+        <text x="305" y="422" fill="#94a3b8" font-size="8" text-anchor="middle">Webhooks</text>
+        <text x="305" y="434" fill="#fbbf24" font-size="7" text-anchor="middle">STRIPE_API_KEY</text>
+
+        <!-- Resend -->
+        <rect x="400" y="370" width="130" height="70" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="465" y="392" fill="white" font-size="11" font-weight="600" text-anchor="middle">Resend</text>
+        <text x="465" y="408" fill="#94a3b8" font-size="8" text-anchor="middle">Transactional Email</text>
+        <text x="465" y="422" fill="#94a3b8" font-size="8" text-anchor="middle">Verify + Digest</text>
+        <text x="465" y="434" fill="#fbbf24" font-size="7" text-anchor="middle">RESEND_API_KEY</text>
+
+        <!-- Google NLP -->
+        <rect x="560" y="370" width="150" height="70" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="635" y="392" fill="white" font-size="11" font-weight="600" text-anchor="middle">Google NLP</text>
+        <text x="635" y="408" fill="#94a3b8" font-size="8" text-anchor="middle">Entity Analysis</text>
+        <text x="635" y="422" fill="#94a3b8" font-size="8" text-anchor="middle">Sentiment + Classify</text>
+        <text x="635" y="434" fill="#fbbf24" font-size="7" text-anchor="middle">GOOGLE_API_KEY</text>
+
+        <!-- PageSpeed / CrUX -->
+        <rect x="740" y="370" width="150" height="70" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="815" y="392" fill="white" font-size="11" font-weight="600" text-anchor="middle">PageSpeed + CrUX</text>
+        <text x="815" y="408" fill="#94a3b8" font-size="8" text-anchor="middle">CWV + LCP Sub-parts</text>
+        <text x="815" y="422" fill="#94a3b8" font-size="8" text-anchor="middle">Performance API</text>
+        <text x="815" y="434" fill="#fbbf24" font-size="7" text-anchor="middle">GOOGLE_API_KEY</text>
+
+        <!-- Arrows from Backend to External Services -->
+        <line x1="560" y1="175" x2="135" y2="368" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+        <line x1="560" y1="175" x2="305" y2="368" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+        <line x1="560" y1="175" x2="465" y2="368" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+        <line x1="560" y1="175" x2="635" y2="368" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+        <line x1="560" y1="175" x2="815" y2="368" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+
+        <!-- SEO Features -->
+        <rect x="40" y="500" width="1040" height="100" rx="8" fill="transparent" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="52" y="516" fill="#22d3ee" font-size="9" font-weight="600">SEO Features (13 endpoints from claude-seo)</text>
+
+        <rect x="60" y="528" width="140" height="55" rx="5" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="130" y="548" fill="white" font-size="10" font-weight="600" text-anchor="middle">Schema.org</text>
+        <text x="130" y="562" fill="#94a3b8" font-size="8" text-anchor="middle">16 types</text>
+        <text x="130" y="574" fill="#94a3b8" font-size="7" text-anchor="middle">Generate + Types</text>
+
+        <rect x="220" y="528" width="140" height="55" rx="5" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="290" y="548" fill="white" font-size="10" font-weight="600" text-anchor="middle">PageSpeed</text>
+        <text x="290" y="562" fill="#94a3b8" font-size="8" text-anchor="middle">CWV + LCP</text>
+        <text x="290" y="574" fill="#94a3b8" font-size="7" text-anchor="middle">CrUX API</text>
+
+        <rect x="380" y="528" width="140" height="55" rx="5" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="450" y="548" fill="white" font-size="10" font-weight="600" text-anchor="middle">Content Quality</text>
+        <text x="450" y="562" fill="#94a3b8" font-size="8" text-anchor="middle">E-E-A-T Score</text>
+        <text x="450" y="574" fill="#94a3b8" font-size="7" text-anchor="middle">Readability</text>
+
+        <rect x="540" y="528" width="140" height="55" rx="5" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="610" y="548" fill="white" font-size="10" font-weight="600" text-anchor="middle">AI Humanizer</text>
+        <text x="610" y="562" fill="#94a3b8" font-size="8" text-anchor="middle">47 patterns</text>
+        <text x="610" y="574" fill="#94a3b8" font-size="7" text-anchor="middle">Detect + Clean</text>
+
+        <rect x="700" y="528" width="140" height="55" rx="5" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="770" y="548" fill="white" font-size="10" font-weight="600" text-anchor="middle">NLP + Risk</text>
+        <text x="770" y="562" fill="#94a3b8" font-size="8" text-anchor="middle">Entity + Sentiment</text>
+        <text x="770" y="574" fill="#94a3b8" font-size="7" text-anchor="middle">Parasite SEO</text>
+
+        <rect x="860" y="528" width="200" height="55" rx="5" fill="rgba(8, 51, 68, 0.3)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="960" y="548" fill="white" font-size="10" font-weight="600" text-anchor="middle">IndexNow + Drift + Cluster</text>
+        <text x="960" y="562" fill="#94a3b8" font-size="8" text-anchor="middle">Bing/Yandex Indexing</text>
+        <text x="960" y="574" fill="#94a3b8" font-size="7" text-anchor="middle">Content Drift Monitor</text>
+
+        <!-- Infra: Secret Manager + Scheduler -->
+        <rect x="40" y="640" width="500" height="55" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="290" y="662" fill="white" font-size="11" font-weight="600" text-anchor="middle">GCP Secret Manager</text>
+        <text x="290" y="678" fill="#94a3b8" font-size="9" text-anchor="middle">DEMO_PASSWORD · SCHEDULER_API_KEY · MONGO_URL · JWT_SECRET · Stripe keys</text>
+
+        <rect x="580" y="640" width="500" height="55" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="830" y="662" fill="white" font-size="11" font-weight="600" text-anchor="middle">Cloud Scheduler</text>
+        <text x="830" y="678" fill="#94a3b8" font-size="9" text-anchor="middle">Every 15 min → POST /api/scheduler/trigger (X-Scheduler-Key)</text>
+
+        <!-- Legend -->
+        <text x="920" y="90" fill="white" font-size="10" font-weight="600">Legend</text>
+        <rect x="920" y="100" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="942" y="108" fill="#94a3b8" font-size="8">Frontend</text>
+        <rect x="920" y="116" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="942" y="124" fill="#94a3b8" font-size="8">Backend</text>
+        <rect x="920" y="132" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="942" y="140" fill="#94a3b8" font-size="8">Database</text>
+        <rect x="920" y="148" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="942" y="156" fill="#94a3b8" font-size="8">Cloud / External</text>
+        <rect x="920" y="164" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="942" y="172" fill="#94a3b8" font-size="8">Security</text>
+        <line x1="920" y1="186" x2="936" y2="186" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="942" y="189" fill="#94a3b8" font-size="8">Auth / Security Flow</text>
+        <rect x="920" y="196" width="16" height="10" rx="2" fill="transparent" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="942" y="204" fill="#94a3b8" font-size="8">Security Group</text>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Backend (Cloud Run)</h3>
+        </div>
+        <ul>
+          <li>• FastAPI + Python 3.11 — 70+ endpoints</li>
+          <li>• MongoDB Atlas — pool min=2 max=20</li>
+          <li>• HybridCache — Redis / in-memory fallback</li>
+          <li>• 712 unit + 187 integration tests</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Security (v1.10.0)</h3>
+        </div>
+        <ul>
+          <li>• JWT 24h + Refresh 30d with rotation</li>
+          <li>• CSRF double-submit cookies (prod only)</li>
+          <li>• CORS locked to searchgoodly.com</li>
+          <li>• 10MB body limit → 413</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>SEO (claude-seo)</h3>
+        </div>
+        <ul>
+          <li>• 13 endpoints — Schema, PageSpeed, NLP</li>
+          <li>• AI Humanizer — 47 detection patterns</li>
+          <li>• Parasite SEO risk detection</li>
+          <li>• IndexNow + Drift monitoring</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">
+      Goodly v1.10.0 • searchgoodly.com • api.searchgoodly.com • GCP: kai-app-1762224583 • github.com/salihtutun/goodly
+    </p>
+  </div>
+</body>
+</html>

@@ -3,7 +3,34 @@
 > **One place to see, fix, and grow your presence on every channel that brings customers.**
 > Google, Instagram, TikTok, YouTube, and AI assistants — audited, scored, and improved.
 
+**Version:** 1.10.0 | **Production:** [searchgoodly.com](https://searchgoodly.com) | **API:** [api.searchgoodly.com](https://api.searchgoodly.com/api/health)
+
 ---
+
+## Production Status
+
+| Service | Status | Details |
+|---------|--------|---------|
+| Backend | UP | v1.10.0 — DB connected, AI configured, Stripe configured, Email configured, Scheduler enabled |
+| Frontend | UP | searchgoodly.com + /health page |
+| CI | PASSING | backend-tests + lint + frontend-tests |
+| CD | PASSING | Deploy to Cloud Run on master push |
+| Tests | 712/712 unit, 187/188 integration, 589 E2E | 1,348 total |
+
+### Security Hardening (v1.10.0)
+- **Auth:** JWT 24h access tokens, 30d refresh tokens with rotation
+- **CSRF:** Double-submit cookie pattern (production only, exempts /api/auth/*)
+- **Body Limit:** 10MB cap (returns 413 for real payloads)
+- **CORS:** Locked to searchgoodly.com
+- **Secrets:** GCP Secret Manager (DEMO_PASSWORD, SCHEDULER_API_KEY)
+- **Cache:** HybridCache — Redis when REDIS_URL set, in-memory fallback
+- **MongoDB:** Connection pooling (min=2, max=20)
+
+### SEO Features (13 endpoints from claude-seo)
+- Schema.org generation (16 types), PageSpeed/CWV, E-E-A-T content quality
+- AI content humanizer (47 patterns), Preload/bfcache audit
+- Google NLP entity analysis, LCP sub-parts (CrUX API)
+- Parasite SEO risk detection, IndexNow, Drift monitoring, Keyword clustering
 
 ## Business Model
 
@@ -79,14 +106,14 @@ goodly/
 
 ---
 
-## API Endpoints (55+ total)
+## API Endpoints (70+ total)
 
 ```
-Auth:      /api/auth/register, login, logout, me, verify, forgot-password, reset-password, onboarded, resend-verification
+Auth:      /api/auth/register, login, logout, refresh, me, verify, forgot-password, reset-password, onboarded, resend-verification, google
 Projects:  /api/projects (CRUD) + schedule
 Audits:    /api/audits (CRUD) + /api/audits/{id}/pdf
 Public:    /api/public/audit (no auth, rate-limited)
-AI Tools:  /api/ai/meta-tags, keywords, competitors
+AI Tools:  /api/ai/meta-tags, keywords, competitors, content-strategy, repurpose, image-prompts
 Billing:   /api/billing/plans, me, checkout, status, portal + /api/webhook/stripe
 SERP:      /api/serp/check, history
 GBP:       /api/gbp/audit, suggestions, competitors, audits
@@ -95,7 +122,10 @@ AI Vis:    /api/ai-visibility/check, history
 Dashboard: /api/dashboard/summary, visibility
 Concierge: /api/concierge/brief + /api/admin/concierge/briefs
 Referrals: /api/referrals/invite
-Scheduler: /api/scheduler/run-now, runs
+Scheduler: /api/scheduler/trigger, run-now, runs
+SEO:       /api/seo/schema/types, schema/generate, pagespeed, content-quality, humanize,
+           preload-audit, nlp-analyze, lcp-subparts, parasite-risk, indexnow,
+           drift/baseline, drift/compare, cluster-keywords
 Health:    /api/health, /
 ```
 
