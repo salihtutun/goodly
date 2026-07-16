@@ -4,7 +4,6 @@ Runs hourly. For each project with schedule='monthly' whose next_audit_at <= now
 it runs an audit, advances next_audit_at by 30 days, and emails a digest.
 Email is sent via Resend (or mocked if RESEND_API_KEY is empty).
 """
-import asyncio
 import logging
 import os
 import uuid

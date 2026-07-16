@@ -17,7 +17,7 @@ import base64
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict
+from typing import List
 
 logger = logging.getLogger("gsc_service")
 

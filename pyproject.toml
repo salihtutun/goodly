@@ -29,3 +29,13 @@ exclude_lines = [
     "if TYPE_CHECKING:",
 ]
 fail_under = 95
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+# E402: module level import not at top of file — intentional for load_dotenv()
+# F841: unused variable — common pattern for except Exception as e with logger.exception
+ignore = ["E402", "F841"]

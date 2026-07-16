@@ -11,7 +11,7 @@ actual corrected code/content that business owners can copy-paste:
 - Speed optimization suggestions
 """
 
-from llm_client import ask_json, DEFAULT_MODEL
+from llm_client import ask_json
 
 SYSTEM: str = (
     "You are an expert SEO technician and web developer. "

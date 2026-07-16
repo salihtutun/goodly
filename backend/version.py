@@ -4,4 +4,4 @@ Import this module anywhere the version is needed:
     from version import VERSION
 """
 
-VERSION = "1.9.0"
+VERSION = "1.10.0"

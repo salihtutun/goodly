@@ -462,7 +462,6 @@ async def google_auth(request: Request, body: GoogleAuthIn, response: Response):
         raise HTTPException(status_code=503, detail="Google Sign-In is temporarily unavailable")
     """Sign in with Google. Verifies the ID token and creates/returns a user."""
     try:
-        import google.auth.transport.requests
         from google.oauth2 import id_token
         from google.auth.transport import requests as google_requests
 
@@ -2173,7 +2172,7 @@ async def gbp_audit(request: Request, body: GBPAuditIn, user: dict = Depends(get
         raise HTTPException(status_code=503, detail="GBP audit is temporarily unavailable")
     try:
         result = await gbp_service.audit_listing(**{k: v for k, v in body.model_dump().items() if k != "project_id"})
-    except Exception as e:
+    except Exception:
         logger.exception("gbp audit failed")
         raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     doc = {
@@ -2194,7 +2193,7 @@ async def gbp_audit(request: Request, body: GBPAuditIn, user: dict = Depends(get
 async def gbp_suggestions(request: Request, body: GBPSuggestionsIn, user: dict = Depends(get_current_user_doc)):
     try:
         result = await gbp_service.suggestions(**body.model_dump())
-    except Exception as e:
+    except Exception:
         logger.exception("gbp suggestions failed")
         raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     await db.ai_history.insert_one({
@@ -2209,7 +2208,7 @@ async def gbp_suggestions(request: Request, body: GBPSuggestionsIn, user: dict =
 async def gbp_competitors(request: Request, body: GBPCompetitorsIn, user: dict = Depends(get_current_user_doc)):
     try:
         result = await gbp_service.compare_competitors(**body.model_dump())
-    except Exception as e:
+    except Exception:
         logger.exception("gbp competitors failed")
         raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     return result
@@ -2248,7 +2247,7 @@ async def ai_visibility_check(request: Request, body: AIVisibilityIn, user: dict
             website=body.website or "",
             queries=body.queries,
         )
-    except Exception as e:
+    except Exception:
         logger.exception("ai-visibility check failed")
         raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
 
@@ -2387,7 +2386,7 @@ async def social_audit(request: Request, body: SocialAuditIn, user: dict = Depen
             posts_per_week=body.posts_per_week or "",
             fetched_signals=fetched,
         )
-    except Exception as e:
+    except Exception:
         logger.exception("social audit failed")
         raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
 
@@ -2420,7 +2419,7 @@ async def social_suggestions(request: Request, body: SocialSuggestionsIn, user: 
             location=body.location or "",
             target_customer=body.target_customer or "",
         )
-    except Exception as e:
+    except Exception:
         logger.exception("social suggestions failed")
         raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     await db.ai_history.insert_one({
@@ -2441,7 +2440,7 @@ async def social_competitors(request: Request, body: SocialCompetitorIn, user: d
             your_niche=body.your_niche or "",
             competitors=body.competitors,
         )
-    except Exception as e:
+    except Exception:
         logger.exception("social competitors failed")
         raise HTTPException(status_code=502, detail="AI service is temporarily unavailable. Please try again.")
     return result
@@ -2865,21 +2864,6 @@ app.add_middleware(
 )
 
 app.add_middleware(SlowAPIMiddleware)
-
-# Request body size limit (prevents DoS via large payloads)
-from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
-class _BodySizeLimitMiddleware(_BaseHTTPMiddleware):
-    MAX_BODY = 5 * 1024 * 1024  # 5 MB
-    async def dispatch(self, request, call_next):
-        content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > self.MAX_BODY:
-            from fastapi.responses import JSONResponse
-            return JSONResponse(
-                status_code=413,
-                content={"detail": "Request body too large. Maximum is 5 MB."},
-            )
-        return await call_next(request)
-app.add_middleware(_BodySizeLimitMiddleware)
 
 # Security headers (HSTS, CSP, X-Frame-Options, etc.)
 app.add_middleware(SecurityHeadersMiddleware)

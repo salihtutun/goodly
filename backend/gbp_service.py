@@ -3,10 +3,8 @@
 GBP is the highest-impact channel for any business with a physical location or
 service area — it owns the Google Maps panel + the "near me" results.
 """
-import json
-import re
 from typing import List, Optional
-from llm_client import ask_json, DEFAULT_MODEL
+from llm_client import ask_json
 
 
 SYSTEM: str = (

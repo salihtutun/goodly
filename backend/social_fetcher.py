@@ -5,7 +5,6 @@ change markup often. We do a quick attempt for verification + follower count,
 then let Claude do the heavy lifting using the user-provided bio / caption / niche.
 """
 import re
-from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 

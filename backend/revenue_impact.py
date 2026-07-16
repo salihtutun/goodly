@@ -6,7 +6,7 @@ and average customer value by industry.
 
 All estimates are directional — the UI should display appropriate disclaimers.
 """
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 # ── Industry Benchmarks ───────────────────────────────
 

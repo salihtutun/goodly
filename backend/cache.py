@@ -9,7 +9,6 @@ For production at scale, set REDIS_URL=redis://... in Cloud Run env vars.
 
 import os
 import time
-import asyncio
 import functools
 import json
 import logging

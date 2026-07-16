@@ -1,6 +1,6 @@
 """Google Gemini powered social presence auditor (Instagram, TikTok, YouTube)."""
 from typing import Optional, List
-from llm_client import ask_json, DEFAULT_MODEL, PRO_MODEL
+from llm_client import ask_json
 
 
 SYSTEM: str = (

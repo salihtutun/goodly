@@ -5,7 +5,6 @@ security headers to every response.
 """
 import os
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

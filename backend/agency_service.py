@@ -65,7 +65,7 @@ async def create_client(
         "user_id": user_doc["id"],
         "name": f"{name}'s Website",
         "url": website,
-        "description": f"Managed by agency",
+        "description": "Managed by agency",
         "target_keywords": "",
         "schedule": "monthly",
         "next_audit_at": None,

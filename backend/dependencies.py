@@ -3,13 +3,12 @@
 Extracted from server.py to avoid circular imports and keep routes thin.
 """
 import os
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, Depends, Request
 
 from auth import get_current_user_id
-from billing import get_plan, month_key
+from billing import month_key
 from database import db
 from cache import dashboard_cache
 

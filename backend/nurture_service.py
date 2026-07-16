@@ -32,8 +32,6 @@ async def schedule_nurture_sequence(
     import os
     from email_service import (
         nurture_email_1_html,
-        nurture_email_2_html,
-        nurture_email_3_html,
         send_html_email,
     )
 
@@ -79,7 +77,6 @@ async def schedule_nurture_sequence(
 def _schedule_email_2(*, email: str, name: str, score: int, issues: list, signup_url: str) -> None:
     """Schedule email 2 for +2 days from now."""
     from email_service import nurture_email_2_html, send_html_email
-    import asyncio
 
     # Build quick wins from issues. seo_analyzer issues use "message" (summary)
     # and "fix" (how to fix) — there is no "title" key.
@@ -113,7 +110,6 @@ def _schedule_email_2(*, email: str, name: str, score: int, issues: list, signup
 def _schedule_email_3(*, email: str, name: str, signup_url: str) -> None:
     """Schedule email 3 for +5 days from now."""
     from email_service import nurture_email_3_html, send_html_email
-    import asyncio
 
     async def _send():
         try:

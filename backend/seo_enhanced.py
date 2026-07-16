@@ -18,10 +18,9 @@ Adds to Goodly's existing SEO stack:
 import os
 import json
 import logging
-import asyncio
 import hashlib
 from datetime import datetime, timezone
-from typing import Optional, Dict, List, Any
+from typing import Dict, List
 from urllib.parse import urlparse
 
 logger = logging.getLogger("seo_enhanced")
@@ -275,7 +274,6 @@ def analyze_content_quality(html: str, text_content: str) -> dict:
         Dict with quality scores and recommendations.
     """
     import re
-    from collections import Counter
 
     words = text_content.split()
     word_count = len(words)

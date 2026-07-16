@@ -6,7 +6,7 @@ Three major features:
 3. AI Image Prompt Generator — ready-to-use prompts for Midjourney/DALL-E/Canva
 """
 
-from llm_client import ask_json, DEFAULT_MODEL
+from llm_client import ask_json
 
 SYSTEM: str = (
     "You are an expert content strategist and creative director for small businesses. "

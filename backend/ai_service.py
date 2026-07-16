@@ -2,7 +2,7 @@
 import json
 from typing import Dict, List
 
-from llm_client import ask_json, DEFAULT_MODEL, PRO_MODEL
+from llm_client import ask_json
 
 
 SYSTEM_MESSAGE: str = (

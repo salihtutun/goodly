@@ -10,7 +10,7 @@ generates ACTUAL content that business owners can copy-paste and use immediately
 - Social captions (Instagram, Facebook, LinkedIn, TikTok)
 """
 
-from llm_client import ask_json, DEFAULT_MODEL
+from llm_client import ask_json
 
 SYSTEM: str = (
     "You are an expert content writer for small businesses. "

@@ -110,7 +110,7 @@ async def check_rank(keyword: str, domain: str, max_results: int = 30) -> dict:
         if use_serpapi:
             return await _check_via_serpapi(keyword, target, max_results)
         return await _check_via_duckduckgo(keyword, target, max_results)
-    except Exception as e:
+    except Exception:
         # If SerpAPI fails for any reason, fall back to DDG
         if use_serpapi:
             try:
