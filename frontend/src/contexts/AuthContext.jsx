@@ -19,7 +19,19 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    fetchMe();
+    // Anonymous visitors have no session cookie and no stored refresh token —
+    // skip the /auth/me probe entirely so public pages don't log 401s in the
+    // console (QA issue #9). Login/register set both signals, so returning
+    // users still bootstrap normally.
+    const hasSessionSignal =
+      document.cookie.includes("csrf_token=") ||
+      localStorage.getItem("refresh_token");
+    if (hasSessionSignal) {
+      fetchMe();
+    } else {
+      setUser(false);
+      setLoading(false);
+    }
   }, [fetchMe]);
 
   const login = async (email, password) => {

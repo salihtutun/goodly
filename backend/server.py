@@ -378,6 +378,21 @@ class AuthOut(BaseModel):
     audit: Optional[dict] = None
 
 
+def _csrf_cookie_domain() -> Optional[str]:
+    """Parent domain for the CSRF cookie in production.
+
+    The API lives on api.searchgoodly.com while the app runs on
+    searchgoodly.com. A host-only cookie set by the API is invisible to
+    document.cookie on the frontend origin, so the double-submit header was
+    never sent and every authenticated POST from the browser failed CSRF.
+    Scoping the cookie to .searchgoodly.com makes it readable app-side.
+    """
+    from urllib.parse import urlparse
+    host = urlparse(os.environ.get("PRODUCTION_DOMAIN", "")).hostname or ""
+    host = host.removeprefix("www.")
+    return f".{host}" if "." in host else None
+
+
 def _set_auth_cookies(response: Response, access_token: str, csrf_token: str = None):
     """Set auth + CSRF cookies on the response."""
     set_auth_cookie(response, access_token)
@@ -392,6 +407,7 @@ def _set_auth_cookies(response: Response, access_token: str, csrf_token: str = N
             samesite="none" if is_production else "lax",
             max_age=60 * 60 * 24,  # 24 hours
             path="/",
+            domain=_csrf_cookie_domain() if is_production else None,
         )
 
 
@@ -552,11 +568,13 @@ async def logout(response: Response, request: Request):
         secure=is_production,
         samesite="none" if is_production else "lax",
     )
+    # Must match the set_cookie domain, otherwise the delete is a no-op
     response.delete_cookie(
         "csrf_token",
         path="/",
         secure=is_production,
         samesite="none" if is_production else "lax",
+        domain=_csrf_cookie_domain() if is_production else None,
     )
     # Try to revoke refresh tokens if user is authenticated
     try:
