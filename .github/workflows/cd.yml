@@ -62,3 +62,36 @@ jobs:
           done
           echo "Smoke test failed after 6 attempts"
           exit 1
+
+  # Browser-level E2E against production. Catches integration bugs unit
+  # tests can't see (cross-origin cookies, CSRF headers, console errors).
+  e2e-smoke:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Run production smoke test
+        run: |
+          export DEMO_PASSWORD=$(gcloud secrets versions access latest --secret=DEMO_PASSWORD --project=${{ secrets.GCP_PROJECT_ID }})
+          python tests/e2e/prod_smoke.py

@@ -129,10 +129,45 @@ const ROUTES = {
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
+// Blog posts are dynamic — fetch the live list at build time so every
+// article gets its own shell (title + excerpt + Article JSON-LD).
+// Build proceeds without them if the API is unreachable (e.g. first deploy).
+async function fetchBlogRoutes() {
+  try {
+    const res = await fetch("https://api.searchgoodly.com/api/blog/posts", {
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { posts = [] } = await res.json();
+    const routes = {};
+    for (const p of posts) {
+      if (!p.slug || !p.title) continue;
+      routes[`/blog/${p.slug}`] = {
+        title: `${p.title} | Goodly Blog`,
+        description: (p.excerpt || p.title).slice(0, 160),
+        // Article schema helps these pages qualify for rich results
+        jsonld: {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: p.title,
+          description: (p.excerpt || "").slice(0, 200),
+          url: `${BASE}/blog/${p.slug}`,
+          publisher: { "@type": "Organization", name: "Goodly", url: BASE },
+        },
+      };
+    }
+    return routes;
+  } catch (e) {
+    console.warn(`prerender-meta: blog fetch skipped (${e.message})`);
+    return {};
+  }
+}
+
+const blogRoutes = await fetchBlogRoutes();
 const template = readFileSync(join(DIST, "index.html"), "utf8");
 let count = 0;
 
-for (const [route, meta] of Object.entries(ROUTES)) {
+for (const [route, meta] of Object.entries({ ...ROUTES, ...blogRoutes })) {
   const url = `${BASE}${route}`;
   let html = template
     // <title> — index.html always has one
@@ -145,6 +180,14 @@ for (const [route, meta] of Object.entries(ROUTES)) {
     .replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${esc(url)}$2`)
     .replace(/(<meta (?:name|property)="twitter:title" content=")[^"]*(")/, `$1${esc(meta.title)}$2`)
     .replace(/(<meta (?:name|property)="twitter:description" content=")[^"]*(")/, `$1${esc(meta.description)}$2`);
+
+  // Inject page-specific JSON-LD (used for blog Article schema)
+  if (meta.jsonld) {
+    html = html.replace(
+      "</head>",
+      `<script type="application/ld+json">${JSON.stringify(meta.jsonld)}</script></head>`,
+    );
+  }
 
   const outDir = join(DIST, ...route.split("/").filter(Boolean));
   mkdirSync(outDir, { recursive: true });
