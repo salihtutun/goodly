@@ -224,9 +224,17 @@ async def check_pagespeed(url: str, strategy: str = "mobile") -> dict:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        # Lighthouse runs take 30-60s for real pages — 30s cut off most sites
+        async with httpx.AsyncClient(timeout=90) as client:
             resp = await client.get(api_url, params=params)
             data = resp.json()
+
+        # Surface API errors instead of silently scoring everything 0
+        # (this was QA issue #14 — "PageSpeed returns score 0 with no error")
+        if "error" in data:
+            msg = data["error"].get("message", "PageSpeed API error")
+            logger.warning("PageSpeed API error for %s: %s", url, msg)
+            return {"error": msg, "score": None}
 
         lighthouse = data.get("lighthouseResult", {})
         categories = lighthouse.get("categories", {})
@@ -243,13 +251,18 @@ async def check_pagespeed(url: str, strategy: str = "mobile") -> dict:
                 "score": audit.get("score", None),
             }
 
+        def cat_score(name):
+            # score can be present-but-null when Lighthouse skips a category
+            s = categories.get(name, {}).get("score")
+            return int(s * 100) if s is not None else None
+
         return {
             "url": url,
             "strategy": strategy,
-            "performance_score": int(categories.get("performance", {}).get("score", 0) * 100),
-            "accessibility_score": int(categories.get("accessibility", {}).get("score", 0) * 100),
-            "best_practices_score": int(categories.get("best-practices", {}).get("score", 0) * 100),
-            "seo_score": int(categories.get("seo", {}).get("score", 0) * 100),
+            "performance_score": cat_score("performance"),
+            "accessibility_score": cat_score("accessibility"),
+            "best_practices_score": cat_score("best-practices"),
+            "seo_score": cat_score("seo"),
             "core_web_vitals": cwv,
             "loading_experience": data.get("loadingExperience", {}),
         }
