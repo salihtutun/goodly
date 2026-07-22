@@ -8,7 +8,7 @@ Updated: 2026-07-15 (late)
 | 2 | Resend domain | **Done — verified** | Resend API reports `searchgoodly.com` → `verified` (confirmed 2026-07-22) |
 | 3 | GA4 | **Done** | `G-ZFFNFYE2YP` in production JS |
 | 4 | Sentry | **Done** | Backend Secret Manager + frontend DSN (`o4510369522057216` / project `4510369535033344`) |
-| 5 | Google Search Console | **TXT live — click Verify** | Apex TXT `google-site-verification=JmH6VMoAq5K8Cu6Gq5MsHCe2CZbf4egBeA-XFv3Q1Ns`. Needs Google login → Verify (API scopes not available here) |
+| 5 | Google Search Console | **Done — verified via API** | Property `https://searchgoodly.com/` verified (FILE method, `googlefc2f5395bd2bce1d.html`) via Site Verification API using compute-SA impersonation. Owners: `salihtutunemt@gmail.com` + compute SA. Sitemap (58 URLs) submitted, 0 errors. Visible at [Search Console](https://search.google.com/search-console) |
 | 6 | Uptime | **Done** | Cloud Monitoring: `searchgoodly-frontend`, `searchgoodly-api-health` (5m) + email alerts |
 
 ## Resend DNS (live — confirmed via dig @ auth NS)

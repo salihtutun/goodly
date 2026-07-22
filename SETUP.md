@@ -21,12 +21,11 @@ DNS is already correct (dig @8.8.8.8 confirms). Resend API still shows pending.
 3. Wait until status is verified (can take minutes to a few hours)
 
 =================================================================
-0c. GOOGLE SEARCH CONSOLE — VERIFY (2 minutes)
+0c. GOOGLE SEARCH CONSOLE — DONE (verified via API 2026-07-22)
 =================================================================
-TXT google-site-verification=JmH6VMoAq5K8Cu6Gq5MsHCe2CZbf4egBeA-XFv3Q1Ns is already on the apex.
-1. Open https://search.google.com/search-console
-2. Add domain property searchgoodly.com (or URL prefix https://searchgoodly.com/)
-3. Click Verify (DNS TXT method)
+Property https://searchgoodly.com/ verified via Site Verification API
+(FILE method). salihtutunemt@gmail.com is an owner — the property appears
+directly at https://search.google.com/search-console. Sitemap submitted.
 
 =================================================================
 1. POST TO REDDIT (5 minutes)
