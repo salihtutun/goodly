@@ -302,6 +302,83 @@ function fallbackBlogRoutes(apiRoutes) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Static hero for "/" — the SPA paints nothing until React boots, which put
+// mobile LCP at ~5.6s. Baking a copy of the nav + hero into the root shell
+// makes first paint come straight from HTML; React re-renders the identical
+// markup on mount so the swap is invisible.
+//
+// Rules for this snippet:
+// - Only use Tailwind classes that already appear in src/**.jsx — Tailwind
+//   doesn't scan this file, so any new class would be missing from the CSS.
+// - Keep markup in sync with Landing.jsx's header + hero section.
+// - Visible by default (so it paints even before/without JS); the inline
+//   script right after it hides it synchronously on any other path, because
+//   vercel.json rewrites every unknown path to this same shell and app
+//   routes must not flash the landing hero.
+const STATIC_HERO = `
+<div id="static-shell">
+  <div class="min-h-screen bg-[#FDFBF7]">
+    <header class="border-b border-[#E5E0D8] bg-[#FDFBF7] sticky top-0 z-30">
+      <div class="max-w-7xl mx-auto px-6 lg:px-10 py-5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="h-9 w-9 rounded-2xl bg-[#2D3E32] flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FDFBF7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+          </div>
+          <span class="font-display font-bold text-[#1A201A] text-xl tracking-tight">good<span class="text-[#D4643F]">ly</span></span>
+        </div>
+        <nav class="hidden md:flex items-center gap-8 text-sm text-[#5C685C]">
+          <a href="#how" class="hover:text-[#1A201A] transition-colors">How it works</a>
+          <a href="#features" class="hover:text-[#1A201A] transition-colors">What you get</a>
+          <a href="/pricing" class="hover:text-[#1A201A] transition-colors">Pricing</a>
+          <a href="/content-studio" class="hover:text-[#1A201A] transition-colors">Content Studio</a>
+          <a href="#stories" class="hover:text-[#1A201A] transition-colors">Stories</a>
+        </nav>
+        <div class="flex items-center gap-3">
+          <a href="/login" class="text-sm text-[#1A201A] hover:text-[#4A5F4F]">Sign in</a>
+          <a href="/register" class="inline-flex items-center justify-center text-sm font-medium bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-5 py-2.5">Start free</a>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section class="relative overflow-hidden">
+        <div class="organic-blob bg-[#81B29A]" style="width:500px;height:500px;top:-80px;right:-120px"></div>
+        <div class="organic-blob bg-[#E07A5F]" style="width:380px;height:380px;bottom:-120px;left:-100px"></div>
+        <div class="relative max-w-7xl mx-auto px-6 lg:px-10 py-16 lg:py-24">
+          <div class="max-w-3xl mx-auto text-center">
+            <div class="label-eyebrow mb-6 justify-center">For small businesses that want more customers</div>
+            <h1 class="font-display font-bold text-[#1A201A] text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.05]">
+              Get found on Google.<br/>
+              <span class="text-[#D4643F]">Without learning SEO.</span>
+            </h1>
+            <p class="mt-6 text-lg text-[#5C685C] max-w-xl mx-auto leading-relaxed">
+              See exactly why customers can't find your business online — and what to fix.
+              One free audit. No jargon. No credit card.
+            </p>
+            <div class="mt-10">
+              <div class="w-full max-w-xl mx-auto">
+                <div class="flex items-center gap-0">
+                  <div class="relative flex-1">
+                    <input type="text" placeholder="yourwebsite.com" class="w-full pl-12 pr-4 py-7 text-lg rounded-l-2xl rounded-r-none border border-[#D4CFC4] bg-white shadow-sm" style="height:3.5rem"/>
+                  </div>
+                  <button type="button" class="inline-flex items-center justify-center rounded-r-2xl rounded-l-none px-8 text-lg bg-[#C4502F] text-white font-semibold shadow-sm" style="height:3.5rem">Get Free Score</button>
+                </div>
+                <p class="mt-3 text-xs text-[#6B776B] text-center">Free instant audit. No signup required.</p>
+              </div>
+            </div>
+            <div class="mt-10 flex flex-wrap items-center justify-center gap-8 text-sm text-[#5C685C]">
+              <div class="flex items-center gap-2">Free forever plan</div>
+              <div class="flex items-center gap-2">Results in 30 seconds</div>
+              <div class="flex items-center gap-2">No credit card required</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<script>if(location.pathname!=="/")document.getElementById("static-shell").setAttribute("hidden","")</script>`;
+
 const apiBlogRoutes = await fetchBlogRoutes();
 const blogRoutes = { ...fallbackBlogRoutes(apiBlogRoutes), ...apiBlogRoutes };
 const template = readFileSync(join(DIST, "index.html"), "utf8");
@@ -340,6 +417,14 @@ for (const [route, meta] of Object.entries({ ...ROUTES, ...blogRoutes })) {
   writeFileSync(join(outDir, "index.html"), html);
   count++;
 }
+
+// Root shell last (the per-route loop above reads `template` from the
+// original file, so writing this after the loop can't leak into sub-shells).
+writeFileSync(
+  join(DIST, "index.html"),
+  template.replace('<div id="root"></div>', `<div id="root">${STATIC_HERO}</div>`),
+);
+console.log("prerender-meta: static hero baked into root shell");
 
 writeSitemap(blogRoutes);
 console.log(`prerender-meta: wrote ${count} route shells with unique meta`);
