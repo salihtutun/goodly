@@ -60,7 +60,7 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build && node scripts/prerender-meta.mjs",
+    "build": "vite build && node scripts/prerender-meta.mjs && node scripts/critical-css.mjs",
     "test": "jest --config jest.config.cjs --no-cache",
     "dev": "vite",
     "preview": "vite preview",
@@ -78,6 +78,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "10.4.20",
     "babel-jest": "^29.7.0",
+    "beasties": "^0.4.3",
     "dotenv": "16.4.5",
     "eslint": "9.23.0",
     "eslint-plugin-import": "2.31.0",
