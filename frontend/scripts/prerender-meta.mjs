@@ -109,6 +109,74 @@ const ROUTES = {
     title: "Goodly vs Ubersuggest — Built for Local Visibility",
     description: "Ubersuggest is a keyword tool. Goodly is a visibility platform: audits, local SEO, AI recommendations, and rank tracking.",
   },
+  "/vs/agency": {
+    title: "Goodly vs Hiring an SEO Agency — 10x Cheaper | Goodly",
+    description: "Agencies charge $1,500+/month with opaque reports. Goodly gives you the same diagnosis, fixes, and monitoring from $49/month.",
+  },
+  "/vs/brightlocal": {
+    title: "Goodly vs BrightLocal — Beyond Local Rank Tracking",
+    description: "BrightLocal tracks local rankings. Goodly tracks them and fixes what's holding you back — AI rewrites, schema, content plans.",
+  },
+  "/vs/localfalcon": {
+    title: "Goodly vs Local Falcon — More Than a Map Scanner",
+    description: "Local Falcon shows where you rank on the map. Goodly shows why — and generates the fixes to climb.",
+  },
+  "/vs/seranking": {
+    title: "Goodly vs SE Ranking — Built for Owners, Not Agencies",
+    description: "SE Ranking is an agency toolkit. Goodly is for the business owner: plain-English audits, done-for-you fixes, revenue impact.",
+  },
+  "/tools/meta-tag-checker": {
+    title: "Free Meta Tag Checker — Test Any Page | Goodly",
+    description: "Check any page's title, description, and OpenGraph tags in seconds. See exactly what Google and social networks read. Free, no signup.",
+  },
+  "/tools/page-speed": {
+    title: "Free Page Speed Test | Goodly",
+    description: "Test how fast your website loads on mobile and desktop. Slow pages lose customers — find out where you stand in 10 seconds.",
+  },
+  "/tools/mobile-friendly": {
+    title: "Free Mobile-Friendly Test | Goodly",
+    description: "Over 60% of searches happen on phones. Check if your website passes Google's mobile-friendly standards. Free, instant.",
+  },
+  "/tools/keyword-density": {
+    title: "Free Keyword Density Checker | Goodly",
+    description: "Analyze how often your target keywords appear on any page — and whether you're under- or over-optimizing.",
+  },
+  "/tools/ssl-checker": {
+    title: "Free SSL Checker — Is Your Site Secure? | Goodly",
+    description: "Google flags sites without valid HTTPS. Check your SSL certificate status and expiry in seconds.",
+  },
+  "/tools/schema-validator": {
+    title: "Free Schema Markup Validator | Goodly",
+    description: "Validate your JSON-LD structured data and see if you qualify for rich results on Google. Free, instant.",
+  },
+  "/tools/robots-checker": {
+    title: "Free Robots.txt Checker | Goodly",
+    description: "One wrong line in robots.txt can hide your whole site from Google. Check yours in seconds.",
+  },
+  "/tools/heading-checker": {
+    title: "Free Heading Structure Checker | Goodly",
+    description: "Check any page's H1-H6 hierarchy. Broken heading structure confuses Google and screen readers alike.",
+  },
+  "/checklist": {
+    title: "Free SEO Checklist for Small Businesses | Goodly",
+    description: "The complete step-by-step SEO checklist for small businesses — from Google Business Profile to schema markup.",
+  },
+  "/content-studio": {
+    title: "Content Studio — AI Writing for Small Businesses | Goodly",
+    description: "Generate blog posts, social captions, and emails written for your business and your customers. Try it free.",
+  },
+  "/refer": {
+    title: "Refer a Business, Earn Rewards | Goodly",
+    description: "Know a business that deserves to be found? Refer them to Goodly and you both get rewarded.",
+  },
+  "/roi-calculator": {
+    title: "SEO ROI Calculator — What Is Ranking Worth? | Goodly",
+    description: "Calculate what page-one rankings would be worth to your business in clicks, customers, and revenue.",
+  },
+  "/stories": {
+    title: "Customer Stories | Goodly",
+    description: "How small businesses use Goodly to get found on Google and grow — real stories, real numbers.",
+  },
   "/terms": {
     title: "Terms of Service | Goodly",
     description: "Goodly's terms of service.",
@@ -130,17 +198,42 @@ const ROUTES = {
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
 // Blog posts are dynamic — fetch the live list at build time so every
-// article gets its own shell (title + excerpt + Article JSON-LD).
+// article gets its own shell (title + excerpt + Article JSON-LD) with the
+// full article body prerendered into #root, so crawlers that don't execute
+// JS index the actual text. React replaces the static body on hydration.
 // Build proceeds without them if the API is unreachable (e.g. first deploy).
+const API = "https://api.searchgoodly.com/api";
+
 async function fetchBlogRoutes() {
   try {
-    const res = await fetch("https://api.searchgoodly.com/api/blog/posts", {
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { posts = [] } = await res.json();
+    // The list endpoint defaults to limit=20 — page through everything so
+    // no article is missing from the sitemap or shell output.
+    const posts = [];
+    for (let offset = 0; ; offset += 100) {
+      const res = await fetch(`${API}/blog/posts?limit=100&offset=${offset}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const batch = (await res.json()).posts || [];
+      posts.push(...batch);
+      if (batch.length < 100) break;
+    }
+    const { marked } = await import("marked");
+
+    // Fetch full article bodies (the list endpoint omits content)
+    const full = await Promise.all(
+      posts.map(async (p) => {
+        try {
+          const r = await fetch(`${API}/blog/posts/${p.slug}`, { signal: AbortSignal.timeout(15000) });
+          return r.ok ? await r.json() : p;
+        } catch {
+          return p; // shell still gets meta, just no body
+        }
+      }),
+    );
+
     const routes = {};
-    for (const p of posts) {
+    for (const p of full) {
       if (!p.slug || !p.title) continue;
       routes[`/blog/${p.slug}`] = {
         title: `${p.title} | Goodly Blog`,
@@ -152,8 +245,16 @@ async function fetchBlogRoutes() {
           headline: p.title,
           description: (p.excerpt || "").slice(0, 200),
           url: `${BASE}/blog/${p.slug}`,
+          datePublished: p.created_at || undefined,
+          dateModified: p.updated_at || p.created_at || undefined,
           publisher: { "@type": "Organization", name: "Goodly", url: BASE },
         },
+        // Markdown → HTML, injected into #root so the text is in the raw
+        // document. Hidden visually to avoid a flash before React mounts.
+        bodyHtml: p.content
+          ? `<article style="position:absolute;left:-9999px" aria-hidden="true"><h1>${esc(p.title)}</h1>${marked.parse(p.content)}</article>`
+          : "",
+        lastmod: (p.updated_at || p.created_at || "").slice(0, 10),
       };
     }
     return routes;
@@ -163,7 +264,46 @@ async function fetchBlogRoutes() {
   }
 }
 
-const blogRoutes = await fetchBlogRoutes();
+// Build-time sitemap: static routes + live blog posts with lastmod, so new
+// articles are picked up by crawlers automatically on every deploy
+// (replaces the hand-maintained public/sitemap.xml copy in the output).
+function writeSitemap(blogRoutes) {
+  const today = new Date().toISOString().slice(0, 10);
+  const priority = (r) => (r === "/" ? "1.0" : r === "/audit" || r === "/pricing" ? "0.9" : r.startsWith("/blog/") ? "0.7" : "0.8");
+  const urls = ["/", ...Object.keys(ROUTES), ...Object.keys(blogRoutes)].map((r) => {
+    const lastmod = blogRoutes[r]?.lastmod || today;
+    return `  <url>\n    <loc>${BASE}${r === "/" ? "" : r}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <priority>${priority(r)}</priority>\n  </url>`;
+  });
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
+  writeFileSync(join(DIST, "sitemap.xml"), xml);
+  console.log(`prerender-meta: sitemap.xml with ${urls.length} URLs`);
+}
+
+// BlogPost.jsx ships FALLBACK_POSTS rendered client-side even when the API
+// has no such post — they were in the old hand-maintained sitemap and still
+// resolve, so keep meta shells + sitemap entries for any not in the API.
+function fallbackBlogRoutes(apiRoutes) {
+  try {
+    const src = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "..", "src", "pages", "BlogPost.jsx"),
+      "utf8",
+    );
+    const routes = {};
+    for (const m of src.matchAll(/"([a-z0-9-]+)":\s*\{\s*\n?\s*title:\s*"([^"]+)"/g)) {
+      const route = `/blog/${m[1]}`;
+      if (!apiRoutes[route]) {
+        routes[route] = { title: `${m[2]} | Goodly Blog`, description: m[2] };
+      }
+    }
+    return routes;
+  } catch (e) {
+    console.warn(`prerender-meta: fallback posts skipped (${e.message})`);
+    return {};
+  }
+}
+
+const apiBlogRoutes = await fetchBlogRoutes();
+const blogRoutes = { ...fallbackBlogRoutes(apiBlogRoutes), ...apiBlogRoutes };
 const template = readFileSync(join(DIST, "index.html"), "utf8");
 let count = 0;
 
@@ -189,10 +329,17 @@ for (const [route, meta] of Object.entries({ ...ROUTES, ...blogRoutes })) {
     );
   }
 
+  // Inject the prerendered article body into #root — crawlers see the full
+  // text; React replaces it on mount.
+  if (meta.bodyHtml) {
+    html = html.replace('<div id="root"></div>', `<div id="root">${meta.bodyHtml}</div>`);
+  }
+
   const outDir = join(DIST, ...route.split("/").filter(Boolean));
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, "index.html"), html);
   count++;
 }
 
+writeSitemap(blogRoutes);
 console.log(`prerender-meta: wrote ${count} route shells with unique meta`);
