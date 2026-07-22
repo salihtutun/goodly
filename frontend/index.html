@@ -43,9 +43,21 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/logo192.png" />
 
+    <!-- Fonts the app actually uses: Outfit (body) + Cabinet Grotesk (display).
+         Loaded async (media=print swap trick) so first paint isn't blocked —
+         font-display:swap shows system fonts until they arrive. Previously these
+         were CSS @imports (serial, render-blocking) and this file preloaded
+         Inter, which nothing uses. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet" />
+    </noscript>
 
     <!-- Google Analytics is loaded at runtime via useAnalytics (REACT_APP_GA_ID).
          The placeholder inline snippet was removed — re-add here only with a real ID. -->

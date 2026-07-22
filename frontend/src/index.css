@@ -1,5 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap');
+/* Fonts are loaded via <link> tags in index.html — CSS @import is serial
+   render-blocking (browser must download this CSS before discovering the
+   font CSS), which cost ~2s of FCP on mobile. */
 
 @tailwind base;
 @tailwind components;

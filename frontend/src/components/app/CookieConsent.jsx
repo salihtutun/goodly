@@ -18,12 +18,15 @@ export default function CookieConsent() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 bg-white border border-[#E5E0D8] rounded-2xl shadow-2xl p-5 animate-in slide-in-from-bottom-4 duration-300">
-      <button onClick={accept} className="absolute top-3 right-3 text-[#9CA89C] hover:text-[#1A201A]">
+      {/* aria-label: icon-only button needs an accessible name (a11y audit) */}
+      <button onClick={accept} aria-label="Dismiss cookie notice" className="absolute top-3 right-3 text-[#6B776B] hover:text-[#1A201A]">
         <X size={16} />
       </button>
       <p className="text-sm text-[#5C685C] pr-6 leading-relaxed">
         We use essential cookies for authentication. No tracking, no ads.{" "}
-        <a href="/privacy" className="text-[#81B29A] hover:underline">Learn more</a>
+        {/* Descriptive text + always-underlined + 4.5:1 green — fixes the
+            link-text and link-in-text-block audits */}
+        <a href="/privacy" className="text-[#4A7862] underline underline-offset-2 hover:text-[#2D3E32]">Read our privacy policy</a>
       </p>
       <button
         onClick={accept}

@@ -191,7 +191,7 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
               </p>
               <a
                 href={`mailto:hello@searchgoodly.com?subject=Concierge%20inquiry%20-%20${encodeURIComponent(result.url)}%20(Score:%20${result.overall_score})`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#E07A5F] hover:text-[#C86A51]"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#B04A2E] hover:text-[#8F3A22] underline underline-offset-2"
               >
                 Talk to a specialist <ArrowRight size={14} />
               </a>

@@ -57,6 +57,10 @@ export default function Landing() {
         </div>
       </header>
 
+      {/* main landmark — target of the skip link in index.html, and required
+          by the landmark-one-main accessibility audit */}
+      <main id="main-content">
+
       {/* Hero — Business outcome language + QuickAuditWidget */}
       <section className="relative overflow-hidden">
         <div className="organic-blob bg-[#81B29A]" style={{ width: 500, height: 500, top: -80, right: -120 }} />
@@ -66,7 +70,9 @@ export default function Landing() {
             <Eyebrow className="mb-6 justify-center">For small businesses that want more customers</Eyebrow>
             <h1 className="font-display font-bold text-[#1A201A] text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.05]">
               Get found on Google.<br/>
-              <span className="text-[#E07A5F]">Without learning SEO.</span>
+              {/* #D4643F is the darkest terracotta that keeps the brand feel while
+                  passing the 3:1 large-text contrast ratio on the cream bg */}
+              <span className="text-[#D4643F]">Without learning SEO.</span>
             </h1>
             <p className="mt-6 text-lg text-[#5C685C] max-w-xl mx-auto leading-relaxed">
               See exactly why customers can't find your business online — and what to fix.
@@ -331,6 +337,8 @@ export default function Landing() {
         </div>
       </section>
 
+      </main>
+
       <footer className="border-t border-[#E5E0D8] py-8">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8">
@@ -409,7 +417,8 @@ function OutcomeCard({ icon: Icon, title, body, stat, accent }) {
       <div className="mt-5 font-display font-bold text-lg text-[#1A201A]">{title}</div>
       <div className="mt-2 text-[#5C685C] text-sm leading-relaxed flex-1">{body}</div>
       <div className="mt-4 pt-4 border-t border-[#E5E0D8]">
-        <div className="flex items-start gap-2 text-xs text-[#9CA89C]">
+        {/* #6B776B (not #9CA89C) — small text needs 4.5:1 contrast on white */}
+        <div className="flex items-start gap-2 text-xs text-[#6B776B]">
           <TrendingUp size={14} className="text-[#81B29A] shrink-0 mt-0.5" />
           {stat}
         </div>

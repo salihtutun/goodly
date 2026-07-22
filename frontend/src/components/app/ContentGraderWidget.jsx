@@ -72,7 +72,8 @@ export default function ContentGraderWidget({ className = "" }) {
     <div className={`bg-white border border-[#E5E0D8] rounded-2xl p-6 sm:p-8 ${className}`}>
       <div className="flex items-center gap-2 mb-1">
         <Sparkles size={18} className="text-[#E07A5F]" />
-        <span className="text-xs font-medium tracking-wider uppercase text-[#E07A5F]">AI Content Grader</span>
+        {/* #B04A2E — small text needs 4.5:1 contrast; brand #E07A5F only hits 2.9 */}
+        <span className="text-xs font-medium tracking-wider uppercase text-[#B04A2E]">AI Content Grader</span>
       </div>
       <h3 className="font-display font-bold text-xl sm:text-2xl text-[#1A201A] mt-1">
         Is your website content working?
