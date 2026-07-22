@@ -15,13 +15,23 @@
  * Runs after prerender-meta.mjs (see package.json build script) so every
  * route shell, including the "/" hero shell, gets its own critical CSS.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { globSync } from "node:fs";
 import Beasties from "beasties";
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "build");
+
+// Node 20 (CI) has no fs.globSync — walk the build tree ourselves.
+function listHtml(dir) {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) out.push(...listHtml(p));
+    else if (name.endsWith(".html")) out.push(p);
+  }
+  return out;
+}
 
 const beasties = new Beasties({
   path: DIST,
@@ -36,7 +46,7 @@ const beasties = new Beasties({
   logLevel: "warn",
 });
 
-const files = globSync(join(DIST, "**", "*.html"));
+const files = listHtml(DIST);
 let done = 0;
 for (const file of files) {
   const html = readFileSync(file, "utf8");
