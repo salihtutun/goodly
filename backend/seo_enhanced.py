@@ -981,6 +981,10 @@ async def analyze_nlp(text: str, features: list = None) -> dict:
     }
 
     document = {"type": "PLAIN_TEXT", "content": text[:100000], "languageCode": "en"}
+    # v1 uses "language", not "languageCode" (that's a v2 field) — sending the
+    # wrong key made analyzeEntities return 400, which was silently swallowed
+    # and every response came back with entities: []
+    document_v1 = {"type": "PLAIN_TEXT", "content": text[:100000], "language": "en"}
 
     # Entities via v1 (returns Knowledge Graph metadata + salience)
     if "entities" in features:
@@ -988,7 +992,7 @@ async def analyze_nlp(text: str, features: list = None) -> dict:
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.post(
                     "https://language.googleapis.com/v1/documents:analyzeEntities",
-                    json={"document": document, "encodingType": "UTF8"},
+                    json={"document": document_v1, "encodingType": "UTF8"},
                     params={"key": api_key},
                 )
                 if resp.status_code == 200:
