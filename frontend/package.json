@@ -60,7 +60,7 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender-meta.mjs",
     "test": "jest --config jest.config.cjs --no-cache",
     "dev": "vite",
     "preview": "vite preview",
