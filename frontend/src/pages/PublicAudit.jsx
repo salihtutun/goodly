@@ -4,11 +4,23 @@ import api, { formatApiError } from "@/lib/api";
 import { Logo, Eyebrow, ScoreRing } from "@/components/app/Common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Gauge, Leaf, Sparkles, ShieldCheck, Star, PenLine, Code, Copy } from "lucide-react";
+import { ArrowRight, Gauge, Leaf, Sparkles, ShieldCheck, Star, PenLine, Code, Copy, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useCountUp } from "@/hooks/useCountUp";
 import EmailCapture from "@/components/app/EmailCapture";
 import ShareAudit from "@/components/app/ShareAudit";
+import GoogleSERPPreview from "@/components/app/GoogleSERPPreview";
+
+/* Wrapper that fades+rises its children in, staggered by `order`.
+   Gives the results page a "report being computed live" feel. */
+function Reveal({ order = 0, children, className = "" }) {
+  return (
+    <div className={`reveal-rise ${className}`} style={{ animationDelay: `${0.15 + order * 0.18}s` }}>
+      {children}
+    </div>
+  );
+}
 
 export default function PublicAudit() {
   usePageMeta({ title: "Free SEO Audit", description: "Get a free SEO score for any website in 10 seconds. No signup required." });
@@ -47,6 +59,24 @@ export default function PublicAudit() {
   const highIssues = issues.filter((i) => i.severity === "high");
   const medIssues = issues.filter((i) => i.severity === "medium");
   const resultUrl = result?.url || result?.result?.url || url;
+
+  // Animated numbers — score ring sweeps up and revenue counts up so the
+  // report feels computed in front of the visitor.
+  const animatedScore = useCountUp(score ?? 0, 1400, 200);
+  const annualLoss = result?.revenue_impact?.total_estimated_annual_revenue_loss || 0;
+  const animatedLoss = useCountUp(annualLoss, 1600, 700);
+
+  // Before/after Google preview data — only shown when the AI produced a
+  // rewrite (suggested_*) so we never render an empty "after" card.
+  const currentMeta = result?.metadata || {};
+  const suggestedTitle = result?.ai_summary?.suggested_title || "";
+  const suggestedDescription = result?.ai_summary?.suggested_description || "";
+  const showBeforeAfter = Boolean(suggestedTitle && suggestedDescription);
+
+  const copyText = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied!`);
+  };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
@@ -148,9 +178,11 @@ export default function PublicAudit() {
               </h1>
             </div>
 
+            <Reveal order={0}>
             <div className="mt-10 bg-white border border-[#E5E0D8] rounded-2xl p-8">
               <div className="flex flex-col items-center">
-                <ScoreRing score={score} size={180} />
+                {/* animatedScore drives both the ring sweep and the number count-up */}
+                <ScoreRing score={animatedScore} size={180} />
                 <div className="mt-4 label-eyebrow">Overall health</div>
               </div>
 
@@ -186,9 +218,11 @@ export default function PublicAudit() {
                 </div>
               )}
             </div>
+            </Reveal>
 
             {/* AI Summary — free value, no auth required */}
             {result?.ai_summary?.summary && (
+              <Reveal order={3}>
               <div className="mt-6 bg-[#F3F0E9] border border-[#E5E0D8] rounded-xl p-5 flex gap-3">
                 <Sparkles className="text-[#E07A5F] shrink-0 mt-0.5" size={20}/>
                 <div>
@@ -210,10 +244,12 @@ export default function PublicAudit() {
                   )}
                 </div>
               </div>
+              </Reveal>
             )}
 
             {/* Schema Markup — free JSON-LD for their site */}
             {result?.schema_markup && (
+              <Reveal order={4}>
               <div className="mt-6 bg-white border border-[#E5E0D8] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -232,23 +268,96 @@ export default function PublicAudit() {
                   {result.schema_markup}
                 </pre>
               </div>
+              </Reveal>
             )}
 
-            {/* Revenue Impact */}
-            {result?.revenue_impact && result.revenue_impact.total_estimated_monthly_revenue_loss > 0 && (
-              <div className="mt-6 bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-2xl p-6 text-center">
-                <div className="text-3xl font-display font-bold text-[#92400E]">
-                  ${result.revenue_impact.total_estimated_monthly_revenue_loss.toLocaleString()}/mo
-                </div>
-                <div className="text-sm text-[#92400E]/70 mt-1">
-                  Estimated revenue you're losing each month
-                </div>
-                {result.revenue_impact.top_quick_wins?.length > 0 && (
-                  <div className="mt-3 text-xs text-[#92400E]/60">
-                    Top fix: {result.revenue_impact.top_quick_wins[0].title}
+            {/* Revenue Impact — the "this is costing you money" moment */}
+            {annualLoss > 0 && (
+              <Reveal order={1}>
+                <div className="mt-6 bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-2xl p-8 text-center">
+                  <div className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#92400E]/70">
+                    <TrendingDown size={14} /> Estimated cost of these issues
                   </div>
-                )}
-              </div>
+                  <div className="mt-2 text-5xl font-display font-bold text-[#92400E] tabular-nums">
+                    ${animatedLoss.toLocaleString()}
+                    <span className="text-2xl font-medium">/year</span>
+                  </div>
+                  <div className="text-sm text-[#92400E]/70 mt-1">
+                    ≈ ${result.revenue_impact.total_estimated_monthly_revenue_loss.toLocaleString()}/month in customers who find a competitor instead
+                  </div>
+                  {result.revenue_impact.top_quick_wins?.length > 0 && (
+                    <div className="mt-5 grid sm:grid-cols-3 gap-2 text-left">
+                      {result.revenue_impact.top_quick_wins.slice(0, 3).map((w, i) => (
+                        <div key={i} className="bg-white/60 rounded-xl p-3">
+                          <div className="text-lg font-display font-bold text-[#92400E]">
+                            ${(w.monthly_impact || 0).toLocaleString()}/mo
+                          </div>
+                          <div className="text-xs text-[#92400E]/70 mt-0.5 leading-snug">{w.title}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-4 text-[10px] text-[#92400E]/50">
+                    Directional estimates based on industry averages for traffic, CTR, and customer value.
+                  </div>
+                </div>
+              </Reveal>
+            )}
+
+            {/* Before / After — how their Google listing looks today vs. rewritten */}
+            {showBeforeAfter && (
+              <Reveal order={2}>
+                <div className="mt-6 bg-white border border-[#E5E0D8] rounded-2xl p-6">
+                  <div className="text-center mb-5">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-[#E07A5F]">See the difference</div>
+                    <h3 className="mt-1 font-display font-bold text-xl text-[#1A201A]">
+                      Your Google listing — today vs. after Goodly
+                    </h3>
+                  </div>
+                  <div className="grid lg:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-[#E07A5F]" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-[#E07A5F]">Your listing today</span>
+                      </div>
+                      <GoogleSERPPreview
+                        title={currentMeta.title || "Untitled page"}
+                        url={resultUrl}
+                        description={currentMeta.description || "No meta description — Google picks random text from your page."}
+                        className="border-[#E07A5F]/30 bg-[#E07A5F]/[0.03] h-full"
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#81B29A]" />
+                          <span className="text-xs font-semibold uppercase tracking-wider text-[#2D3E32]">After Goodly</span>
+                        </div>
+                        <button
+                          onClick={() => copyText(`${suggestedTitle}\n${suggestedDescription}`, "New title + description")}
+                          className="text-xs text-[#5C685C] hover:text-[#1A201A] flex items-center gap-1 bg-[#F3F0E9] hover:bg-[#E5E0D8] rounded-full px-3 py-1 transition-colors"
+                        >
+                          <Copy size={12} /> Copy both
+                        </button>
+                      </div>
+                      <GoogleSERPPreview
+                        title={suggestedTitle}
+                        url={resultUrl}
+                        description={suggestedDescription}
+                        className="border-[#81B29A]/40 bg-[#81B29A]/[0.04] h-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-5 text-center">
+                    <p className="text-sm text-[#5C685C]">
+                      This rewrite was generated from your audit. Goodly produces fixes like this for every issue it finds.
+                    </p>
+                    <Button onClick={() => navigate("/register")} className="mt-3 bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7] rounded-full px-8">
+                      Get every fix like this <ArrowRight size={16} className="ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              </Reveal>
             )}
 
             {/* Email capture — get their email before showing full CTA */}

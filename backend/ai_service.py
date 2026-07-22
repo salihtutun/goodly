@@ -117,8 +117,11 @@ Return JSON with this exact shape:
     {{"title": "...", "why": "...", "how": "...", "estimated_impact": "high|medium|low", "estimated_effort": "low|medium|high"}}
   ],
   "wins": ["What this site is already doing well — 2-3 bullets."],
-  "next_30_days": ["...", "...", "..."]
+  "next_30_days": ["...", "...", "..."],
+  "suggested_title": "A rewritten page title (max 60 chars) with the business's main keyword — better than the current one in AUDIT DATA metadata",
+  "suggested_description": "A rewritten meta description (150-160 chars) that is compelling, keyword-rich, and ends with a call to action"
 }}
 
-Give 5-7 priority actions, ordered most impactful first."""
+Give 5-7 priority actions, ordered most impactful first.
+The suggested_title and suggested_description must be concrete, ready to paste — infer the business type and location from the audit data."""
     return await ask_json(prompt, system_message=SYSTEM_MESSAGE)

@@ -910,6 +910,10 @@ async def _public_audit_ai_extras(result: dict, url: str, budget_seconds: float)
             "summary": ai_recs.get("summary", ""),
             "top_action": (ai_recs.get("priority_actions") or [{}])[0] if ai_recs.get("priority_actions") else None,
             "wins": ai_recs.get("wins", []),
+            # Powers the before/after Google-result preview on the results
+            # page — same AI call, no extra latency.
+            "suggested_title": ai_recs.get("suggested_title", ""),
+            "suggested_description": ai_recs.get("suggested_description", ""),
         }
 
     async def _schema():
@@ -1012,11 +1016,18 @@ async def public_audit(request: Request, body: PublicAuditIn, response: Response
         except Exception as e:
             logger.warning("Nurture sequence scheduling failed: %s", e)
 
+    # Current title/description power the "your listing today" side of the
+    # before/after Google preview on the results page.
+    metadata = result.get("metadata") or {}
     return {
         "url": result.get("url", body.url),
         "overall_score": result.get("overall_score"),
         "categories": result.get("categories"),
         "issues": result.get("issues", []),
+        "metadata": {
+            "title": metadata.get("title", ""),
+            "description": metadata.get("description", ""),
+        },
         "revenue_impact": revenue,
         "ai_summary": ai_summary,
         "schema_markup": schema_markup,
