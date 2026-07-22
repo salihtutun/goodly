@@ -869,6 +869,70 @@ class PublicAuditIn(BaseModel):
     email: Optional[EmailStr] = None  # Optional email for nurture sequence
 
 
+# Hard wall-clock budget for the optional AI enrichments on the public audit.
+# The Vercel proxy in front of the API kills requests around 30s, and the page
+# fetch alone can take up to 15s — so AI work gets whatever fits in this budget
+# and the endpoint responds without the extras if they run long.
+PUBLIC_AUDIT_AI_BUDGET_SECONDS = 10.0
+
+
+async def _public_audit_ai_extras(result: dict, url: str):
+    """Run the AI summary + schema generation in parallel with a time budget.
+
+    Returns (ai_summary, schema_markup); either may be None if its task
+    failed or didn't finish inside the budget. Never raises.
+    """
+    async def _summary():
+        from ai_service import audit_recommendations
+        ai_recs = await audit_recommendations(result)
+        return {
+            "summary": ai_recs.get("summary", ""),
+            "top_action": (ai_recs.get("priority_actions") or [{}])[0] if ai_recs.get("priority_actions") else None,
+            "wins": ai_recs.get("wins", []),
+        }
+
+    async def _schema():
+        metadata = result.get("metadata") or {}
+        if metadata.get("has_schema"):
+            return None  # Site already has schema — nothing to generate
+        from ai_remediation import generate_fixes
+        domain = url.split("//")[-1].split("/")[0].replace("www.", "")
+        biz_name = metadata.get("title") or domain
+        fixes = await generate_fixes(
+            business_name=biz_name,
+            website_url=url,
+            audit_issues=[{"message": "Missing schema markup (JSON-LD)", "category": "schema", "severity": "high"}],
+            industry="",
+            location="",
+        )
+        return fixes.get("complete_schema_markup") or fixes.get("schema_markup")
+
+    summary_task = asyncio.create_task(_summary())
+    schema_task = asyncio.create_task(_schema())
+    # asyncio.wait (not gather+wait_for) so a task that finished in time is
+    # kept even when the other one blows the budget.
+    _done, pending = await asyncio.wait(
+        {summary_task, schema_task}, timeout=PUBLIC_AUDIT_AI_BUDGET_SECONDS
+    )
+    for task in pending:
+        task.cancel()
+        logger.warning("Public audit AI extra timed out after %.0fs budget", PUBLIC_AUDIT_AI_BUDGET_SECONDS)
+
+    ai_summary = None
+    schema_markup = None
+    if summary_task in _done:
+        try:
+            ai_summary = summary_task.result()
+        except Exception as e:
+            logger.warning("Public audit AI summary failed: %s", e)
+    if schema_task in _done:
+        try:
+            schema_markup = schema_task.result()
+        except Exception as e:
+            logger.warning("Public audit schema generation failed: %s", e)
+    return ai_summary, schema_markup
+
+
 @api.post("/public/audit")
 @limiter.limit("30/minute")
 async def public_audit(request: Request, body: PublicAuditIn, response: Response, bg: BackgroundTasks):
@@ -889,38 +953,12 @@ async def public_audit(request: Request, body: PublicAuditIn, response: Response
         except Exception as e:
             logger.warning("Public audit revenue impact failed: %s", e)
 
-    # Generate lightweight AI summary for public audit (no auth, fast model)
+    # AI summary + schema markup run in parallel under a hard time budget —
+    # the audit responds without them rather than timing out at the proxy.
     ai_summary = None
     schema_markup = None
     if not result.get("fetch_failed"):
-        try:
-            from ai_service import audit_recommendations
-            ai_recs = await audit_recommendations(result)
-            ai_summary = {
-                "summary": ai_recs.get("summary", ""),
-                "top_action": (ai_recs.get("priority_actions") or [{}])[0] if ai_recs.get("priority_actions") else None,
-                "wins": ai_recs.get("wins", []),
-            }
-        except Exception as e:
-            logger.warning("Public audit AI summary failed: %s", e)
-
-        # Generate schema markup if missing
-        try:
-            metadata = result.get("metadata") or {}
-            if not metadata.get("has_schema"):
-                from ai_remediation import generate_fixes
-                domain = body.url.split("//")[-1].split("/")[0].replace("www.", "")
-                biz_name = metadata.get("title") or domain
-                fixes = await generate_fixes(
-                    business_name=biz_name,
-                    website_url=body.url,
-                    audit_issues=[{"message": "Missing schema markup (JSON-LD)", "category": "schema", "severity": "high"}],
-                    industry="",
-                    location="",
-                )
-                schema_markup = fixes.get("complete_schema_markup") or fixes.get("schema_markup")
-        except Exception as e:
-            logger.warning("Public audit schema generation failed: %s", e)
+        ai_summary, schema_markup = await _public_audit_ai_extras(result, body.url)
 
     # Track audit event
     try:
@@ -1125,8 +1163,8 @@ async def get_audit_improvement(audit_id: str, user_id: str = Depends(get_curren
 # AI tools
 # ---------------------------------------------------------------
 class MetaTagsIn(BaseModel):
-    business_name: str
-    description: str
+    business_name: str = Field(min_length=1, description="Your business name (e.g., 'Joe's Plumbing')")
+    description: str = Field(min_length=1, description="Short description of your business or page content")
     target_keywords: Optional[str] = ""
 
 
@@ -2150,8 +2188,8 @@ async def mark_onboarded(user_id: str = Depends(get_current_user_id)):
 # Google Business Profile audit / suggestions / competitors
 # ---------------------------------------------------------------
 class GBPAuditIn(BaseModel):
-    business_name: str = Field(min_length=1, max_length=200)
-    primary_category: str = Field(min_length=1)
+    business_name: str = Field(min_length=1, max_length=200, description="Your business name")
+    primary_category: str = Field(min_length=1, description="Google Business Profile primary category (e.g., 'Plumber', 'Restaurant', 'Dentist')")
     address: Optional[str] = ""
     service_area: Optional[str] = ""
     description: Optional[str] = ""
@@ -2869,6 +2907,43 @@ app.include_router(api)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+# Friendly 422s — FastAPI's default validation errors are a nested list of
+# loc/msg/type dicts that read as noise to API consumers. Summarize which
+# fields are missing/invalid in one plain-English sentence (QA issues #4/#5),
+# and keep the raw errors under "errors" for programmatic use.
+from fastapi.exceptions import RequestValidationError
+
+async def _validation_error_handler(request: Request, exc: RequestValidationError):
+    missing, invalid = [], []
+    for err in exc.errors():
+        # loc looks like ("body", "business_name") — take the field path
+        field = ".".join(str(p) for p in err.get("loc", []) if p not in ("body", "query", "path"))
+        if err.get("type") == "missing":
+            missing.append(field or "body")
+        else:
+            invalid.append(f"{field or 'body'} ({err.get('msg', 'invalid')})")
+    parts = []
+    if missing:
+        parts.append(f"Missing required field{'s' if len(missing) > 1 else ''}: {', '.join(missing)}")
+    if invalid:
+        parts.append(f"Invalid value{'s' if len(invalid) > 1 else ''}: {'; '.join(invalid)}")
+    detail = ". ".join(parts) or "Request validation failed."
+    # Pydantic field validators can put raw exception objects in ctx —
+    # stringify anything non-JSON-safe before returning the raw errors.
+    safe_errors = []
+    for err in exc.errors():
+        safe = {k: v for k, v in err.items() if k != "ctx"}
+        if "ctx" in err:
+            safe["ctx"] = {k: str(v) for k, v in err["ctx"].items()}
+        safe_errors.append(safe)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": detail, "errors": safe_errors},
+    )
+
+app.add_exception_handler(RequestValidationError, _validation_error_handler)
 
 # Catch uvicorn protocol errors from Content-Length mismatches (body < header)
 # and return 413 instead of 500. The error format {"error":{"code":"500"...}}

@@ -5,7 +5,10 @@ We can't actually query OpenAI / Perplexity / Gemini cheaply, so we use Google G
 a heuristic — the user understands it's best-effort directional signal, not a
 deterministic measurement. We're transparent about that in the UI.
 """
+import logging
 from typing import List, Optional
+
+logger = logging.getLogger("ai_visibility")
 
 from llm_client import ask_json, PRO_MODEL
 
@@ -83,4 +86,10 @@ GUIDELINES:
 - blocking_factors: 2-5 honest things keeping this business out of AI answers.
 - discoverability_signals_missing: 3-6 specific online artifacts an AI would need to see (e.g., "A 'best of' list on a high-DA blog", "Reddit recommendations in r/Portland", "Press in The Oregonian").
 """
-    return await ask_json(prompt, system_message=SYSTEM, model=PRO_MODEL)
+    # Pro gives deeper reasoning but is slower and quota-limited — fall back
+    # to Flash rather than surfacing a 502 to the user (QA issue #6).
+    try:
+        return await ask_json(prompt, system_message=SYSTEM, model=PRO_MODEL)
+    except Exception:
+        logger.warning("AI visibility: pro model failed, retrying with flash")
+        return await ask_json(prompt, system_message=SYSTEM)

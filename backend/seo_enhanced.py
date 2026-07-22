@@ -305,65 +305,118 @@ def analyze_content_quality(html: str, text_content: str) -> dict:
     for name, pattern in entity_patterns.items():
         entities[name] = len(re.findall(pattern, text_content, re.IGNORECASE))
 
-    # External links (citations)
-    external_links = len(re.findall(r'href="https?://(?!{})[^"]*"'.format(
-        re.escape(urlparse(html[:200] if 'http' in html[:200] else '').netloc or 'example.com')
-    ), html, re.IGNORECASE)) if html else 0
+    # External links (citations) — count distinct absolute-URL domains.
+    # We don't know the page's own domain here, so counting unique domains
+    # approximates "cites external sources" without inventing an exclusion.
+    link_domains = {
+        urlparse(href).netloc
+        for href in re.findall(r'href=["\'](https?://[^"\']+)["\']', html, re.IGNORECASE)
+    } if html else set()
+    external_links = len(link_domains)
 
     # Author signals
     has_author = bool(re.search(r'author|byline|written by', html, re.IGNORECASE))
     has_date = bool(re.search(r'published|updated|date', html, re.IGNORECASE))
 
-    # Scoring
+    # Scoring — weighted across 6 dimensions (max 100)
+    # Word count: 0-25 points (proportional, max at 1000+ words)
+    # Readability: 0-20 points
+    # Heading structure: 0-20 points     (requires html)
+    # External citations: 0-15 points    (requires html)
+    # Author/date signals: 0-10 points   (requires html)
+    # Entity/trust signals: 0-10 points
+    #
+    # When called with text only (no html), the 45 html-dependent points are
+    # unreachable, so the final score is rescaled over the 55 achievable
+    # points — otherwise good text could never score above 55/100.
+    has_html = bool(html and html.strip())
     quality_score = 0
     issues = []
 
-    if word_count < 300:
-        issues.append({"severity": "high", "message": f"Thin content: only {word_count} words. Aim for 500+ words."})
-    elif word_count < 500:
+    # Word count (0-25 pts): proportional, not binary
+    if word_count >= 1000:
+        quality_score += 25
+    elif word_count >= 500:
+        quality_score += 20
+    elif word_count >= 300:
+        quality_score += 15
+    elif word_count >= 150:
+        quality_score += 10
+    elif word_count >= 50:
+        quality_score += 5
+    else:
+        quality_score += 2  # at least something for having content
+
+    if word_count < 150:
+        issues.append({"severity": "high", "message": f"Very thin content: only {word_count} words. Aim for 300+ words."})
+    elif word_count < 300:
         issues.append({"severity": "medium", "message": f"Content is short: {word_count} words. Consider expanding to 500+."})
+
+    # Readability (0-20 pts)
+    if flesch < 30:
+        quality_score += 5
+        issues.append({"severity": "medium", "message": f"Content is very difficult to read (Flesch: {flesch:.0f}). Simplify language."})
+    elif flesch < 50:
+        quality_score += 12
+    elif flesch < 70:
+        quality_score += 16
     else:
         quality_score += 20
 
-    if flesch < 30:
-        issues.append({"severity": "medium", "message": f"Content is very difficult to read (Flesch: {flesch:.0f}). Simplify language."})
-    elif flesch > 70:
-        quality_score += 10
-    else:
-        quality_score += 15
+    # Heading structure (0-20 pts) — only meaningful when html was provided;
+    # complaining about a missing H1 in a plain-text snippet is noise.
+    if has_html:
+        if h1_count == 0:
+            issues.append({"severity": "high", "message": "Missing H1 heading."})
+        elif h1_count > 1:
+            quality_score += 5
+            issues.append({"severity": "medium", "message": f"Multiple H1s ({h1_count}). Use exactly one."})
+        else:
+            quality_score += 10
 
-    if h1_count == 0:
-        issues.append({"severity": "high", "message": "Missing H1 heading."})
-    elif h1_count > 1:
-        issues.append({"severity": "medium", "message": f"Multiple H1s ({h1_count}). Use exactly one."})
-    else:
-        quality_score += 10
+        if h2_count >= 3:
+            quality_score += 10
+        elif h2_count >= 1:
+            quality_score += 5
+        else:
+            issues.append({"severity": "low", "message": "No H2 subheadings. Add more to structure content."})
 
-    if h2_count < 2:
-        issues.append({"severity": "low", "message": "Few H2 subheadings. Add more to structure content."})
-    else:
-        quality_score += 10
+        # External citations (0-15 pts)
+        if external_links >= 5:
+            quality_score += 15
+        elif external_links >= 2:
+            quality_score += 10
+        elif external_links >= 1:
+            quality_score += 5
+        else:
+            issues.append({"severity": "low", "message": "No external citations. Link to authoritative sources."})
 
-    if external_links < 2:
-        issues.append({"severity": "low", "message": "Few external citations. Link to authoritative sources."})
-    else:
-        quality_score += 10
+        # Author/date signals (0-10 pts)
+        if has_author:
+            quality_score += 5
+        else:
+            issues.append({"severity": "low", "message": "No author byline detected. Add author information for E-E-A-T."})
 
-    if not has_author:
-        issues.append({"severity": "low", "message": "No author byline detected. Add author information for E-E-A-T."})
-    else:
+        if has_date:
+            quality_score += 5
+        else:
+            issues.append({"severity": "low", "message": "No publish date detected. Add dates for freshness signals."})
+
+    # Entity/trust signals (0-10 pts)
+    entity_count = sum(1 for v in entities.values() if v > 0)
+    if entity_count >= 3:
+        quality_score += 10
+    elif entity_count >= 1:
         quality_score += 5
 
-    if not has_date:
-        issues.append({"severity": "low", "message": "No publish date detected. Add dates for freshness signals."})
-    else:
-        quality_score += 5
-
-    if entities.get("email") or entities.get("phone") or entities.get("address"):
-        quality_score += 10
+    # Rescale text-only scores over the 55 achievable points so the 0-100
+    # range means the same thing regardless of whether html was supplied.
+    if not has_html:
+        quality_score = round(quality_score * 100 / 55)
 
     return {
         "quality_score": min(100, quality_score),
+        "scored_dimensions": "all" if has_html else "text_only",
         "word_count": word_count,
         "sentence_count": sentence_count,
         "readability_flesch": round(flesch, 1),
@@ -452,8 +505,9 @@ async def capture_seo_baseline(db, url: str, user_id: str) -> dict:
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # Extract key SEO signals
-    title = soup.title.string.strip() if soup.title else ""
+    # Extract key SEO signals. get_text() instead of .string — .string is
+    # None when <title> has nested markup, which crashed with AttributeError.
+    title = soup.title.get_text(strip=True) if soup.title else ""
     meta_desc = ""
     meta_tag = soup.find("meta", attrs={"name": "description"})
     if meta_tag:
@@ -510,8 +564,11 @@ async def capture_seo_baseline(db, url: str, user_id: str) -> dict:
         "status_code": resp.status_code,
     }
 
-    # Store in DB
+    # Store in DB. insert_one mutates the dict by adding a Mongo ObjectId
+    # under _id, which FastAPI can't JSON-serialize — pop it before returning
+    # (this was the cause of the drift endpoints' 500s).
     await db.seo_baselines.insert_one(baseline)
+    baseline.pop("_id", None)
     return baseline
 
 
@@ -527,6 +584,7 @@ async def compare_seo_drift(db, url: str, user_id: str) -> dict:
     )
     if not baseline:
         return {"error": "No baseline found. Run capture_seo_baseline first."}
+    baseline.pop("_id", None)  # ObjectId isn't JSON-serializable
 
     # Capture current state
     current = await capture_seo_baseline(db, url, user_id)
@@ -572,8 +630,9 @@ async def compare_seo_drift(db, url: str, user_id: str) -> dict:
 def cluster_keywords(keywords: List[str], n_clusters: int = 5) -> dict:
     """Group related keywords into semantic clusters.
 
-    Uses simple word-overlap clustering (no external deps).
-    For production, swap in sentence-transformers for better results.
+    Uses TF-IDF-weighted token overlap clustering.
+    Common words across many keywords are downweighted to prevent
+    chain-merging of diverse keywords into a single cluster.
 
     Args:
         keywords: List of keyword strings.
@@ -582,8 +641,9 @@ def cluster_keywords(keywords: List[str], n_clusters: int = 5) -> dict:
     Returns:
         Dict with cluster assignments and cluster keywords.
     """
-    from collections import defaultdict
+    from collections import defaultdict, Counter
     import re
+    import math
 
     # Tokenize keywords
     tokenized = []
@@ -591,34 +651,54 @@ def cluster_keywords(keywords: List[str], n_clusters: int = 5) -> dict:
         tokens = set(re.findall(r'\b[a-z]{3,}\b', kw.lower()))
         tokenized.append(tokens)
 
-    # Simple greedy clustering by token overlap
+    # Compute IDF-like weights: common tokens get lower weight
+    n_docs = len(keywords)
+    token_df = Counter()
+    for tokens in tokenized:
+        for t in tokens:
+            token_df[t] += 1
+
+    def token_weight(token):
+        """IDF-like: rare tokens get higher weight."""
+        df = token_df.get(token, 1)
+        return math.log((n_docs + 1) / (df + 1)) + 1
+
+    # Weighted overlap clustering
     clusters = defaultdict(list)
-    cluster_keywords = defaultdict(list)
+    cluster_keywords = defaultdict(dict)  # cid -> {token: weight}
 
     for i, (kw, tokens) in enumerate(zip(keywords, tokenized)):
         best_cluster = -1
-        best_overlap = 0
+        best_overlap = 0.0
 
-        for cid, cwords in cluster_keywords.items():
-            overlap = len(tokens & cwords)
+        for cid, cweights in cluster_keywords.items():
+            # Weighted Jaccard-like overlap
+            shared = tokens & set(cweights.keys())
+            if not shared:
+                continue
+            overlap = sum(token_weight(t) for t in shared)
             if overlap > best_overlap:
                 best_overlap = overlap
                 best_cluster = cid
 
-        if best_overlap > 0 and best_cluster >= 0:
+        # Require minimum overlap to join existing cluster
+        MIN_OVERLAP = 1.5
+        if best_overlap >= MIN_OVERLAP and best_cluster >= 0:
             clusters[best_cluster].append(kw)
-            cluster_keywords[best_cluster] |= tokens
+            for t in tokens:
+                cluster_keywords[best_cluster][t] = cluster_keywords[best_cluster].get(t, 0) + token_weight(t)
         else:
             # New cluster
             cid = len(clusters)
             if cid < n_clusters:
                 clusters[cid].append(kw)
-                cluster_keywords[cid] = tokens
+                cluster_keywords[cid] = {t: token_weight(t) for t in tokens}
             else:
                 # Assign to smallest cluster
                 smallest = min(clusters.keys(), key=lambda k: len(clusters[k]))
                 clusters[smallest].append(kw)
-                cluster_keywords[smallest] |= tokens
+                for t in tokens:
+                    cluster_keywords[smallest][t] = cluster_keywords[smallest].get(t, 0) + token_weight(t)
 
     return {
         "n_clusters": len(clusters),
