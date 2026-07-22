@@ -5,7 +5,7 @@ Updated: 2026-07-15 (late)
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
 | 1 | Stripe price IDs + checkout | **Done** | 5 active prices (Starter/Pro/Concierge); webhook `https://api.searchgoodly.com/api/webhook/stripe` |
-| 2 | Resend domain | **DNS done — Resend pending** | All 3 records on IONOS auth NS (`ns1023.ui-dns.com` et al). API status still `pending`; send returns 403 until Resend flips. Re-check: [Resend domains](https://resend.com/domains) → **Restart verification** |
+| 2 | Resend domain | **Done — verified** | Resend API reports `searchgoodly.com` → `verified` (confirmed 2026-07-22) |
 | 3 | GA4 | **Done** | `G-ZFFNFYE2YP` in production JS |
 | 4 | Sentry | **Done** | Backend Secret Manager + frontend DSN (`o4510369522057216` / project `4510369535033344`) |
 | 5 | Google Search Console | **TXT live — click Verify** | Apex TXT `google-site-verification=JmH6VMoAq5K8Cu6Gq5MsHCe2CZbf4egBeA-XFv3Q1Ns`. Needs Google login → Verify (API scopes not available here) |
