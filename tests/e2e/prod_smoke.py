@@ -41,8 +41,11 @@ async def main():
         )
 
         # 1. Public page loads without console errors (QA #9 regression guard)
-        await page.goto(f"{FRONTEND}/audit", wait_until="networkidle", timeout=45000)
-        await page.wait_for_timeout(2000)
+        # wait_until="load" not "networkidle" — GA/Sentry beacons can keep the
+        # network busy forever and time the whole run out (seen 2026-07-22).
+        # The 3s settle gives React time to mount and log any errors.
+        await page.goto(f"{FRONTEND}/audit", wait_until="load", timeout=45000)
+        await page.wait_for_timeout(3000)
         check("public page loads clean", not console_errors, "; ".join(console_errors[:3]))
 
         # 2. Prerendered meta shells serve unique titles (QA #10 regression guard)
