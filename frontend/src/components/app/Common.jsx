@@ -9,7 +9,8 @@ export function Logo({ size = "md", showWord = true }) {
       </div>
       {showWord && (
         <span className="font-display font-bold text-[#1A201A] text-xl tracking-tight">
-          good<span className="text-[#E07A5F]">ly</span>
+          {/* #D4643F: passes 3:1 large-text contrast (bold 20px), unlike #E07A5F */}
+          good<span className="text-[#D4643F]">ly</span>
         </span>
       )}
     </div>

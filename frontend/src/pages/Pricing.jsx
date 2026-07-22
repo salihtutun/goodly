@@ -256,7 +256,7 @@ export default function Pricing() {
                     </div>
                   )}
                   {!plan.highlighted && <div className="label-eyebrow">{plan.tag}</div>}
-                  <div className={`mt-3 ${plan.highlighted ? "text-[#FDFBF7]/80 label-eyebrow" : ""}`}>{plan.highlighted && plan.name}</div>
+                  <div className={`mt-3 ${plan.highlighted ? "!text-[#FDFBF7]/80 label-eyebrow" : ""}`}>{plan.highlighted && plan.name}</div>
                   {!plan.highlighted && <div className="font-display font-bold text-2xl mt-1">{plan.name}</div>}
                   <div className="mt-4 font-display">
                     <span className="text-5xl font-bold">${displayPrice}</span>

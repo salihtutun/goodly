@@ -92,7 +92,7 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
         <form onSubmit={handleSubmit} className="relative">
           <div className="flex items-center gap-0">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9CA89C] pointer-events-none" size={20} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B776B] pointer-events-none" size={20} />
               <Input
                 type="text"
                 placeholder="yourwebsite.com"
@@ -107,7 +107,7 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
               type="submit"
               data-testid={submitTestId}
               disabled={loading || !url.trim()}
-              className="rounded-r-2xl rounded-l-none py-7 px-8 text-lg bg-[#E07A5F] hover:bg-[#D06A4F] text-white font-semibold shadow-sm"
+              className="rounded-r-2xl rounded-l-none py-7 px-8 text-lg bg-[#C4502F] hover:bg-[#A63E20] text-white font-semibold shadow-sm"
             >
               {loading ? <Loader2 className="animate-spin" size={20} /> : "Get Free Score"}
             </Button>
@@ -117,7 +117,7 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
               <AlertTriangle size={14} /> {error}
             </p>
           )}
-          <p className="mt-3 text-xs text-[#9CA89C] text-center">
+          <p className="mt-3 text-xs text-[#6B776B] text-center">
             Free instant audit. No signup required.
           </p>
         </form>
@@ -126,11 +126,11 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm text-[#5C685C] font-medium">Your website score</p>
-              <p className="text-xs text-[#9CA89C] truncate max-w-[250px]">{result.url}</p>
+              <p className="text-xs text-[#6B776B] truncate max-w-[250px]">{result.url}</p>
             </div>
             <div className={`text-4xl font-display font-bold ${scoreColor(result.overall_score)}`}>
               {result.overall_score}
-              <span className="text-lg font-normal text-[#9CA89C]">/100</span>
+              <span className="text-lg font-normal text-[#6B776B]">/100</span>
             </div>
           </div>
 
@@ -206,7 +206,7 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
               </p>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA89C]" size={16} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B776B]" size={16} />
                   <Input
                     type="email"
                     placeholder="your@email.com"
@@ -224,7 +224,7 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
                   {emailLoading ? <Loader2 className="animate-spin" size={16} /> : "Send"}
                 </Button>
               </div>
-              <p className="mt-1.5 text-xs text-[#9CA89C]">
+              <p className="mt-1.5 text-xs text-[#6B776B]">
                 No spam. Just your report and 3 helpful emails.
               </p>
             </form>

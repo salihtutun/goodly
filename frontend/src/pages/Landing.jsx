@@ -194,7 +194,8 @@ export default function Landing() {
           section once real customer stories (with permission) exist. */}
       <section id="stories" className="bg-[#2D3E32] py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 text-center">
-          <Eyebrow className="mb-4 text-[#81B29A] justify-center">Built for you</Eyebrow>
+          {/* !important — .label-eyebrow sets its own color which otherwise wins */}
+          <Eyebrow className="mb-4 !text-[#81B29A] justify-center">Built for you</Eyebrow>
           <h2 className="font-display font-bold text-[#FDFBF7] text-3xl sm:text-4xl lg:text-5xl tracking-tight max-w-3xl mx-auto">
             Your business could be the next success story
           </h2>
@@ -233,7 +234,7 @@ export default function Landing() {
             <button
               onClick={() => setAnnual(true)}
               className={`text-sm font-medium px-4 py-2 rounded-full transition-colors ${annual ? "bg-[#2D3E32] text-white" : "text-[#5C685C] hover:text-[#1A201A]"}`}
-            >Annual <span className="text-[10px] text-[#81B29A] ml-1">Save 17%</span></button>
+            >Annual <span className="text-[10px] text-[#3F6B55] ml-1">Save 17%</span></button>
           </div>
 
           <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
@@ -435,13 +436,14 @@ function PricingCard({ name, price, annualPrice, annual, tag, features, onClick,
       className={`relative rounded-3xl p-8 border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
         highlighted ? "bg-[#2D3E32] border-[#2D3E32] text-[#FDFBF7]" : "bg-white border-[#E5E0D8] text-[#1A201A]"
       }`}>
+      {/* bg #C4502F: white-on-terracotta needs 4.5:1 for small text */}
       {highlighted && (
-        <div className="absolute -top-3 left-7 bg-[#E07A5F] text-[#FDFBF7] text-xs font-medium tracking-wider uppercase px-3 py-1 rounded-full">
+        <div className="absolute -top-3 left-7 bg-[#C4502F] text-white text-xs font-medium tracking-wider uppercase px-3 py-1 rounded-full">
           {tag}
         </div>
       )}
       {!highlighted && <div className="label-eyebrow">{tag}</div>}
-      <div className={`mt-3 ${highlighted ? "text-[#FDFBF7]/80 label-eyebrow" : ""}`}>{highlighted && name}</div>
+      <div className={`mt-3 ${highlighted ? "!text-[#FDFBF7]/80 label-eyebrow" : ""}`}>{highlighted && name}</div>
       {!highlighted && <div className="font-display font-bold text-2xl mt-1">{name}</div>}
       <div className="mt-4 font-display">
         <span className="text-5xl font-bold">${displayPrice}</span>
@@ -462,7 +464,7 @@ function PricingCard({ name, price, annualPrice, annual, tag, features, onClick,
       </ul>
       <button onClick={onClick}
         className={`mt-8 w-full rounded-full py-3 text-sm font-medium transition-colors ${
-          highlighted ? "bg-[#E07A5F] hover:bg-[#C86A51] text-[#FDFBF7]"
+          highlighted ? "bg-[#C4502F] hover:bg-[#A63E20] text-white"
                       : "bg-[#2D3E32] hover:bg-[#4A5F4F] text-[#FDFBF7]"
         }`}>
         {ctaLabel}

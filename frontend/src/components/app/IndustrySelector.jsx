@@ -153,7 +153,7 @@ export default function IndustrySelector() {
 
               <Link
                 to="/register"
-                className="mt-8 inline-flex items-center gap-2 bg-[#E07A5F] hover:bg-[#D06A4F] text-white rounded-full px-8 py-4 text-base font-medium transition-colors"
+                className="mt-8 inline-flex items-center gap-2 bg-[#C4502F] hover:bg-[#A63E20] text-white rounded-full px-8 py-4 text-base font-medium transition-colors"
               >
                 {industry.cta} <ArrowRight size={18} />
               </Link>

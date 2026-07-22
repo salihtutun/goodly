@@ -159,7 +159,7 @@ export function AuthShell({ children }) {
         />
         <div className="absolute inset-0 bg-gradient-to-br from-[#2D3E32]/40 via-transparent to-[#2D3E32]/20" />
         <div className="absolute bottom-12 left-12 right-12 text-[#FDFBF7]">
-          <div className="label-eyebrow text-[#FDFBF7]/70 mb-3">Goodly</div>
+          <div className="label-eyebrow !text-[#FDFBF7]/70 mb-3">Goodly</div>
           <p className="font-display text-3xl leading-snug tracking-tight max-w-md">
             Get found on Google. Without learning SEO. Free audit in 30 seconds.
           </p>
