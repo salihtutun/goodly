@@ -869,14 +869,17 @@ class PublicAuditIn(BaseModel):
     email: Optional[EmailStr] = None  # Optional email for nurture sequence
 
 
-# Hard wall-clock budget for the optional AI enrichments on the public audit.
-# The Vercel proxy in front of the API kills requests around 30s, and the page
-# fetch alone can take up to 15s — so AI work gets whatever fits in this budget
-# and the endpoint responds without the extras if they run long.
-PUBLIC_AUDIT_AI_BUDGET_SECONDS = 10.0
+# Total wall-clock budget for a public audit response. The Vercel proxy in
+# front of the API kills requests around 30s, so everything (page fetch + AI
+# enrichment) must finish inside this window. The AI extras get whatever is
+# left after the fetch — a fast target site leaves them ~18s, a slow one may
+# leave only a few seconds, and the endpoint responds without them if so.
+PUBLIC_AUDIT_TOTAL_BUDGET_SECONDS = 25.0
+PUBLIC_AUDIT_AI_MIN_SECONDS = 4.0
+PUBLIC_AUDIT_AI_MAX_SECONDS = 18.0
 
 
-async def _public_audit_ai_extras(result: dict, url: str):
+async def _public_audit_ai_extras(result: dict, url: str, budget_seconds: float):
     """Run the AI summary + schema generation in parallel with a time budget.
 
     Returns (ai_summary, schema_markup); either may be None if its task
@@ -912,11 +915,11 @@ async def _public_audit_ai_extras(result: dict, url: str):
     # asyncio.wait (not gather+wait_for) so a task that finished in time is
     # kept even when the other one blows the budget.
     _done, pending = await asyncio.wait(
-        {summary_task, schema_task}, timeout=PUBLIC_AUDIT_AI_BUDGET_SECONDS
+        {summary_task, schema_task}, timeout=budget_seconds
     )
     for task in pending:
         task.cancel()
-        logger.warning("Public audit AI extra timed out after %.0fs budget", PUBLIC_AUDIT_AI_BUDGET_SECONDS)
+        logger.warning("Public audit AI extra timed out after %.0fs budget", budget_seconds)
 
     ai_summary = None
     schema_markup = None
@@ -941,6 +944,7 @@ async def public_audit(request: Request, body: PublicAuditIn, response: Response
     """Run a free SEO audit without authentication. Returns score + top issues only."""
     if not validate_url(body.url):
         raise HTTPException(status_code=400, detail="Invalid URL. Please provide a valid website URL (e.g., https://example.com).")
+    request_start = asyncio.get_event_loop().time()
     result = await analyze_url(body.url)
     # Calculate revenue impact for public audit
     revenue = None
@@ -953,12 +957,18 @@ async def public_audit(request: Request, body: PublicAuditIn, response: Response
         except Exception as e:
             logger.warning("Public audit revenue impact failed: %s", e)
 
-    # AI summary + schema markup run in parallel under a hard time budget —
-    # the audit responds without them rather than timing out at the proxy.
+    # AI summary + schema markup run in parallel with the time left in the
+    # request budget — the audit responds without them rather than timing
+    # out at the proxy. Fast fetches leave the AI up to 18s; slow ones less.
     ai_summary = None
     schema_markup = None
     if not result.get("fetch_failed"):
-        ai_summary, schema_markup = await _public_audit_ai_extras(result, body.url)
+        elapsed = asyncio.get_event_loop().time() - request_start
+        ai_budget = min(
+            PUBLIC_AUDIT_AI_MAX_SECONDS,
+            max(PUBLIC_AUDIT_AI_MIN_SECONDS, PUBLIC_AUDIT_TOTAL_BUDGET_SECONDS - elapsed),
+        )
+        ai_summary, schema_markup = await _public_audit_ai_extras(result, body.url, ai_budget)
 
     # Track audit event
     try:
