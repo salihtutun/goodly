@@ -20,6 +20,7 @@ const INDUSTRIES = {
       { icon: Phone, title: "Watch the phone ring", desc: "Track your progress. See exactly which fixes brought in more reservations." },
     ],
     cta: "Get your restaurant found →",
+    href: "/restaurants",
   },
   plumbing: {
     icon: "🔧",
@@ -38,6 +39,7 @@ const INDUSTRIES = {
       { icon: Phone, title: "Get more emergency calls", desc: "Every position you climb in Google rankings means more emergency calls. We track the ROI." },
     ],
     cta: "Get your plumbing business found →",
+    href: "/plumbers",
   },
   dental: {
     icon: "🦷",
@@ -56,6 +58,7 @@ const INDUSTRIES = {
       { icon: Phone, title: "Fill your appointment book", desc: "Track how many new patient inquiries come from Google each month." },
     ],
     cta: "Get your dental practice found →",
+    href: "/dentists",
   },
   salon: {
     icon: "💇",
@@ -74,6 +77,7 @@ const INDUSTRIES = {
       { icon: Phone, title: "Track your bookings", desc: "See exactly how many bookings come from Google vs Instagram each month." },
     ],
     cta: "Get your salon found →",
+    href: "/salons",
   },
   retail: {
     icon: "🏪",
@@ -92,6 +96,26 @@ const INDUSTRIES = {
       { icon: Phone, title: "Track foot traffic impact", desc: "See how your online visibility translates to in-store visits and sales." },
     ],
     cta: "Get your retail store found →",
+    href: "/retail",
+  },
+  cabinet: {
+    icon: "🪵",
+    label: "Cabinets",
+    headline: "Get found when homeowners remodel their kitchen",
+    problem: "Cabinet jobs are worth thousands. Homeowners searching 'kitchen cabinets near me' call the first few shops they find — make sure you're one of them.",
+    stats: [
+      { value: "$8k+", label: "average kitchen cabinet job" },
+      { value: "3x", label: "more quotes with a strong Maps listing" },
+      { value: "76%", label: "of local searches visit within 24h" },
+    ],
+    features: [
+      { icon: Search, title: "Rank for remodel searches", desc: "Show up for 'kitchen cabinets,' 'custom cabinets,' and 'cabinets near me.'" },
+      { icon: MapPin, title: "Win the Google Maps pack", desc: "Photos of finished kitchens + complete service areas = more quote requests." },
+      { icon: Star, title: "Collect reviews that close deals", desc: "Homeowners pick shops with recent, detailed reviews. We'll help you build that proof." },
+      { icon: Phone, title: "Turn searchers into quote calls", desc: "Clear CTAs and service pages so browsers pick up the phone." },
+    ],
+    cta: "Get your cabinet shop found →",
+    href: "/cabinets",
   },
 };
 
@@ -152,7 +176,7 @@ export default function IndustrySelector() {
               </div>
 
               <Link
-                to="/register"
+                to={industry.href || "/audit"}
                 className="mt-8 inline-flex items-center gap-2 bg-[#C4502F] hover:bg-[#A63E20] text-white rounded-full px-8 py-4 text-base font-medium transition-colors"
               >
                 {industry.cta} <ArrowRight size={18} />

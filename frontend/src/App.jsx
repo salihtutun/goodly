@@ -1,6 +1,6 @@
 import "@/App.css";
 import { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -105,8 +105,18 @@ function Lazy({ children }) {
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
+  // New owners without industry/goals setup land on the guided wizard once —
+  // skip when they're already on it, or already looking at an audit they just ran.
+  const onOnboarding = location.pathname.startsWith("/app/onboarding");
+  const onFirstAudit =
+    location.pathname.startsWith("/app/audits/") ||
+    location.pathname.startsWith("/app/audit");
+  if (!user.onboarded && !onOnboarding && !onFirstAudit) {
+    return <Navigate to="/app/onboarding" replace />;
+  }
   return <>{children}<OnboardingTour /></>;
 }
 
@@ -233,6 +243,7 @@ export default function App() {
             <Route path="/home-services" element={<Lazy><IndustryPage industry="homeservices" /></Lazy>} />
             <Route path="/real-estate" element={<Lazy><IndustryPage industry="realestate" /></Lazy>} />
             <Route path="/automotive" element={<Lazy><IndustryPage industry="automotive" /></Lazy>} />
+            <Route path="/cabinets" element={<Lazy><IndustryPage industry="cabinet" /></Lazy>} />
             {/* Competitor Analysis Landing */}
             <Route path="/competitors" element={<Lazy><CompetitorLanding /></Lazy>} />
             {/* Comparison Pages */}

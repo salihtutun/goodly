@@ -53,7 +53,7 @@ export default function OnboardingWizard() {
       });
 
       // Run first audit
-      await api.post("/audits", {
+      const { data: audit } = await api.post("/audits", {
         url: project.url,
         project_id: project.id,
       });
@@ -63,6 +63,24 @@ export default function OnboardingWizard() {
 
       await refresh();
       toast.success("Your first audit is ready!");
+      navigate(audit?.id ? `/app/audits/${audit.id}` : "/app");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Owners who already ran an audit at signup shouldn't be trapped —
+  // let them enter the app after we record onboarded=true.
+  const skipForNow = async () => {
+    setBusy(true);
+    try {
+      await api.post("/auth/onboarded", {
+        industry: form.industry || "other",
+        goals: form.goals || "Get found on Google",
+      });
+      await refresh();
       navigate("/app");
     } catch (e) {
       toast.error(formatApiError(e));
@@ -81,6 +99,14 @@ export default function OnboardingWizard() {
         <p className="mt-3 text-[#5C685C] text-lg">
           2 minutes. 3 questions. Your first audit is on us.
         </p>
+        <button
+          type="button"
+          onClick={skipForNow}
+          disabled={busy}
+          className="mt-2 text-sm text-[#5C685C] hover:text-[#1A201A] underline underline-offset-2"
+        >
+          Skip for now — take me to my account
+        </button>
 
         {/* Progress */}
         <div className="mt-10 flex gap-2">

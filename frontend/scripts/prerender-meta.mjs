@@ -93,6 +93,10 @@ const ROUTES = {
     title: "SEO for Auto Shops — Be the First Call | Goodly",
     description: "Be the shop people call when their car won't start. Goodly gets your auto business to the top of local search.",
   },
+  "/cabinets": {
+    title: "SEO for Cabinet Makers — Get Found When Homeowners Remodel | Goodly",
+    description: "Homeowners searching for kitchen cabinets call the first shops they find. Goodly shows cabinet makers exactly how to be one of them.",
+  },
   "/vs/ahrefs": {
     title: "Goodly vs Ahrefs — SEO Without the Complexity",
     description: "Ahrefs is built for SEO pros. Goodly is built for small business owners: plain-English audits, action plans, and done-for-you fixes.",

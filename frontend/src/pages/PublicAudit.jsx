@@ -201,16 +201,22 @@ export default function PublicAudit() {
                 </div>
               </div>
 
-              {highIssues.length > 0 && (
+              {(highIssues.length > 0 || medIssues.length > 0) && (
                 <div className="mt-6">
                   <div className="label-eyebrow mb-3">Top issues to fix</div>
                   <div className="space-y-2">
-                    {highIssues.slice(0, 3).map((issue, i) => (
+                    {[...highIssues, ...medIssues].slice(0, 3).map((issue, i) => (
                       <div key={i} className="flex items-start gap-3 bg-[#E07A5F]/5 border border-[#E07A5F]/20 rounded-xl p-3">
                         <ShieldCheck size={16} className="text-[#E07A5F] mt-0.5 shrink-0" />
                         <div>
                           <div className="text-sm font-medium text-[#1A201A]">{issue.title || issue.message}</div>
                           {issue.description && <div className="text-xs text-[#5C685C] mt-0.5">{issue.description}</div>}
+                          {/* Plain-English fix — what an owner should do next */}
+                          {issue.fix && (
+                            <div className="text-xs text-[#2D3E32] mt-1.5 leading-snug">
+                              <span className="font-semibold">What to do: </span>{issue.fix}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -254,16 +260,20 @@ export default function PublicAudit() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Code size={16} className="text-[#81B29A]" />
-                    <div className="text-xs font-semibold uppercase tracking-wider text-[#81B29A]">Free Schema Markup</div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-[#81B29A]">Free Google listing code</div>
                   </div>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(result.schema_markup); toast.success("Schema copied!"); }}
+                    onClick={() => { navigator.clipboard.writeText(result.schema_markup); toast.success("Copied — send this to whoever manages your website"); }}
                     className="text-xs text-[#5C685C] hover:text-[#1A201A] flex items-center gap-1 bg-[#F3F0E9] hover:bg-[#E5E0D8] rounded-full px-3 py-1 transition-colors"
                   >
                     <Copy size={12} /> Copy
                   </button>
                 </div>
-                <p className="text-xs text-[#5C685C] mb-3">Google uses this to show rich results (star ratings, hours, location). Paste it in your site's &lt;head&gt;.</p>
+                <p className="text-xs text-[#5C685C] mb-3">
+                  This helps Google show your hours, location, and reviews. Copy it and paste into your site's
+                  custom code / header injection (Squarespace → Settings → Advanced → Code Injection,
+                  WordPress → a header plugin, or ask your web person).
+                </p>
                 <pre className="bg-[#1A201A] text-[#81B29A] rounded-lg p-4 text-xs overflow-x-auto max-h-48 font-mono leading-relaxed">
                   {result.schema_markup}
                 </pre>

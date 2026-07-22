@@ -24,8 +24,8 @@ export default function Landing() {
       <JsonLd data={organizationSchema()} />
       <JsonLd data={softwareAppSchema()} />
       <JsonLd data={faqSchema([
-        { question: "What is an SEO audit?", answer: "An SEO audit scans your website for 50+ signals Google cares about — meta tags, headings, mobile-friendliness, page speed, content quality, and more. You get a score and a plain-English list of exactly what to fix." },
-        { question: "How long does it take to see results?", answer: "Most businesses see meaningful improvement in 3-6 months. But many see their Google Maps ranking improve within 2-4 weeks after fixing the basics like completing their Google Business Profile and fixing meta tags." },
+        { question: "What is an SEO audit?", answer: "An SEO audit scans your website for 50+ signals Google cares about — page titles, headings, mobile-friendliness, page speed, content quality, and more. You get a score and a plain-English list of exactly what to fix." },
+        { question: "How long does it take to see results?", answer: "Most businesses see meaningful improvement in 3-6 months. But many see their Google Maps ranking improve within 2-4 weeks after fixing the basics like completing their Google Business Profile and fixing page titles and descriptions." },
         { question: "Do I need to know SEO to use Goodly?", answer: "No. Goodly is built for business owners, not SEO experts. Every issue comes with a plain-English explanation and step-by-step fix. If you can use Facebook, you can use Goodly." },
         { question: "Is there really a free plan?", answer: "Yes. The Free plan gives you 5 audits per month, 2 saved projects, and an AI action plan — forever. No credit card needed." },
         { question: "What's the difference between Starter and Pro?", answer: "Starter ($49/mo) includes 10 audits, 5 keyword trackers, weekly re-audits, and PDF reports. Pro ($149/mo) adds unlimited audits, 25 keyword trackers, daily re-audits, competitor analysis, and all social platforms." },
@@ -105,7 +105,7 @@ export default function Landing() {
           </div>
           <div className="mt-14 grid md:grid-cols-3 gap-6">
             {[
-              { n: "01", icon: Search, t: "Paste your website", d: "Enter your URL. We scan everything Google looks at — meta tags, speed, mobile-friendliness, and more. Takes 30 seconds." },
+              { n: "01", icon: Search, t: "Paste your website", d: "Enter your URL. We check everything Google looks at — page titles, speed, mobile fit, and more. Takes 30 seconds." },
               { n: "02", icon: TrendingUp, t: "See what's holding you back", d: "Get a clear score and a plain-English list of exactly what to fix. No technical jargon. Just 'do this, get more customers.'" },
               { n: "03", icon: Phone, t: "Watch the phone ring", d: "Fix the issues, re-audit anytime, and track your progress as your visibility improves." },
             ].map((s) => (
@@ -145,7 +145,7 @@ export default function Landing() {
               icon={Search}
               accent="#81B29A"
               title="Show up on Google"
-              body="We scan your site for 50+ signals Google cares about. Missing meta tags? Slow pages? Broken links? We find them all and tell you exactly what to fix — in plain English."
+              body="We scan your site for 50+ signals Google cares about. Missing page titles? Slow pages? Broken links? We find them all and tell you exactly what to fix — in plain English."
               stat="Businesses on page one get 92% of all search traffic"
             />
             <OutcomeCard

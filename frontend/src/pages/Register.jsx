@@ -40,8 +40,16 @@ export default function Register() {
     const res = await register(email.trim(), password, name.trim() || undefined, website.trim() || undefined);
     setBusy(false);
     if (res.ok) {
-      toast.success("Account created — check your inbox to verify your email");
-      navigate("/verify-email");
+      // Take owners straight to value — their audit if we ran one, otherwise
+      // the guided setup. Verify-email is no longer a hard stop (session is live).
+      toast.success("Account created! Check your inbox when you can — email verification helps keep your account safe.");
+      if (res.audit?.id) {
+        navigate(`/app/audits/${res.audit.id}`);
+      } else if (website.trim()) {
+        navigate(`/app/audit?url=${encodeURIComponent(website.trim())}`);
+      } else {
+        navigate("/app/onboarding");
+      }
     } else {
       setError(res.error);
     }
@@ -54,8 +62,8 @@ export default function Register() {
       // refresh the auth context instead of stashing tokens in localStorage.
       await api.post("/auth/google", { credential });
       await refresh();
-      toast.success("Welcome! Account created with Google.");
-      navigate("/app");
+      toast.success("Welcome! Let's get your business found.");
+      navigate("/app/onboarding");
     } catch (err) {
       setError(formatApiError(err));
     } finally { setBusy(false); }

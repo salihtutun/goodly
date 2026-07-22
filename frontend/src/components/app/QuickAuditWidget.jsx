@@ -83,8 +83,17 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
     return "bg-red-50 border-red-200";
   };
 
-  const criticalCount = result?.issues?.filter(i => i.severity === "critical")?.length || 0;
-  const warningCount = result?.issues?.filter(i => i.severity === "warning")?.length || 0;
+  // Backend severities are high/medium/low (not critical/warning) — map so
+  // owners see real urgency instead of a false "No critical issues".
+  const issues = result?.issues || [];
+  const criticalCount = issues.filter((i) => i.severity === "high" || i.severity === "critical").length;
+  const warningCount = issues.filter((i) => i.severity === "medium" || i.severity === "warning").length;
+  const topFixes = [...issues]
+    .sort((a, b) => {
+      const rank = { high: 0, critical: 0, medium: 1, warning: 1, low: 2 };
+      return (rank[a.severity] ?? 3) - (rank[b.severity] ?? 3);
+    })
+    .slice(0, 2);
 
   return (
     <div className="w-full max-w-xl mx-auto">
@@ -183,18 +192,38 @@ export default function QuickAuditWidget({ onComplete, submitTestId }) {
             </div>
           )}
 
+          {/* Top fixes — plain English so owners know what to do next */}
+          {topFixes.length > 0 && (
+            <div className="bg-white/70 rounded-xl p-3 mb-4 border border-white space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#5C685C]">Start here</p>
+              {topFixes.map((issue, i) => (
+                <div key={i} className="text-sm text-[#1A201A]">
+                  <div className="font-medium">{issue.title || issue.message}</div>
+                  {(issue.fix || issue.description) && (
+                    <div className="text-xs text-[#5C685C] mt-0.5 leading-snug">{issue.fix || issue.description}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Concierge CTA for low-scoring sites */}
           {result.overall_score < 50 && (
             <div className="bg-[#E07A5F]/10 rounded-xl p-4 mb-4 border border-[#E07A5F]/20">
               <p className="text-sm text-[#1A201A] font-medium mb-2">
                 Want an expert to fix this for you? We'll get you to page one in 90 days — or you don't pay.
               </p>
-              <a
-                href={`mailto:hello@searchgoodly.com?subject=Concierge%20inquiry%20-%20${encodeURIComponent(result.url)}%20(Score:%20${result.overall_score})`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#B04A2E] hover:text-[#8F3A22] underline underline-offset-2"
-              >
-                Talk to a specialist <ArrowRight size={14} />
-              </a>
+              <div className="flex flex-wrap items-center gap-3">
+                <a
+                  href={`mailto:hello@searchgoodly.com?subject=Concierge%20inquiry%20-%20${encodeURIComponent(result.url)}%20(Score:%20${result.overall_score})`}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-[#B04A2E] hover:text-[#8F3A22] underline underline-offset-2"
+                >
+                  Talk to a specialist <ArrowRight size={14} />
+                </a>
+                <a href="/pricing#concierge" className="text-sm text-[#5C685C] hover:text-[#1A201A] underline underline-offset-2">
+                  See Concierge plan
+                </a>
+              </div>
             </div>
           )}
 

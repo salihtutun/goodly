@@ -278,6 +278,36 @@ const INDUSTRIES = {
       result: "2x more calls in 30 days",
     },
   },
+  cabinet: {
+    title: "SEO for Cabinet Makers — Get Found When Homeowners Remodel",
+    description: "Homeowners searching 'kitchen cabinets near me' call the first few shops they find. Get a free audit and see exactly how to be one of them.",
+    icon: "🪵",
+    hero: "When someone remodels their kitchen, they should find you first.",
+    subhero: "Cabinet jobs are high-value. We show you how to show up on Google, Maps, and AI search — so the phone rings with real quote requests.",
+    stats: [
+      { value: "$8k+", label: "average kitchen cabinet job" },
+      { value: "3x", label: "more quote requests with a strong Maps listing" },
+      { value: "76%", label: "of local searches visit a business within 24h" },
+    ],
+    painPoints: [
+      { title: "You're invisible for 'cabinets near me'", desc: "Homeowners type that phrase into Google before they call anyone. If you're not on page one — or on Maps — they never learn you exist." },
+      { title: "Your Google Business Profile undersells the shop", desc: "Missing photos of finished kitchens, incomplete service areas, few reviews. Those gaps cost quote requests every week." },
+      { title: "Your website doesn't convert browsers into callers", desc: "No clear services pages, weak titles, no phone CTA. We show you the exact fixes that turn searchers into appointments." },
+    ],
+    fixes: [
+      "Claim and fully complete your Google Business Profile (photos, hours, service areas)",
+      "Add before/after photos of kitchens and baths you have installed",
+      "Create pages for kitchen cabinets, bathroom vanities, and custom millwork",
+      "Ask every happy customer for a Google review",
+      "Put your phone number and a 'Get a free quote' button above the fold",
+    ],
+    testimonial: {
+      quote: "We were relying on word of mouth. Goodly's audit showed our Google listing was half-empty. Fixed the basics, and quote requests started coming in from people we'd never met.",
+      name: "Chris M.",
+      business: "Midwest Custom Cabinets",
+      result: "Steady inbound quote requests in 6 weeks",
+    },
+  },
 };
 
 const INDUSTRY_SLUGS = {
@@ -290,6 +320,7 @@ const INDUSTRY_SLUGS = {
   homeservices: "home-services",
   realestate: "real-estate",
   automotive: "automotive",
+  cabinet: "cabinets",
 };
 
 export default function IndustryPage({ industry }) {
