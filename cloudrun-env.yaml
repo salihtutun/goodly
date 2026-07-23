@@ -8,5 +8,5 @@ ADMIN_EMAIL: admin@searchgoodly.com
 DB_NAME: goodly
 SCHEDULER_ENABLED: "true"
 SENTRY_ENVIRONMENT: production
-SENTRY_RELEASE: goodly@1.9.0
+SENTRY_RELEASE: goodly@1.10.1
 # DEMO_PASSWORD is set via Secret Manager (--set-secrets=DEMO_PASSWORD=DEMO_PASSWORD:latest)
