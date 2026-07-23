@@ -16,8 +16,10 @@ logger = logging.getLogger("llm_client")
 
 # Default model — fast and cost-effective for structured JSON tasks
 DEFAULT_MODEL = "gemini-2.5-flash"
-# For complex reasoning tasks (competitor analysis, visibility simulation)
-PRO_MODEL = "gemini-2.5-pro"
+# For complex reasoning tasks (competitor analysis, visibility simulation).
+# gemini-2.5-pro is closed to new API keys ("no longer available to new users")
+# — use 3.5 Flash which still has strong reasoning on the current key.
+PRO_MODEL = "gemini-3.5-flash"
 
 # Retry configuration
 MAX_RETRIES = 3

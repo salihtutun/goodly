@@ -500,8 +500,13 @@ async def google_auth(request: Request, body: GoogleAuthIn, response: Response):
         from google.auth.transport import requests as google_requests
 
         # Verify the Google ID token
-        google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
-        if not google_client_id:
+        google_client_id = (os.environ.get("GOOGLE_CLIENT_ID") or "").strip()
+        # Reject placeholders left over from Secret Manager bootstrap
+        if (
+            not google_client_id
+            or "placeholder" in google_client_id.lower()
+            or not google_client_id.endswith(".apps.googleusercontent.com")
+        ):
             raise HTTPException(status_code=501, detail="Google Sign-In is not configured")
 
         idinfo = id_token.verify_oauth2_token(
