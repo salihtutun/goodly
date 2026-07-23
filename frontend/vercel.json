@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://goodly-api-cs4bo62anq-uc.a.run.app/api/$1"
+      "destination": "https://goodly-api-ha7sdjf54q-uc.a.run.app/api/$1"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
