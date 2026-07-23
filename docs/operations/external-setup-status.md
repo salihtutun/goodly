@@ -1,6 +1,8 @@
 # External Dependencies — Setup Status
 
-Updated: 2026-07-15 (late)
+Updated: 2026-07-22
+
+**GCP project:** `goodly-seo` (dedicated). Cut over from `kai-app-1762224583` on 2026-07-22 — Cloud Run `https://goodly-api-ha7sdjf54q-uc.a.run.app`, WIF + secrets + scheduler live here. Do not use `kai-app-1762224583` for Goodly.
 
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
@@ -22,7 +24,7 @@ TXT  send.searchgoodly.com               v=spf1 include:amazonses.com ~all
 Re-verify (after Resend UI restart, or wait up to a few hours):
 
 ```bash
-export RESEND_API_KEY=$(gcloud secrets versions access latest --secret=RESEND_API_KEY --project=kai-app-1762224583)
+export RESEND_API_KEY=$(gcloud secrets versions access latest --secret=RESEND_API_KEY --project=${GCLOUD_PROJECT})
 curl -X POST https://api.resend.com/domains/0f8f7d33-597c-42d7-b707-684c8ec07914/verify \
   -H "Authorization: Bearer $RESEND_API_KEY"
 curl https://api.resend.com/domains/0f8f7d33-597c-42d7-b707-684c8ec07914 \

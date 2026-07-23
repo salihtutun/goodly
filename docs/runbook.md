@@ -7,6 +7,7 @@
 | Frontend | https://searchgoodly.com |
 | Backend API | https://api.searchgoodly.com |
 | Cloud Run | https://goodly-api-ha7sdjf54q-uc.a.run.app |
+| GCP project | `goodly-seo` |
 | Vercel Project | frontend (prj_qzWN6IOPM8MD3DboaB04keXcWWk2) |
 
 ## Quick Health Check
